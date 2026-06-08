@@ -1,0 +1,7 @@
+# Code owners — auto-requested as PR reviewers (and notified) when a PR is opened.
+# Docs: https://docs.github.com/articles/about-code-owners
+# NOTE: The PR author is never auto-requested on their own PR.
+#       Draft PRs do not trigger requests until marked ready-for-review.
+
+# All files
+*   @JinnyLyn
