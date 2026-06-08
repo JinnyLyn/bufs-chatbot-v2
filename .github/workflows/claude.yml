@@ -37,7 +37,7 @@ jobs:
           echo "HOME=$RUNNER_TEMP/claude-home" >> "$GITHUB_ENV"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
