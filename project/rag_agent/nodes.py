@@ -1,0 +1,214 @@
+from typing import Literal, Set
+from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage, AIMessage, ToolMessage
+from langgraph.types import Command
+from .graph_state import State, AgentState
+from .schemas import QueryAnalysis
+from .prompts import *
+import config
+from utils import estimate_context_tokens
+from config import BASE_TOKEN_THRESHOLD, TOKEN_GROWTH_FACTOR
+
+
+def _invoke_structured_rewrite(llm, messages):
+    """Invoke with_structured_output(QueryAnalysis), trying methods until one parses.
+
+    Ollama models support different structured-output mechanisms (qwen3.5:9b →
+    function_calling; qwen3:4b-instruct → json_schema/default), so fall back across
+    them rather than hard-coding one.
+    """
+    base = llm.with_config(temperature=0.1)
+    cfg = getattr(config, "STRUCTURED_OUTPUT_METHOD", "auto")
+    methods = [cfg] if cfg and cfg != "auto" else ["function_calling", "json_schema", None]
+    last_exc = None
+    for method in methods:
+        try:
+            structured = (
+                base.with_structured_output(QueryAnalysis)
+                if method is None
+                else base.with_structured_output(QueryAnalysis, method=method)
+            )
+            return structured.invoke(messages)
+        except Exception as exc:  # parse / validation error → try the next method
+            last_exc = exc
+    raise last_exc
+
+def summarize_history(state: State, llm):
+    if len(state["messages"]) < 4:
+        return {"conversation_summary": ""}
+    
+    relevant_msgs = [
+        msg for msg in state["messages"][:-1]
+        if isinstance(msg, (HumanMessage, AIMessage)) and not getattr(msg, "tool_calls", None)
+    ]
+
+    if not relevant_msgs:
+        return {"conversation_summary": ""}
+    
+    conversation = "대화 기록:\n"
+    for msg in relevant_msgs[-6:]:
+        role = "사용자" if isinstance(msg, HumanMessage) else "어시스턴트"
+        conversation += f"{role}: {msg.content}\n"
+
+    summary_response = llm.with_config(temperature=0.2).invoke([SystemMessage(content=get_conversation_summary_prompt()), HumanMessage(content=conversation)])
+    return {"conversation_summary": summary_response.content, "agent_answers": [{"__reset__": True}]}
+
+def rewrite_query(state: State, llm):
+    last_message = state["messages"][-1]
+    conversation_summary = state.get("conversation_summary", "")
+
+    context_section = (f"대화 요약:\n{conversation_summary}\n" if conversation_summary.strip() else "") + f"사용자 질문:\n{last_message.content}\n"
+
+    response = _invoke_structured_rewrite(
+        llm, [SystemMessage(content=get_rewrite_query_prompt()), HumanMessage(content=context_section)]
+    )
+
+    if response.questions and response.is_clear:
+        delete_all = [RemoveMessage(id=m.id) for m in state["messages"] if not isinstance(m, SystemMessage)]
+        return {"questionIsClear": True, "messages": delete_all, "originalQuery": last_message.content, "rewrittenQuestions": response.questions}
+
+    clarification = response.clarification_needed if response.clarification_needed and len(response.clarification_needed.strip()) > 10 else "질문을 정확히 이해하려면 추가 정보가 필요합니다."
+    return {"questionIsClear": False, "messages": [AIMessage(content=clarification)]}
+
+def request_clarification(state: State):
+    return {}
+
+# --- Agent Nodes ---
+def orchestrator(state: AgentState, llm_with_tools):
+    context_summary = state.get("context_summary", "").strip()
+    sys_msg = SystemMessage(content=get_orchestrator_prompt())
+    summary_injection = (
+        [HumanMessage(content=f"[이전 조사에서 압축된 컨텍스트]\n\n{context_summary}")]
+        if context_summary else []
+    )
+    if not state.get("messages"):
+        human_msg = HumanMessage(content=state["question"])
+        force_search = HumanMessage(content="이 질문에 답하려면 첫 단계로 반드시 'search_child_chunks'를 호출하세요.")
+        response = llm_with_tools.invoke([sys_msg] + summary_injection + [human_msg, force_search])
+        return {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
+
+    response = llm_with_tools.invoke([sys_msg] + summary_injection + state["messages"])
+    tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
+    return {"messages": [response], "tool_call_count": len(tool_calls) if tool_calls else 0, "iteration_count": 1}
+
+def fallback_response(state: AgentState, llm):
+    seen = set()
+    unique_contents = []
+    for m in state["messages"]:
+        if isinstance(m, ToolMessage) and m.content not in seen:
+            unique_contents.append(m.content)
+            seen.add(m.content)
+
+    context_summary = state.get("context_summary", "").strip()
+
+    context_parts = []
+    if context_summary:
+        context_parts.append(f"## 압축된 조사 컨텍스트 (이전 반복)\n\n{context_summary}")
+    if unique_contents:
+        context_parts.append(
+            "## 검색된 데이터 (현재 반복)\n\n" +
+            "\n\n".join(f"--- 데이터 출처 {i} ---\n{content}" for i, content in enumerate(unique_contents, 1))
+        )
+
+    context_text = "\n\n".join(context_parts) if context_parts else "문서에서 검색된 데이터가 없습니다."
+
+    prompt_content = (
+        f"사용자 질문: {state.get('question')}\n\n"
+        f"{context_text}\n\n"
+        f"지시:\n위 데이터만 사용해 가능한 한 최선의 답변을 작성하세요."
+    )
+    response = llm.invoke([SystemMessage(content=get_fallback_response_prompt()), HumanMessage(content=prompt_content)])
+    return {"messages": [response]}
+
+def should_compress_context(state: AgentState) -> Command[Literal["compress_context", "orchestrator"]]:
+    messages = state["messages"]
+
+    new_ids: Set[str] = set()
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+            for tc in msg.tool_calls:
+                if tc["name"] == "retrieve_parent_chunks":
+                    raw = tc["args"].get("parent_id") or tc["args"].get("id") or tc["args"].get("ids") or []
+                    if isinstance(raw, str):
+                        new_ids.add(f"parent::{raw}")
+                    else:
+                        new_ids.update(f"parent::{r}" for r in raw)
+
+                elif tc["name"] == "search_child_chunks":
+                    query = tc["args"].get("query", "")
+                    if query:
+                        new_ids.add(f"search::{query}")
+            break
+
+    updated_ids = state.get("retrieval_keys", set()) | new_ids
+
+    current_token_messages = estimate_context_tokens(messages)
+    current_token_summary = estimate_context_tokens([HumanMessage(content=state.get("context_summary", ""))])
+    current_tokens = current_token_messages + current_token_summary
+
+    max_allowed = BASE_TOKEN_THRESHOLD + int(current_token_summary * TOKEN_GROWTH_FACTOR)
+
+    goto = "compress_context" if current_tokens > max_allowed else "orchestrator"
+    return Command(update={"retrieval_keys": updated_ids}, goto=goto)
+
+def compress_context(state: AgentState, llm):
+    messages = state["messages"]
+    existing_summary = state.get("context_summary", "").strip()
+
+    if not messages:
+        return {}
+
+    conversation_text = f"사용자 질문:\n{state.get('question')}\n\n압축할 대화:\n\n"
+    if existing_summary:
+        conversation_text += f"[이전 압축 컨텍스트]\n{existing_summary}\n\n"
+
+    for msg in messages[1:]:
+        if isinstance(msg, AIMessage):
+            tool_calls_info = ""
+            if getattr(msg, "tool_calls", None):
+                calls = ", ".join(f"{tc['name']}({tc['args']})" for tc in msg.tool_calls)
+                tool_calls_info = f" | 도구 호출: {calls}"
+            conversation_text += f"[어시스턴트{tool_calls_info}]\n{msg.content or '(도구 호출만 있음)'}\n\n"
+        elif isinstance(msg, ToolMessage):
+            tool_name = getattr(msg, "name", "tool")
+            conversation_text += f"[도구 결과 - {tool_name}]\n{msg.content}\n\n"
+
+    summary_response = llm.invoke([SystemMessage(content=get_context_compression_prompt()), HumanMessage(content=conversation_text)])
+    new_summary = summary_response.content
+
+    retrieved_ids: Set[str] = state.get("retrieval_keys", set())
+    if retrieved_ids:
+        parent_ids = sorted(r for r in retrieved_ids if r.startswith("parent::"))
+        search_queries = sorted(r.replace("search::", "") for r in retrieved_ids if r.startswith("search::"))
+
+        block = "\n\n---\n**이미 수행됨 (반복하지 말 것):**\n"
+        if parent_ids:
+            block += "이미 가져온 parent chunks:\n" + "\n".join(f"- {p.replace('parent::', '')}" for p in parent_ids) + "\n"
+        if search_queries:
+            block += "이미 실행한 검색 쿼리:\n" + "\n".join(f"- {q}" for q in search_queries) + "\n"
+        new_summary += block
+
+    return {"context_summary": new_summary, "messages": [RemoveMessage(id=m.id) for m in messages[1:]]}
+
+def collect_answer(state: AgentState):
+    last_message = state["messages"][-1]
+    is_valid = isinstance(last_message, AIMessage) and last_message.content and not last_message.tool_calls
+    answer = last_message.content if is_valid else "답변을 생성하지 못했습니다."
+    return {
+        "final_answer": answer,
+        "agent_answers": [{"index": state["question_index"], "question": state["question"], "answer": answer}]
+    }
+# --- End of Agent Nodes---
+
+def aggregate_answers(state: State, llm):
+    if not state.get("agent_answers"):
+        return {"messages": [AIMessage(content="생성된 답변이 없습니다.")]}
+
+    sorted_answers = sorted(state["agent_answers"], key=lambda x: x["index"])
+
+    formatted_answers = ""
+    for i, ans in enumerate(sorted_answers, start=1):
+        formatted_answers += (f"\n답변 {i}:\n"f"{ans['answer']}\n")
+
+    user_message = HumanMessage(content=f"""원래 사용자 질문: {state["originalQuery"]}\n검색된 답변:{formatted_answers}""")
+    synthesis_response = llm.invoke([SystemMessage(content=get_aggregation_prompt()), user_message])
+    return {"messages": [AIMessage(content=synthesis_response.content)]}

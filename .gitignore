@@ -1,0 +1,25 @@
+.DS_Store
+# KB data committed by choice (2026-06-08): markdown_docs(source), parent_store + qdrant_db
+# (regenerable via `python project/reindex.py` — committed for clone-and-run convenience).
+logs/
+backups/
+docs/
+__pycache__/
+.vscode/
+.env
+.venv/
+venv/
+
+# machine-specific CA bundle (Windows trust store export, for TLS-scanning AV)
+win-ca-bundle.pem
+
+# frontend build artifacts / local env
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+
+# node deps anywhere + Qdrant runtime lock (regenerated on run)
+node_modules/
+qdrant_db/.lock
+# Word/Office temp lock files
+~$*
