@@ -19,16 +19,16 @@
 
 **A. 자연어로 시키기 (제일 쉬움 — 명령어 0개)**
 에이전트(Claude)한테 이 말만 그대로 하세요:
-> **"이 레포 처음 셋업해줘. `scripts/setup-dev.sh` 실행해줘."**
+> **"이 레포 처음 셋업해줘. `.claude/scripts/setup-dev.sh` 실행해줘."**
 
 **B. 터미널 쓰는 사람**
 ```bash
-bash scripts/setup-dev.sh
+bash .claude/scripts/setup-dev.sh
 ```
 
 **C. 정 안 되면 이 한 줄만**
 ```bash
-git config core.hooksPath .githooks
+git config core.hooksPath .claude/githooks
 ```
 
 > 이게 하는 일: ① `main`에 실수로 커밋하면 자동으로 막아줌  ② Windows/Mac 줄바꿈 충돌 방지.
@@ -56,7 +56,7 @@ git config core.hooksPath .githooks
   최신 `main`을 받아 내 브랜치에 합쳐두세요. → 충돌을 **조금씩 미리** 풀어서 나중에
   큰 충돌이 안 나요.
 - **제일 쉬운 방법** — 명령어 하나 또는 에이전트한테 한마디:
-  - 터미널: `bash scripts/sync-main.sh`
+  - 터미널: `bash .claude/scripts/sync-main.sh`
   - 자연어: **"main이랑 동기화해줘. 충돌 있으면 알려줘."**
   - main이 앞서갔으면 알아서 받아 합치고, **충돌나면 어떤 파일인지 바로 알려줘요.**
 

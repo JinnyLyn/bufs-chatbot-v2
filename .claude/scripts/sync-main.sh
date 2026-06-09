@@ -3,8 +3,8 @@
 # 현재 작업 브랜치를 최신 main과 동기화 (PR 시점 충돌 최소화용).
 # main이 앞서갔으면 받아서 합치고, 충돌이 있으면 "지금" 알려줍니다.
 #
-# 명령어 생소하면 에이전트한테:  "main이랑 동기화해줘 (scripts/sync-main.sh)"
-# 직접 돌릴 거면:                bash scripts/sync-main.sh
+# 명령어 생소하면 에이전트한테:  "main이랑 동기화해줘 (.claude/scripts/sync-main.sh)"
+# 직접 돌릴 거면:                bash .claude/scripts/sync-main.sh
 # ────────────────────────────────────────────────────────────────────────
 set -e
 cd "$(git rev-parse --show-toplevel)"

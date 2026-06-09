@@ -3,7 +3,7 @@
 # SessionStart 훅에서 자동 호출되는 "읽기 전용" 점검.
 #   - main이 내 브랜치보다 앞섰는지 fetch해서 확인
 #   - 합치면 충돌날지 미리보기 (워킹트리는 건드리지 않음 — merge 안 함)
-# 실제 동기화는 scripts/sync-main.sh 가 따로 합니다.
+# 실제 동기화는 .claude/scripts/sync-main.sh 가 따로 합니다.
 # 무엇이 실패하든 세션을 막지 않도록 항상 exit 0.
 # ────────────────────────────────────────────────────────────────────────
 
@@ -30,5 +30,5 @@ else
 fi
 
 echo "🔔 [동기화 알림] 현재 브랜치 '$branch'가 main보다 $ahead 커밋 뒤처져 있어요. $msg"
-echo "   → 'bash scripts/sync-main.sh' 실행, 또는 에이전트한테 \"main이랑 동기화해줘\"."
+echo "   → 'bash .claude/scripts/sync-main.sh' 실행, 또는 에이전트한테 \"main이랑 동기화해줘\"."
 exit 0

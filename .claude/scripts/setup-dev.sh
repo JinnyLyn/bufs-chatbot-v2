@@ -2,16 +2,16 @@
 # ────────────────────────────────────────────────────────────────────────
 # 레포 받은 직후 "한 번만" 돌리는 셋업 스크립트.
 # 명령어가 생소하면, 에이전트(Claude)한테 이렇게만 말하세요:
-#     "이 레포 처음 셋업해줘 (scripts/setup-dev.sh 실행)"
+#     "이 레포 처음 셋업해줘 (.claude/scripts/setup-dev.sh 실행)"
 #
-# 직접 돌릴 거면:   bash scripts/setup-dev.sh
+# 직접 돌릴 거면:   bash .claude/scripts/setup-dev.sh
 # 여러 번 돌려도 안전합니다(같은 설정을 다시 맞출 뿐).
 # ────────────────────────────────────────────────────────────────────────
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
 echo "▶ 1/2  main 직접 커밋 차단 훅 켜는 중..."
-git config core.hooksPath .githooks
+git config core.hooksPath .claude/githooks
 
 echo "▶ 2/2  줄바꿈(LF) 자동변환 끄는 중 (Windows/Mac 충돌 방지)..."
 git config core.autocrlf false

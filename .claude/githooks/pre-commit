@@ -5,7 +5,7 @@
 # main = 운영/배포 서버 코드. 여기 직접 커밋하면 막습니다.
 # git을 직접 치든, 에이전트(Claude Code/Desktop)가 치든, 똑같이 걸립니다.
 #
-# ▶ 활성화(각자 한 번만):  git config core.hooksPath .githooks
+# ▶ 활성화(각자 한 번만):  git config core.hooksPath .claude/githooks
 # ────────────────────────────────────────────────────────────────────────
 
 branch=$(git symbolic-ref --short HEAD 2>/dev/null)

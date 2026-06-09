@@ -12,7 +12,7 @@
 2. **작업 시작 = 최신 `main`에서 새 브랜치.** 그리고 **세션 시작 시 / 작업 중 주기적으로 /
    PR 올리기 직전에** `main`과 동기화해 충돌을 미리 드러낸다 (오래 작업해도 PR 시점 충돌 최소화):
    - feature 브랜치에서 `git fetch origin` 후 `git rev-list --count HEAD..origin/main`로
-     main이 앞서갔는지 확인. **앞서갔고 작업트리가 깨끗하면** `bash scripts/sync-main.sh`
+     main이 앞서갔는지 확인. **앞서갔고 작업트리가 깨끗하면** `bash .claude/scripts/sync-main.sh`
      (= `git merge origin/main`)로 합친다.
    - **충돌이 나면 즉시 사용자에게 알리고 함께 해결**한다(임의로 한쪽을 버리지 않는다).
    - 미커밋 변경이 있으면 먼저 커밋/스태시 후 동기화. `main` 브랜치에서는 하지 않는다.
@@ -29,10 +29,10 @@
 작업을 시작하기 전에, 이 레포의 훅이 켜져 있는지 확인하고 안 켜져 있으면 켠다:
 
 ```bash
-[ "$(git config --get core.hooksPath)" = ".githooks" ] || bash scripts/setup-dev.sh
+[ "$(git config --get core.hooksPath)" = ".claude/githooks" ] || bash .claude/scripts/setup-dev.sh
 ```
 
-사용자가 "셋업해줘"라고 하면 `bash scripts/setup-dev.sh`를 실행한다
+사용자가 "셋업해줘"라고 하면 `bash .claude/scripts/setup-dev.sh`를 실행한다
 (main 커밋 차단 훅 + 줄바꿈 정규화). 자세한 작업 절차는 `WORKFLOW.md`,
 OS·줄바꿈·인덱스 데이터 주의는 `WORKFLOW.md`의 "Windows/Mac 참고" 참조.
 
