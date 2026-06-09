@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "prepare": "cd .. && git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "lucide-react": "^1.8.0",
