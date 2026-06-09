@@ -18,11 +18,17 @@
 
 > 생성물(데이터·인덱스·평가 리포트)은 커밋하지 않는다 — `.gitignore`에 맡긴다.
 
-## 최초 1회 셋업 (각자, 또는 에이전트한테 시키기)
+## 에이전트 자가 셋업 (세션 시작 시 확인)
+
+작업을 시작하기 전에, 이 레포의 훅이 켜져 있는지 확인하고 안 켜져 있으면 켠다:
 
 ```bash
-git config core.hooksPath .githooks   # main 직접 커밋 차단 훅 활성화
+[ "$(git config --get core.hooksPath)" = ".githooks" ] || bash scripts/setup-dev.sh
 ```
+
+사용자가 "셋업해줘"라고 하면 `bash scripts/setup-dev.sh`를 실행한다
+(main 커밋 차단 훅 + 줄바꿈 정규화). 자세한 작업 절차는 `WORKFLOW.md`,
+OS·줄바꿈·인덱스 데이터 주의는 `WORKFLOW.md`의 "Windows/Mac 참고" 참조.
 
 ---
 

@@ -1,0 +1,19 @@
+# 모든 텍스트는 레포 안에서 LF로 통일 → Windows/Mac/Linux 줄바꿈 싸움 종료
+* text=auto eol=lf
+
+# 바이너리(줄바꿈 건드리면 깨짐)
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.pdf  binary
+*.docx binary
+*.xlsx binary
+*.pkl  binary
+*.bin  binary
+*.safetensors binary
+*.zip  binary
+
+# 쉘 스크립트는 LF, 윈도우 배치는 CRLF 고정
+*.sh  text eol=lf
+*.bat text eol=crlf
