@@ -1,0 +1,27 @@
+#!/bin/sh
+# ────────────────────────────────────────────────────────────────────────
+# main 직접 커밋 차단 훅 (WORKFLOW.md 제1원칙 강제)
+#
+# main = 운영/배포 서버 코드. 여기 직접 커밋하면 막습니다.
+# git을 직접 치든, 에이전트(Claude Code/Desktop)가 치든, 똑같이 걸립니다.
+#
+# ▶ 활성화(각자 한 번만):  git config core.hooksPath .githooks
+# ────────────────────────────────────────────────────────────────────────
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo ""
+  echo "  ⛔ '$branch'에 직접 커밋할 수 없습니다 (운영 서버 코드)."
+  echo ""
+  echo "  새 브랜치를 파서 작업하세요:"
+  echo "      git checkout -b feat/내-작업이름"
+  echo "      git add -p && git commit ..."
+  echo ""
+  echo "  방금 한 변경은 그대로 남아 있습니다. 브랜치만 옮기면 됩니다."
+  echo "  (자세한 규칙: WORKFLOW.md)"
+  echo ""
+  exit 1
+fi
+
+exit 0
