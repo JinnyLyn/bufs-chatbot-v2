@@ -91,7 +91,7 @@ class TestChatRouterOffline:
 
         resp = client.get(
             "/api/chat/stream",
-            params={"message": "졸업학점은?", "session_id": "test-sess"},
+            params={"question": "졸업학점은?", "session_id": "test-sess"},
             headers={"X-Test-Mode": "1"},
         )
         # 200 or streaming: accept any 2xx — SSE may return 200
@@ -110,7 +110,7 @@ class TestChatRouterOffline:
 
         resp = client.get(
             "/api/chat/stream",
-            params={"message": "테스트", "session_id": "test-sess"},
+            params={"question": "테스트", "session_id": "test-sess"},
             headers={"X-Test-Mode": "1"},
         )
         # Both the HTTP status AND the SSE body are required — each covers a
@@ -147,7 +147,7 @@ class TestChatRouterLive:
 
         resp = client.get(
             "/api/chat/stream",
-            params={"message": "안녕하세요", "session_id": "live-test"},
+            params={"question": "안녕하세요", "session_id": "live-test"},
             headers={"X-Test-Mode": "1"},
         )
         assert resp.status_code == 200
