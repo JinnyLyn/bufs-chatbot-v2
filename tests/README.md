@@ -78,6 +78,28 @@ QDRANT_DB_PATH=./qdrant_db \
 pytest -m integration -v
 ```
 
+#### H100 원격 LLM로 라이브 테스트 돌리기
+
+H100의 LLM은 **Ollama로 서빙**된다. `scripts/start-all-h100.ps1`이 SSH 터널로 원격
+`:11434`를 로컬 `127.0.0.1:11434`로 포워딩하므로, 라이브 테스트는 로컬 Ollama와
+동일하게 `OLLAMA_BASE_URL=http://127.0.0.1:11434`로 붙는다 (별도 API 클라이언트 불필요).
+
+```powershell
+# 1) 터널 + 스택 기동 (멱등적 — 이미 떠 있으면 건너뜀)
+powershell -ExecutionPolicy Bypass -File scripts\start-all-h100.ps1
+
+# 2) 라이브 통합 테스트 (PowerShell 환경변수 문법)
+$env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+$env:LLM_MODEL       = "qwen3.5:9b"   # 반드시 대상 H100 Ollama에 pull 돼 있는 모델
+pytest -m integration -v
+```
+
+> **모델 이름 주의**: `LLM_MODEL`은 대상 Ollama에 **실제로 존재하는** 모델이어야 한다
+> (`curl http://127.0.0.1:11434/api/tags`로 확인). config 기본값
+> `qwen3:4b-instruct-2507-q4_K_M`이 해당 인스턴스에 없으면 `model not found`로 실패하므로,
+> 존재하는 모델(예: `qwen3.5:9b`)로 오버라이드한다. H100 인스턴스마다 pull 된 모델이 다를 수
+> 있으니 항상 `/api/tags`로 먼저 확인할 것.
+
 > **참고**: `pytest -m integration` 실행 시 테스트가 하나도 수집되지 않으면 pytest는
 > **exit code 5**를 반환합니다 (테스트 없음). CI에서 이를 성공으로 처리하려면
 > `|| true` 또는 `--ignore-glob` 등을 활용하세요.
