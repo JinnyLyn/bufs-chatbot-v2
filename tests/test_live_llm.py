@@ -54,7 +54,7 @@ def test_live_ollama_returns_nonempty_response():
 
     Timeout 60 s is generous for first-call VRAM load on RTX 4090.
     """
-    client = ollama.Client(host=_OLLAMA_URL)
+    client = ollama.Client(host=_OLLAMA_URL, timeout=60.0)
     response = client.chat(
         model=_LLM_MODEL,
         messages=[{"role": "user", "content": "안녕하세요. 한 문장으로 짧게 답해주세요."}],
@@ -77,7 +77,7 @@ def test_live_ollama_responds_to_korean_query():
 
     think=False ensures token budget goes to the answer, not internal reasoning.
     """
-    client = ollama.Client(host=_OLLAMA_URL)
+    client = ollama.Client(host=_OLLAMA_URL, timeout=60.0)
     response = client.chat(
         model=_LLM_MODEL,
         messages=[{
@@ -96,7 +96,7 @@ def test_live_ollama_responds_to_korean_query():
 @_SKIP_NO_OLLAMA
 def test_live_ollama_model_name_is_reachable():
     """Model name is present in Ollama's local model list (sanity / connectivity check)."""
-    client = ollama.Client(host=_OLLAMA_URL)
+    client = ollama.Client(host=_OLLAMA_URL, timeout=60.0)
     model_list = client.list()
     names = [m.model for m in model_list.models]
     assert any(_LLM_MODEL in name for name in names), (

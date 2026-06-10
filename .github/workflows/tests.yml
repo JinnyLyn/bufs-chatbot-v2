@@ -27,21 +27,10 @@ jobs:
             ${{ runner.os }}-pip-minimal-
 
       - name: Install test dependencies (minimal — no torch/sentence-transformers)
-        # Full requirements.txt includes sentence-transformers/torch which are
-        # ~4 GB and slow to install.  The 8 unit-target modules only need the
-        # subset below.  If you need the full install, uncomment the next line:
-        #   pip install -r requirements.txt
-        # and remove the manual install below.
-        run: |
-          pip install \
-            "pytest>=8.3" \
-            "pytest-asyncio>=0.24" \
-            "pytest-cov>=6.0" \
-            pydantic \
-            "langgraph==1.2.0" \
-            "langchain-text-splitters==1.1.2" \
-            "tiktoken==0.13.0" \
-            "pymupdf4llm==1.27.2.3"
+        # requirements-dev.txt is the single source of truth for the unit-test
+        # subset.  Full requirements.txt (~4 GB torch/sentence-transformers) is
+        # only needed for integration/production installs.
+        run: pip install -r requirements-dev.txt
 
       - name: Run offline unit tests with coverage
         run: |

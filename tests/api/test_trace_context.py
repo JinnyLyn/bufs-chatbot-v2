@@ -106,14 +106,18 @@ class TestTraceFilter:
         assert record.trace_id == get_trace_id()
 
     def test_trace_id_var_module_default_is_dash(self):
-        """The ContextVar is defined with default='-' — verify via the default kwarg."""
+        """The ContextVar default is '-', verified in a truly empty context.
+
+        copy_context() copies the CURRENT context where the var may already be
+        set by other tests in the same thread.  contextvars.Context() creates a
+        brand-new empty context; calling .run() there exercises the declared
+        default rather than any previously set value.
+        """
+        import contextvars
         from api.trace_context import _trace_id_var
-        # ContextVar.get(default) returns *default* only when the var has no value
-        # in the current context. We can probe the module default by inspecting it
-        # in a truly empty context created via copy_context on a clean state.
-        # Simpler: just confirm the declared default matches what the code documents.
-        assert _trace_id_var.get("SENTINEL") != "SENTINEL"  # var IS set in this context
-        # The actual default ("-") is documented and tested via the conftest reset fixture.
+        ctx = contextvars.Context()  # empty context — var has never been set here
+        result = ctx.run(_trace_id_var.get)
+        assert result == "-"
 
     def test_filter_reflects_updated_trace_id(self):
         _, set_trace_id, _, TraceFilter = _import_trace_context()

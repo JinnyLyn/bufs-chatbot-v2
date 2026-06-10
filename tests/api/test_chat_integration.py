@@ -113,8 +113,10 @@ class TestChatRouterOffline:
             params={"message": "테스트", "session_id": "test-sess"},
             headers={"X-Test-Mode": "1"},
         )
-        # SSE body should mention 'done' somewhere
-        assert "done" in resp.text or resp.status_code == 200
+        # Both the HTTP status AND the SSE body are required — each covers a
+        # different failure mode (transport vs. payload).
+        assert resp.status_code == 200
+        assert "done" in resp.text
 
 
 # ---------------------------------------------------------------------------
