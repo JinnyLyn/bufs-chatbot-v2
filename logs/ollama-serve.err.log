@@ -1,0 +1,1134 @@
+time=2026-06-05T20:22:35.513+09:00 level=INFO source=routes.go:1802 msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:0 OLLAMA_DEBUG:INFO OLLAMA_DEBUG_LOG_REQUESTS:false OLLAMA_EDITOR: OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://127.0.0.1:11435 OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MAX_TRANSFER_STREAMS:4 OLLAMA_MODELS:C:\\Users\\suhwa\\.ollama\\models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NO_CLOUD:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false OLLAMA_VULKAN:false ROCR_VISIBLE_DEVICES:]"
+time=2026-06-05T20:22:35.532+09:00 level=INFO source=routes.go:1804 msg="Ollama cloud disabled: false"
+time=2026-06-05T20:22:35.552+09:00 level=INFO source=images.go:517 msg="total blobs: 36"
+time=2026-06-05T20:22:35.555+09:00 level=INFO source=images.go:524 msg="total unused blobs removed: 0"
+time=2026-06-05T20:22:35.557+09:00 level=INFO source=routes.go:1864 msg="Listening on 127.0.0.1:11435 (version 0.24.0)"
+time=2026-06-05T20:22:35.562+09:00 level=INFO source=runner.go:67 msg="discovering available GPUs..."
+time=2026-06-05T20:22:35.580+09:00 level=INFO source=runner.go:106 msg="experimental Vulkan support disabled.  To enable, set OLLAMA_VULKAN=1"
+time=2026-06-05T20:22:35.585+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 51880"
+time=2026-06-05T20:22:35.866+09:00 level=WARN source=model_show_cache.go:591 msg="failed to open manifest config while checking model show cache eligibility" error="open C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-2f15b3218f0552c60647ce60ada83632d2c09755b16259b13e3e4458e9ae419d: The system cannot find the file specified."
+time=2026-06-05T20:22:35.871+09:00 level=WARN source=model_show_cache.go:336 msg="failed to hydrate local model show cache" model=registry.ollama.ai/library/qwen2.5:7b-instruct-q4_K_M error="open C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-2f15b3218f0552c60647ce60ada83632d2c09755b16259b13e3e4458e9ae419d: The system cannot find the file specified."
+time=2026-06-05T20:22:36.118+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h15m5.453319645s consecutive_failures=0
+time=2026-06-05T20:22:36.631+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 51906"
+time=2026-06-05T20:22:37.440+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 51948"
+time=2026-06-05T20:22:38.055+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 51992"
+time=2026-06-05T20:22:38.055+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 51991"
+time=2026-06-05T20:22:38.387+09:00 level=INFO source=types.go:42 msg="inference compute" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 filter_id="" library=CUDA compute=8.9 name=CUDA0 description="NVIDIA GeForce RTX 4070" libdirs=ollama,cuda_v13 driver=13.0 pci_id=0000:01:00.0 type=discrete total="12.0 GiB" available="9.9 GiB"
+time=2026-06-05T20:22:38.387+09:00 level=INFO source=routes.go:1914 msg="vram-based default context" total_vram="12.0 GiB" default_num_ctx=4096
+time=2026-06-05T20:22:41.670+09:00 level=WARN source=routes.go:1447 msg="bad manifest filepath" name=registry.ollama.ai/library/qwen2.5:7b-instruct-q4_K_M error="open C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-2f15b3218f0552c60647ce60ada83632d2c09755b16259b13e3e4458e9ae419d: The system cannot find the file specified."
+time=2026-06-05T20:24:53.009+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 55433"
+time=2026-06-05T20:24:53.367+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-05T20:24:53.368+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-05T20:24:53.368+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-05T20:24:53.457+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-05T20:24:53.460+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 55457"
+time=2026-06-05T20:24:53.468+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="16.3 GiB" free_swap="14.6 GiB"
+time=2026-06-05T20:24:53.468+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="9.5 GiB" free="9.9 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-05T20:24:53.468+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-05T20:24:53.617+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-05T20:24:53.639+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:55457"
+time=2026-06-05T20:24:53.648+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-05T20:24:53.679+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-05T20:24:53.784+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-05T20:24:54.506+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-05T20:24:54.978+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-05T20:24:54.978+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-05T20:24:54.978+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-05T20:24:54.978+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-05T20:24:54.981+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-05T20:24:54.981+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-05T20:24:54.981+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-05T20:24:54.981+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-05T20:24:54.982+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-05T20:24:54.982+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-05T20:24:54.982+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-05T20:24:54.982+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-05T20:24:54.985+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-05T20:24:57.012+09:00 level=INFO source=server.go:1432 msg="llama runner started in 3.54 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 2424078336 total: 12878610432
+time=2026-06-05T20:34:52.941+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 56054"
+time=2026-06-06T00:37:41.887+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h38m2.639290743s consecutive_failures=0
+time=2026-06-06T05:15:44.864+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h52m55.622123007s consecutive_failures=0
+time=2026-06-06T09:08:40.819+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h17m6.136395963s consecutive_failures=0
+time=2026-06-06T13:25:47.313+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h14m19.216258151s consecutive_failures=0
+time=2026-06-06T13:46:04.800+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 55915"
+time=2026-06-06T13:46:05.646+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-06T13:46:05.647+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-06T13:46:05.647+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-06T13:46:05.730+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-06T13:46:05.732+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 55951"
+time=2026-06-06T13:46:05.739+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="16.0 GiB" free_swap="13.0 GiB"
+time=2026-06-06T13:46:05.739+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="9.3 GiB" free="9.8 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-06T13:46:05.739+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-06T13:46:05.866+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-06T13:46:05.887+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:55951"
+time=2026-06-06T13:46:05.896+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T13:46:05.927+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-06T13:46:06.015+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-06T13:46:06.672+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T13:46:07.176+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T13:46:07.176+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-06T13:46:07.176+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-06T13:46:07.176+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-06T13:46:07.179+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-06T13:46:07.186+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-06T13:46:07.186+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-06T13:46:07.186+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-06T13:46:07.186+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-06T13:46:07.186+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-06T13:46:07.186+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-06T13:46:07.186+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-06T13:46:07.190+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-06T13:46:09.221+09:00 level=INFO source=server.go:1432 msg="llama runner started in 3.48 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1979076608 total: 12878610432
+time=2026-06-06T13:51:37.694+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 63046"
+time=2026-06-06T13:58:52.145+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 49463"
+time=2026-06-06T13:58:52.495+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-06T13:58:52.495+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-06T13:58:52.495+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-06T13:58:52.578+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-06T13:58:52.579+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 49485"
+time=2026-06-06T13:58:52.585+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="14.3 GiB" free_swap="8.9 GiB"
+time=2026-06-06T13:58:52.585+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="9.3 GiB" free="9.8 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-06T13:58:52.585+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-06T13:58:52.744+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-06T13:58:52.767+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:49485"
+time=2026-06-06T13:58:52.776+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T13:58:52.807+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-06T13:58:52.907+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-06T13:58:53.471+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T13:58:54.026+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T13:58:54.026+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-06T13:58:54.026+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-06T13:58:54.026+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-06T13:58:54.029+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-06T13:58:54.029+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-06T13:58:54.029+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-06T13:58:54.029+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-06T13:58:54.030+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-06T13:58:54.030+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-06T13:58:54.030+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-06T13:58:54.030+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-06T13:58:54.034+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-06T13:58:55.303+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.72 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 2296922112 total: 12878610432
+time=2026-06-06T14:06:30.511+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 60887"
+time=2026-06-06T15:04:27.918+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 57442"
+time=2026-06-06T15:04:28.277+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-06T15:04:28.286+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-06T15:04:28.286+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-06T15:04:28.396+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-06T15:04:28.399+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 57464"
+time=2026-06-06T15:04:28.408+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="15.4 GiB" free_swap="7.8 GiB"
+time=2026-06-06T15:04:28.408+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="9.2 GiB" free="9.7 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-06T15:04:28.409+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-06T15:04:28.548+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-06T15:04:28.571+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:57464"
+time=2026-06-06T15:04:28.580+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T15:04:28.613+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-06T15:04:28.725+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-06T15:04:29.280+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T15:04:29.930+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T15:04:29.930+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-06T15:04:29.930+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-06T15:04:29.930+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-06T15:04:29.933+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-06T15:04:29.933+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-06T15:04:29.933+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-06T15:04:29.933+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-06T15:04:29.934+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-06T15:04:29.934+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-06T15:04:29.934+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-06T15:04:29.934+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-06T15:04:29.938+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-06T15:04:31.208+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.80 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1845231616 total: 12878610432
+time=2026-06-06T15:53:23.382+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 64517"
+time=2026-06-06T16:14:40.131+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 62985"
+time=2026-06-06T16:14:40.466+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-06T16:14:40.466+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-06T16:14:40.466+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-06T16:14:40.562+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-06T16:14:40.565+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 63006"
+time=2026-06-06T16:14:40.574+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="15.7 GiB" free_swap="7.6 GiB"
+time=2026-06-06T16:14:40.574+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="9.0 GiB" free="9.5 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-06T16:14:40.574+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-06T16:14:40.703+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-06T16:14:40.725+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:63006"
+time=2026-06-06T16:14:40.729+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T16:14:40.761+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-06T16:14:40.862+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-06T16:14:41.386+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T16:14:42.016+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-06T16:14:42.019+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-06T16:14:42.016+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-06T16:14:42.016+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-06T16:14:42.016+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-06T16:14:42.024+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-06T16:14:42.026+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-06T16:14:42.026+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-06T16:14:42.026+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-06T16:14:42.026+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-06T16:14:42.026+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-06T16:14:42.026+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-06T16:14:42.030+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-06T16:14:43.044+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.47 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1921847296 total: 12878610432
+time=2026-06-06T16:22:34.617+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 60092"
+time=2026-06-06T16:40:06.864+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h28m33.278908042s consecutive_failures=0
+time=2026-06-06T21:08:43.283+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h16m32.269009153s consecutive_failures=0
+time=2026-06-07T01:25:16.584+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h27m21.065398007s consecutive_failures=0
+time=2026-06-07T05:52:39.190+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h16m27.108879758s consecutive_failures=0
+time=2026-06-07T09:09:06.660+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h38m55.536729129s consecutive_failures=0
+time=2026-06-07T12:48:02.461+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h54m28.540407274s consecutive_failures=0
+time=2026-06-07T16:42:32.854+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h16m56.654711138s consecutive_failures=0
+time=2026-06-07T18:39:44.276+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 59495"
+time=2026-06-07T18:39:44.949+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-07T18:39:44.949+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-07T18:39:44.949+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-07T18:39:45.023+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-07T18:39:45.031+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 59527"
+time=2026-06-07T18:39:45.038+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="13.5 GiB" free_swap="7.5 GiB"
+time=2026-06-07T18:39:45.038+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="8.9 GiB" free="9.4 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-07T18:39:45.038+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-07T18:39:45.174+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-07T18:39:45.195+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:59527"
+time=2026-06-07T18:39:45.201+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T18:39:45.232+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-07T18:39:45.317+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-07T18:39:45.949+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T18:39:46.573+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T18:39:46.573+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-07T18:39:46.573+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-07T18:39:46.573+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-07T18:39:46.573+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-07T18:39:46.583+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-07T18:39:46.583+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-07T18:39:46.583+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-07T18:39:46.584+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-07T18:39:46.584+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-07T18:39:46.584+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-07T18:39:46.584+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-07T18:39:46.584+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-07T18:39:48.589+09:00 level=INFO source=server.go:1432 msg="llama runner started in 3.55 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1829720064 total: 12878610432
+time=2026-06-07T18:45:17.359+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 65179"
+time=2026-06-07T19:59:30.361+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h31m48.489832969s consecutive_failures=0
+time=2026-06-07T20:21:53.140+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 57951"
+time=2026-06-07T20:21:53.743+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-07T20:21:53.743+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-07T20:21:53.744+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-07T20:21:53.829+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-07T20:21:53.831+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 57977"
+time=2026-06-07T20:21:53.836+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="12.4 GiB" free_swap="6.7 GiB"
+time=2026-06-07T20:21:53.836+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="8.9 GiB" free="9.4 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-07T20:21:53.836+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-07T20:21:53.977+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-07T20:21:53.999+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:57977"
+time=2026-06-07T20:21:54.002+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T20:21:54.033+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-07T20:21:54.136+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-07T20:21:54.713+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T20:21:55.489+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T20:21:55.490+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-07T20:21:55.489+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-07T20:21:55.489+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-07T20:21:55.489+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-07T20:21:55.498+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-07T20:21:55.499+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-07T20:21:55.499+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-07T20:21:55.499+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-07T20:21:55.499+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-07T20:21:55.499+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-07T20:21:55.499+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-07T20:21:55.500+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-07T20:21:57.504+09:00 level=INFO source=server.go:1432 msg="llama runner started in 3.67 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1848307712 total: 12878610432
+time=2026-06-07T21:01:58.821+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 60518"
+time=2026-06-07T21:15:48.731+09:00 level=WARN source=routes.go:1447 msg="bad manifest filepath" name=registry.ollama.ai/library/qwen2.5:7b-instruct-q4_K_M error="open C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-2f15b3218f0552c60647ce60ada83632d2c09755b16259b13e3e4458e9ae419d: The system cannot find the file specified."
+time=2026-06-07T21:16:04.030+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 55046"
+time=2026-06-07T21:16:04.353+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-07T21:16:04.354+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-07T21:16:04.354+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-07T21:16:04.435+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-07T21:16:04.437+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 55066"
+time=2026-06-07T21:16:04.442+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="12.1 GiB" free_swap="6.6 GiB"
+time=2026-06-07T21:16:04.442+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="8.9 GiB" free="9.4 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-07T21:16:04.442+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-07T21:16:04.572+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-07T21:16:04.593+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:55066"
+time=2026-06-07T21:16:04.604+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T21:16:04.635+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-07T21:16:04.718+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-07T21:16:05.260+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T21:16:06.039+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T21:16:06.039+09:00 level=INFO source=ggml.go:490 msg="offloading 32 repeating layers to GPU"
+time=2026-06-07T21:16:06.039+09:00 level=INFO source=ggml.go:497 msg="offloading output layer to GPU"
+time=2026-06-07T21:16:06.039+09:00 level=INFO source=ggml.go:502 msg="offloaded 33/33 layers to GPU"
+time=2026-06-07T21:16:06.039+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="5.6 GiB"
+time=2026-06-07T21:16:06.049+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="563.7 MiB"
+time=2026-06-07T21:16:06.050+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.5 GiB"
+time=2026-06-07T21:16:06.050+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="587.0 MiB"
+time=2026-06-07T21:16:06.051+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="31.7 MiB"
+time=2026-06-07T21:16:06.051+09:00 level=INFO source=device.go:272 msg="total memory" size="8.2 GiB"
+time=2026-06-07T21:16:06.051+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-07T21:16:06.051+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-07T21:16:06.052+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-07T21:16:07.306+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.86 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1832476672 total: 12878610432
+time=2026-06-07T21:24:41.463+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-07T21:24:41.464+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-07T21:24:41.464+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-07T21:24:41.464+09:00 level=INFO source=sched.go:627 msg="updated VRAM based on existing loaded models" gpu=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA total="12.0 GiB" available="1.7 GiB"
+llama_model_loader: loaded meta data with 32 key-value pairs and 292 tensors from C:\Users\suhwa\.ollama\models\blobs\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = exaone
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = EXAONE 3.5 7.8B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = EXAONE-3.5
+llama_model_loader: - kv   5:                         general.size_label str              = 7.8B
+llama_model_loader: - kv   6:                            general.license str              = other
+llama_model_loader: - kv   7:                       general.license.name str              = exaone
+llama_model_loader: - kv   8:                       general.license.link str              = LICENSE
+llama_model_loader: - kv   9:                               general.tags arr[str,4]       = ["lg-ai", "exaone", "exaone-3.5", "te...
+llama_model_loader: - kv  10:                          general.languages arr[str,2]       = ["en", "ko"]
+llama_model_loader: - kv  11:                    exaone.embedding_length u32              = 4096
+llama_model_loader: - kv  12:                exaone.attention.head_count u32              = 32
+llama_model_loader: - kv  13:             exaone.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  14:                      exaone.context_length u32              = 32768
+llama_model_loader: - kv  15:    exaone.attention.layer_norm_rms_epsilon f32              = 0.000010
+llama_model_loader: - kv  16:                 exaone.feed_forward_length u32              = 14336
+llama_model_loader: - kv  17:                         exaone.block_count u32              = 32
+llama_model_loader: - kv  18:                          general.file_type u32              = 15
+llama_model_loader: - kv  19:                      exaone.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  20:                exaone.rope.dimension_count u32              = 128
+llama_model_loader: - kv  21:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  22:                         tokenizer.ggml.pre str              = exaone
+llama_model_loader: - kv  23:                      tokenizer.ggml.tokens arr[str,102400]  = ["[PAD]", "[BOS]", "[EOS]", "[UNK]", ...
+llama_model_loader: - kv  24:                  tokenizer.ggml.token_type arr[i32,102400]  = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, ...
+llama_model_loader: - kv  25:                      tokenizer.ggml.merges arr[str,101782]  = ["t h", "Ġ a", "Ġ í", "i n", "Ġ t...
+llama_model_loader: - kv  26:                tokenizer.ggml.bos_token_id u32              = 1
+llama_model_loader: - kv  27:                tokenizer.ggml.eos_token_id u32              = 361
+llama_model_loader: - kv  28:            tokenizer.ggml.unknown_token_id u32              = 3
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  30:                    tokenizer.chat_template str              = {% for message in messages %}{% if lo...
+llama_model_loader: - kv  31:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:   66 tensors
+llama_model_loader: - type q4_K:  193 tensors
+llama_model_loader: - type q6_K:   33 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 4.44 GiB (4.88 BPW) 
+load: special_eos_id is not in special_eog_ids - the tokenizer config may be incorrect
+load: printing all EOG tokens:
+load:   - 42 ('<|endoftext|>')
+load:   - 361 ('[|endofturn|]')
+load: special tokens cache size = 362
+load: token to piece cache size = 0.6622 MB
+print_info: arch             = exaone
+print_info: vocab_only       = 1
+print_info: no_alloc         = 0
+print_info: model type       = ?B
+print_info: model params     = 7.82 B
+print_info: general.name     = EXAONE 3.5 7.8B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 102400
+print_info: n_merges         = 101782
+print_info: BOS token        = 1 '[BOS]'
+print_info: EOS token        = 361 '[|endofturn|]'
+print_info: EOT token        = 42 '<|endoftext|>'
+print_info: UNK token        = 3 '[UNK]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: LF token         = 560 'Ċ'
+print_info: EOG token        = 42 '<|endoftext|>'
+print_info: EOG token        = 361 '[|endofturn|]'
+print_info: max token length = 48
+llama_model_load: vocab only - skipping tensors
+time=2026-06-07T21:24:41.603+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 --port 54256"
+time=2026-06-07T21:24:41.609+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="11.2 GiB" free_swap="1.3 GiB"
+time=2026-06-07T21:24:41.609+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="1.3 GiB" free="1.7 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-07T21:24:41.609+09:00 level=INFO source=server.go:532 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-07T21:24:41.609+09:00 level=INFO source=server.go:1064 msg="model requires more gpu memory than is currently available, evicting a model to make space" "loaded layers"=7
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1832476672 total: 12878610432
+time=2026-06-07T21:24:41.884+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 54258"
+time=2026-06-07T21:24:41.888+09:00 level=INFO source=runner.go:965 msg="starting go runner"
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-07T21:24:42.005+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-07T21:24:42.007+09:00 level=INFO source=runner.go:1001 msg="Server listening on 127.0.0.1:54256"
+time=2026-06-07T21:24:42.154+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 54275"
+time=2026-06-07T21:24:42.426+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-07T21:24:42.426+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-07T21:24:42.426+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-07T21:24:42.441+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="11.9 GiB" free_swap="6.6 GiB"
+time=2026-06-07T21:24:42.442+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="8.8 GiB" free="9.2 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-07T21:24:42.442+09:00 level=INFO source=server.go:532 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-07T21:24:42.442+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="4.2 GiB"
+time=2026-06-07T21:24:42.442+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="512.0 MiB"
+time=2026-06-07T21:24:42.442+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="341.3 MiB"
+time=2026-06-07T21:24:42.442+09:00 level=INFO source=device.go:272 msg="total memory" size="5.1 GiB"
+time=2026-06-07T21:24:42.443+09:00 level=INFO source=runner.go:895 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Auto KvSize:4096 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-07T21:24:42.443+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-07T21:24:42.444+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 10076381184 total: 12878610432
+llama_model_load_from_file_impl: using device CUDA0 (NVIDIA GeForce RTX 4070) (0000:01:00.0) - 9609 MiB free
+llama_model_loader: loaded meta data with 32 key-value pairs and 292 tensors from C:\Users\suhwa\.ollama\models\blobs\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = exaone
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = EXAONE 3.5 7.8B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = EXAONE-3.5
+llama_model_loader: - kv   5:                         general.size_label str              = 7.8B
+llama_model_loader: - kv   6:                            general.license str              = other
+llama_model_loader: - kv   7:                       general.license.name str              = exaone
+llama_model_loader: - kv   8:                       general.license.link str              = LICENSE
+llama_model_loader: - kv   9:                               general.tags arr[str,4]       = ["lg-ai", "exaone", "exaone-3.5", "te...
+llama_model_loader: - kv  10:                          general.languages arr[str,2]       = ["en", "ko"]
+llama_model_loader: - kv  11:                    exaone.embedding_length u32              = 4096
+llama_model_loader: - kv  12:                exaone.attention.head_count u32              = 32
+llama_model_loader: - kv  13:             exaone.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  14:                      exaone.context_length u32              = 32768
+llama_model_loader: - kv  15:    exaone.attention.layer_norm_rms_epsilon f32              = 0.000010
+llama_model_loader: - kv  16:                 exaone.feed_forward_length u32              = 14336
+llama_model_loader: - kv  17:                         exaone.block_count u32              = 32
+llama_model_loader: - kv  18:                          general.file_type u32              = 15
+llama_model_loader: - kv  19:                      exaone.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  20:                exaone.rope.dimension_count u32              = 128
+llama_model_loader: - kv  21:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  22:                         tokenizer.ggml.pre str              = exaone
+llama_model_loader: - kv  23:                      tokenizer.ggml.tokens arr[str,102400]  = ["[PAD]", "[BOS]", "[EOS]", "[UNK]", ...
+llama_model_loader: - kv  24:                  tokenizer.ggml.token_type arr[i32,102400]  = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, ...
+llama_model_loader: - kv  25:                      tokenizer.ggml.merges arr[str,101782]  = ["t h", "Ġ a", "Ġ í", "i n", "Ġ t...
+llama_model_loader: - kv  26:                tokenizer.ggml.bos_token_id u32              = 1
+llama_model_loader: - kv  27:                tokenizer.ggml.eos_token_id u32              = 361
+llama_model_loader: - kv  28:            tokenizer.ggml.unknown_token_id u32              = 3
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  30:                    tokenizer.chat_template str              = {% for message in messages %}{% if lo...
+llama_model_loader: - kv  31:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:   66 tensors
+llama_model_loader: - type q4_K:  193 tensors
+llama_model_loader: - type q6_K:   33 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 4.44 GiB (4.88 BPW) 
+load: special_eos_id is not in special_eog_ids - the tokenizer config may be incorrect
+load: printing all EOG tokens:
+load:   - 42 ('<|endoftext|>')
+load:   - 361 ('[|endofturn|]')
+load: special tokens cache size = 362
+load: token to piece cache size = 0.6622 MB
+print_info: arch             = exaone
+print_info: vocab_only       = 0
+print_info: no_alloc         = 0
+print_info: n_ctx_train      = 32768
+print_info: n_embd           = 4096
+print_info: n_embd_inp       = 4096
+print_info: n_layer          = 32
+print_info: n_head           = 32
+print_info: n_head_kv        = 8
+print_info: n_rot            = 128
+print_info: n_swa            = 0
+print_info: is_swa_any       = 0
+print_info: n_embd_head_k    = 128
+print_info: n_embd_head_v    = 128
+print_info: n_gqa            = 4
+print_info: n_embd_k_gqa     = 1024
+print_info: n_embd_v_gqa     = 1024
+print_info: f_norm_eps       = 0.0e+00
+print_info: f_norm_rms_eps   = 1.0e-05
+print_info: f_clamp_kqv      = 0.0e+00
+print_info: f_max_alibi_bias = 0.0e+00
+print_info: f_logit_scale    = 0.0e+00
+print_info: f_attn_scale     = 0.0e+00
+print_info: n_ff             = 14336
+print_info: n_expert         = 0
+print_info: n_expert_used    = 0
+print_info: n_expert_groups  = 0
+print_info: n_group_used     = 0
+print_info: causal attn      = 1
+print_info: pooling type     = 0
+print_info: rope type        = 2
+print_info: rope scaling     = linear
+print_info: freq_base_train  = 1000000.0
+print_info: freq_scale_train = 1
+print_info: n_ctx_orig_yarn  = 32768
+print_info: rope_yarn_log_mul= 0.0000
+print_info: rope_finetuned   = unknown
+print_info: model type       = 8B
+print_info: model params     = 7.82 B
+print_info: general.name     = EXAONE 3.5 7.8B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 102400
+print_info: n_merges         = 101782
+print_info: BOS token        = 1 '[BOS]'
+print_info: EOS token        = 361 '[|endofturn|]'
+print_info: EOT token        = 42 '<|endoftext|>'
+print_info: UNK token        = 3 '[UNK]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: LF token         = 560 'Ċ'
+print_info: EOG token        = 42 '<|endoftext|>'
+print_info: EOG token        = 361 '[|endofturn|]'
+print_info: max token length = 48
+load_tensors: loading model tensors, this can take a while... (mmap = false)
+load_tensors: offloading 32 repeating layers to GPU
+load_tensors: offloading output layer to GPU
+load_tensors: offloaded 33/33 layers to GPU
+load_tensors:          CPU model buffer size =   225.00 MiB
+load_tensors:        CUDA0 model buffer size =  4320.64 MiB
+llama_context: constructing llama_context
+llama_context: n_seq_max     = 1
+llama_context: n_ctx         = 4096
+llama_context: n_ctx_seq     = 4096
+llama_context: n_batch       = 512
+llama_context: n_ubatch      = 512
+llama_context: causal_attn   = 1
+llama_context: flash_attn    = auto
+llama_context: kv_unified    = false
+llama_context: freq_base     = 1000000.0
+llama_context: freq_scale    = 1
+llama_context: n_ctx_seq (4096) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+llama_context:  CUDA_Host  output buffer size =     0.41 MiB
+llama_kv_cache:      CUDA0 KV buffer size =   512.00 MiB
+llama_kv_cache: size =  512.00 MiB (  4096 cells,  32 layers,  1/1 seqs), K (f16):  256.00 MiB, V (f16):  256.00 MiB
+llama_context: Flash Attention was auto, set to enabled
+llama_context:      CUDA0 compute buffer size =   208.00 MiB
+llama_context:  CUDA_Host compute buffer size =    16.01 MiB
+llama_context: graph nodes  = 999
+llama_context: graph splits = 2
+time=2026-06-07T21:24:44.447+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.84 seconds"
+time=2026-06-07T21:24:44.447+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-07T21:24:44.447+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-07T21:24:44.448+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.84 seconds"
+time=2026-06-07T21:36:54.436+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 65105"
+time=2026-06-07T21:36:55.040+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 65128"
+time=2026-06-08T00:31:19.154+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h22m20.442114536s consecutive_failures=0
+time=2026-06-08T04:53:41.106+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h14m18.59922094s consecutive_failures=0
+time=2026-06-08T08:08:00.004+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h7m20.47929065s consecutive_failures=0
+time=2026-06-08T12:15:20.773+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h16m20.278124392s consecutive_failures=0
+time=2026-06-08T14:13:41.540+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 62042"
+time=2026-06-08T14:13:42.001+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-08T14:13:42.010+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-08T14:13:42.010+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-08T14:13:42.134+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-08T14:13:42.139+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 62078"
+time=2026-06-08T14:13:42.144+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="12.5 GiB" free_swap="446.2 MiB"
+time=2026-06-08T14:13:42.144+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="1.2 GiB" free="1.7 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-08T14:13:42.144+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-08T14:13:42.286+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-08T14:13:42.309+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:62078"
+time=2026-06-08T14:13:42.311+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:13:42.343+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-08T14:13:42.427+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-08T14:13:43.129+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:4[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:4(28..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:13:43.420+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:3[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:3(29..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:13:43.697+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:3[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:3(29..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:13:45.428+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:3[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:3(29..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:13:45.428+09:00 level=INFO source=ggml.go:490 msg="offloading 3 repeating layers to GPU"
+time=2026-06-08T14:13:45.428+09:00 level=INFO source=ggml.go:494 msg="offloading output layer to CPU"
+time=2026-06-08T14:13:45.428+09:00 level=INFO source=ggml.go:502 msg="offloaded 3/33 layers to GPU"
+time=2026-06-08T14:13:45.428+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="385.3 MiB"
+time=2026-06-08T14:13:45.456+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="5.8 GiB"
+time=2026-06-08T14:13:45.456+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="120.7 MiB"
+time=2026-06-08T14:13:45.472+09:00 level=INFO source=device.go:256 msg="kv cache" device=CPU size="1.2 GiB"
+time=2026-06-08T14:13:45.494+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="616.3 MiB"
+time=2026-06-08T14:13:45.524+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="629.1 MiB"
+time=2026-06-08T14:13:45.529+09:00 level=INFO source=device.go:272 msg="total memory" size="8.7 GiB"
+time=2026-06-08T14:13:45.536+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-08T14:13:45.542+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-08T14:13:45.549+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-08T14:13:47.129+09:00 level=INFO source=server.go:1432 msg="llama runner started in 4.99 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 2169389056 total: 12878610432
+time=2026-06-08T14:18:54.870+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 58913"
+time=2026-06-08T14:18:55.157+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 58931"
+time=2026-06-08T14:18:55.422+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-08T14:18:55.422+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-08T14:18:55.422+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-08T14:18:55.506+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-08T14:18:55.506+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 58947"
+time=2026-06-08T14:18:55.512+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="11.9 GiB" free_swap="9.1 GiB"
+time=2026-06-08T14:18:55.512+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="2.7 GiB" free="3.1 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-08T14:18:55.512+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-08T14:18:55.640+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-08T14:18:55.663+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:58947"
+time=2026-06-08T14:18:55.672+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:18:55.704+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-08T14:18:55.779+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-08T14:18:56.320+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:12[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:12(20..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:18:56.603+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:12[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:12(20..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:18:57.580+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:8192 KvCacheType: NumThreads:6 GPULayers:12[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:12(20..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:18:57.580+09:00 level=INFO source=ggml.go:490 msg="offloading 12 repeating layers to GPU"
+time=2026-06-08T14:18:57.580+09:00 level=INFO source=ggml.go:494 msg="offloading output layer to CPU"
+time=2026-06-08T14:18:57.580+09:00 level=INFO source=ggml.go:502 msg="offloaded 12/33 layers to GPU"
+time=2026-06-08T14:18:57.580+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="1.4 GiB"
+time=2026-06-08T14:18:57.581+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="4.7 GiB"
+time=2026-06-08T14:18:57.581+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="567.1 MiB"
+time=2026-06-08T14:18:57.581+09:00 level=INFO source=device.go:256 msg="kv cache" device=CPU size="945.2 MiB"
+time=2026-06-08T14:18:57.581+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="624.4 MiB"
+time=2026-06-08T14:18:57.581+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="629.1 MiB"
+time=2026-06-08T14:18:57.582+09:00 level=INFO source=device.go:272 msg="total memory" size="8.8 GiB"
+time=2026-06-08T14:18:57.582+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-08T14:18:57.582+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-08T14:18:57.582+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-08T14:18:59.085+09:00 level=INFO source=server.go:1432 msg="llama runner started in 3.57 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 696401920 total: 12878610432
+time=2026-06-08T14:23:56.318+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 54448"
+time=2026-06-08T14:23:56.616+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 54467"
+time=2026-06-08T14:23:56.881+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-08T14:23:56.881+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-08T14:23:56.881+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+time=2026-06-08T14:23:56.969+09:00 level=INFO source=server.go:259 msg="enabling flash attention"
+time=2026-06-08T14:23:56.973+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c --port 54484"
+time=2026-06-08T14:23:56.978+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="12.2 GiB" free_swap="9.1 GiB"
+time=2026-06-08T14:23:56.978+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="2.9 GiB" free="3.3 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-08T14:23:56.978+09:00 level=INFO source=server.go:792 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-08T14:23:57.108+09:00 level=INFO source=runner.go:1450 msg="starting ollama engine"
+time=2026-06-08T14:23:57.130+09:00 level=INFO source=runner.go:1485 msg="Server listening on 127.0.0.1:54484"
+time=2026-06-08T14:23:57.131+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:33[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:33(0..32)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:23:57.163+09:00 level=INFO source=ggml.go:144 msg="" architecture=qwen35 file_type=Q4_K_M name="" description="" num_tensors=883 num_key_values=52
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-08T14:23:57.240+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-08T14:23:57.774+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:14[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:14(18..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:23:58.049+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:13[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:13(19..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:23:58.333+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:13[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:13(19..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:23:59.205+09:00 level=INFO source=runner.go:1297 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Enabled KvSize:4096 KvCacheType: NumThreads:6 GPULayers:13[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:13(19..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T14:23:59.205+09:00 level=INFO source=ggml.go:490 msg="offloading 13 repeating layers to GPU"
+time=2026-06-08T14:23:59.205+09:00 level=INFO source=ggml.go:494 msg="offloading output layer to CPU"
+time=2026-06-08T14:23:59.205+09:00 level=INFO source=ggml.go:502 msg="offloaded 13/33 layers to GPU"
+time=2026-06-08T14:23:59.205+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="1.6 GiB"
+time=2026-06-08T14:23:59.214+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="4.6 GiB"
+time=2026-06-08T14:23:59.214+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="535.1 MiB"
+time=2026-06-08T14:23:59.214+09:00 level=INFO source=device.go:256 msg="kv cache" device=CPU size="849.2 MiB"
+time=2026-06-08T14:23:59.215+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="616.3 MiB"
+time=2026-06-08T14:23:59.215+09:00 level=INFO source=device.go:267 msg="compute graph" device=CPU size="629.1 MiB"
+time=2026-06-08T14:23:59.215+09:00 level=INFO source=device.go:272 msg="total memory" size="8.7 GiB"
+time=2026-06-08T14:23:59.215+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-08T14:23:59.215+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-08T14:23:59.216+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+time=2026-06-08T14:24:00.223+09:00 level=INFO source=server.go:1432 msg="llama runner started in 3.24 seconds"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 590036992 total: 12878610432
+time=2026-06-08T14:29:01.687+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 51093"
+time=2026-06-08T16:31:41.356+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h12m53.044352381s consecutive_failures=0
+time=2026-06-08T17:56:45.136+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 54778"
+time=2026-06-08T17:56:45.572+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-08T17:56:45.572+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-08T17:56:45.572+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+llama_model_loader: loaded meta data with 32 key-value pairs and 292 tensors from C:\Users\suhwa\.ollama\models\blobs\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = exaone
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = EXAONE 3.5 7.8B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = EXAONE-3.5
+llama_model_loader: - kv   5:                         general.size_label str              = 7.8B
+llama_model_loader: - kv   6:                            general.license str              = other
+llama_model_loader: - kv   7:                       general.license.name str              = exaone
+llama_model_loader: - kv   8:                       general.license.link str              = LICENSE
+llama_model_loader: - kv   9:                               general.tags arr[str,4]       = ["lg-ai", "exaone", "exaone-3.5", "te...
+llama_model_loader: - kv  10:                          general.languages arr[str,2]       = ["en", "ko"]
+llama_model_loader: - kv  11:                    exaone.embedding_length u32              = 4096
+llama_model_loader: - kv  12:                exaone.attention.head_count u32              = 32
+llama_model_loader: - kv  13:             exaone.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  14:                      exaone.context_length u32              = 32768
+llama_model_loader: - kv  15:    exaone.attention.layer_norm_rms_epsilon f32              = 0.000010
+llama_model_loader: - kv  16:                 exaone.feed_forward_length u32              = 14336
+llama_model_loader: - kv  17:                         exaone.block_count u32              = 32
+llama_model_loader: - kv  18:                          general.file_type u32              = 15
+llama_model_loader: - kv  19:                      exaone.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  20:                exaone.rope.dimension_count u32              = 128
+llama_model_loader: - kv  21:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  22:                         tokenizer.ggml.pre str              = exaone
+llama_model_loader: - kv  23:                      tokenizer.ggml.tokens arr[str,102400]  = ["[PAD]", "[BOS]", "[EOS]", "[UNK]", ...
+llama_model_loader: - kv  24:                  tokenizer.ggml.token_type arr[i32,102400]  = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, ...
+llama_model_loader: - kv  25:                      tokenizer.ggml.merges arr[str,101782]  = ["t h", "Ġ a", "Ġ í", "i n", "Ġ t...
+llama_model_loader: - kv  26:                tokenizer.ggml.bos_token_id u32              = 1
+llama_model_loader: - kv  27:                tokenizer.ggml.eos_token_id u32              = 361
+llama_model_loader: - kv  28:            tokenizer.ggml.unknown_token_id u32              = 3
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  30:                    tokenizer.chat_template str              = {% for message in messages %}{% if lo...
+llama_model_loader: - kv  31:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:   66 tensors
+llama_model_loader: - type q4_K:  193 tensors
+llama_model_loader: - type q6_K:   33 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 4.44 GiB (4.88 BPW) 
+load: special_eos_id is not in special_eog_ids - the tokenizer config may be incorrect
+load: printing all EOG tokens:
+load:   - 42 ('<|endoftext|>')
+load:   - 361 ('[|endofturn|]')
+load: special tokens cache size = 362
+load: token to piece cache size = 0.6622 MB
+print_info: arch             = exaone
+print_info: vocab_only       = 1
+print_info: no_alloc         = 0
+print_info: model type       = ?B
+print_info: model params     = 7.82 B
+print_info: general.name     = EXAONE 3.5 7.8B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 102400
+print_info: n_merges         = 101782
+print_info: BOS token        = 1 '[BOS]'
+print_info: EOS token        = 361 '[|endofturn|]'
+print_info: EOT token        = 42 '<|endoftext|>'
+print_info: UNK token        = 3 '[UNK]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: LF token         = 560 'Ċ'
+print_info: EOG token        = 42 '<|endoftext|>'
+print_info: EOG token        = 361 '[|endofturn|]'
+print_info: max token length = 48
+llama_model_load: vocab only - skipping tensors
+time=2026-06-08T17:56:45.694+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 --port 54811"
+time=2026-06-08T17:56:45.699+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="14.7 GiB" free_swap="538.8 MiB"
+time=2026-06-08T17:56:45.699+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="785.8 MiB" free="1.2 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-08T17:56:45.699+09:00 level=INFO source=server.go:532 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-08T17:56:45.700+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="132.5 MiB"
+time=2026-06-08T17:56:45.700+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="4.1 GiB"
+time=2026-06-08T17:56:45.700+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="16.0 MiB"
+time=2026-06-08T17:56:45.700+09:00 level=INFO source=device.go:256 msg="kv cache" device=CPU size="496.0 MiB"
+time=2026-06-08T17:56:45.700+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="341.3 MiB"
+time=2026-06-08T17:56:45.700+09:00 level=INFO source=device.go:272 msg="total memory" size="5.1 GiB"
+time=2026-06-08T17:56:45.827+09:00 level=INFO source=runner.go:965 msg="starting go runner"
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-08T17:56:45.927+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-08T17:56:45.928+09:00 level=INFO source=runner.go:1001 msg="Server listening on 127.0.0.1:54811"
+time=2026-06-08T17:56:45.938+09:00 level=INFO source=runner.go:895 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Auto KvSize:4096 KvCacheType: NumThreads:6 GPULayers:1[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:1(31..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T17:56:45.938+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-08T17:56:45.939+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1303166976 total: 12878610432
+llama_model_load_from_file_impl: using device CUDA0 (NVIDIA GeForce RTX 4070) (0000:01:00.0) - 1242 MiB free
+llama_model_loader: loaded meta data with 32 key-value pairs and 292 tensors from C:\Users\suhwa\.ollama\models\blobs\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = exaone
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = EXAONE 3.5 7.8B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = EXAONE-3.5
+llama_model_loader: - kv   5:                         general.size_label str              = 7.8B
+llama_model_loader: - kv   6:                            general.license str              = other
+llama_model_loader: - kv   7:                       general.license.name str              = exaone
+llama_model_loader: - kv   8:                       general.license.link str              = LICENSE
+llama_model_loader: - kv   9:                               general.tags arr[str,4]       = ["lg-ai", "exaone", "exaone-3.5", "te...
+llama_model_loader: - kv  10:                          general.languages arr[str,2]       = ["en", "ko"]
+llama_model_loader: - kv  11:                    exaone.embedding_length u32              = 4096
+llama_model_loader: - kv  12:                exaone.attention.head_count u32              = 32
+llama_model_loader: - kv  13:             exaone.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  14:                      exaone.context_length u32              = 32768
+llama_model_loader: - kv  15:    exaone.attention.layer_norm_rms_epsilon f32              = 0.000010
+llama_model_loader: - kv  16:                 exaone.feed_forward_length u32              = 14336
+llama_model_loader: - kv  17:                         exaone.block_count u32              = 32
+llama_model_loader: - kv  18:                          general.file_type u32              = 15
+llama_model_loader: - kv  19:                      exaone.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  20:                exaone.rope.dimension_count u32              = 128
+llama_model_loader: - kv  21:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  22:                         tokenizer.ggml.pre str              = exaone
+llama_model_loader: - kv  23:                      tokenizer.ggml.tokens arr[str,102400]  = ["[PAD]", "[BOS]", "[EOS]", "[UNK]", ...
+llama_model_loader: - kv  24:                  tokenizer.ggml.token_type arr[i32,102400]  = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, ...
+llama_model_loader: - kv  25:                      tokenizer.ggml.merges arr[str,101782]  = ["t h", "Ġ a", "Ġ í", "i n", "Ġ t...
+llama_model_loader: - kv  26:                tokenizer.ggml.bos_token_id u32              = 1
+llama_model_loader: - kv  27:                tokenizer.ggml.eos_token_id u32              = 361
+llama_model_loader: - kv  28:            tokenizer.ggml.unknown_token_id u32              = 3
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  30:                    tokenizer.chat_template str              = {% for message in messages %}{% if lo...
+llama_model_loader: - kv  31:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:   66 tensors
+llama_model_loader: - type q4_K:  193 tensors
+llama_model_loader: - type q6_K:   33 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 4.44 GiB (4.88 BPW) 
+load: special_eos_id is not in special_eog_ids - the tokenizer config may be incorrect
+load: printing all EOG tokens:
+load:   - 42 ('<|endoftext|>')
+load:   - 361 ('[|endofturn|]')
+load: special tokens cache size = 362
+load: token to piece cache size = 0.6622 MB
+print_info: arch             = exaone
+print_info: vocab_only       = 0
+print_info: no_alloc         = 0
+print_info: n_ctx_train      = 32768
+print_info: n_embd           = 4096
+print_info: n_embd_inp       = 4096
+print_info: n_layer          = 32
+print_info: n_head           = 32
+print_info: n_head_kv        = 8
+print_info: n_rot            = 128
+print_info: n_swa            = 0
+print_info: is_swa_any       = 0
+print_info: n_embd_head_k    = 128
+print_info: n_embd_head_v    = 128
+print_info: n_gqa            = 4
+print_info: n_embd_k_gqa     = 1024
+print_info: n_embd_v_gqa     = 1024
+print_info: f_norm_eps       = 0.0e+00
+print_info: f_norm_rms_eps   = 1.0e-05
+print_info: f_clamp_kqv      = 0.0e+00
+print_info: f_max_alibi_bias = 0.0e+00
+print_info: f_logit_scale    = 0.0e+00
+print_info: f_attn_scale     = 0.0e+00
+print_info: n_ff             = 14336
+print_info: n_expert         = 0
+print_info: n_expert_used    = 0
+print_info: n_expert_groups  = 0
+print_info: n_group_used     = 0
+print_info: causal attn      = 1
+print_info: pooling type     = 0
+print_info: rope type        = 2
+print_info: rope scaling     = linear
+print_info: freq_base_train  = 1000000.0
+print_info: freq_scale_train = 1
+print_info: n_ctx_orig_yarn  = 32768
+print_info: rope_yarn_log_mul= 0.0000
+print_info: rope_finetuned   = unknown
+print_info: model type       = 8B
+print_info: model params     = 7.82 B
+print_info: general.name     = EXAONE 3.5 7.8B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 102400
+print_info: n_merges         = 101782
+print_info: BOS token        = 1 '[BOS]'
+print_info: EOS token        = 361 '[|endofturn|]'
+print_info: EOT token        = 42 '<|endoftext|>'
+print_info: UNK token        = 3 '[UNK]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: LF token         = 560 'Ċ'
+print_info: EOG token        = 42 '<|endoftext|>'
+print_info: EOG token        = 361 '[|endofturn|]'
+print_info: max token length = 48
+load_tensors: loading model tensors, this can take a while... (mmap = false)
+ggml_cuda_host_malloc: failed to allocate 4188.14 MiB of pinned memory: out of memory
+load_tensors: offloading 1 repeating layers to GPU
+load_tensors: offloaded 1/33 layers to GPU
+load_tensors:          CPU model buffer size =   225.00 MiB
+load_tensors:        CUDA0 model buffer size =   132.50 MiB
+load_tensors:          CPU model buffer size =  4188.14 MiB
+ggml_cuda_host_malloc: failed to allocate 1.00 MiB of pinned memory: resource already mapped
+ggml_cuda_host_malloc: failed to allocate 1.00 MiB of pinned memory: resource already mapped
+ggml_cuda_host_malloc: failed to allocate 1.00 MiB of pinned memory: resource already mapped
+llama_context: constructing llama_context
+llama_context: n_seq_max     = 1
+llama_context: n_ctx         = 4096
+llama_context: n_ctx_seq     = 4096
+llama_context: n_batch       = 512
+llama_context: n_ubatch      = 512
+llama_context: causal_attn   = 1
+llama_context: flash_attn    = auto
+llama_context: kv_unified    = false
+llama_context: freq_base     = 1000000.0
+llama_context: freq_scale    = 1
+llama_context: n_ctx_seq (4096) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+llama_context:        CPU  output buffer size =     0.41 MiB
+llama_kv_cache:        CPU KV buffer size =   496.00 MiB
+llama_kv_cache:      CUDA0 KV buffer size =    16.00 MiB
+llama_kv_cache: size =  512.00 MiB (  4096 cells,  32 layers,  1/1 seqs), K (f16):  256.00 MiB, V (f16):  256.00 MiB
+llama_context: Flash Attention was auto, set to enabled
+ggml_cuda_host_malloc: failed to allocate 16.01 MiB of pinned memory: resource already mapped
+CUDA error: shared object initialization failed
+  current device: 0, in function launch_mul_mat_q at C:\a\ollama\ollama\ml\backend\ggml\ggml\src\ggml-cuda\template-instances\../mmq.cuh:3724
+  cudaFuncSetAttribute((mul_mat_q<type, mmq_x, false>), cudaFuncAttributeMaxDynamicSharedMemorySize, nbytes_shared)
+C:\a\ollama\ollama\ml\backend\ggml\ggml\src\ggml-cuda\ggml-cuda.cu:94: CUDA error
+time=2026-06-08T17:56:50.469+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server error"
+time=2026-06-08T17:56:50.776+09:00 level=ERROR source=server.go:316 msg="llama runner terminated" error="exit status 1"
+time=2026-06-08T17:56:50.971+09:00 level=INFO source=sched.go:511 msg="Load failed" model=C:\Users\suhwa\.ollama\models\blobs\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 error="llama runner process has terminated: CUDA error: shared object initialization failed\nCUDA error"
+time=2026-06-08T17:56:53.051+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 54842"
+time=2026-06-08T17:56:53.333+09:00 level=INFO source=cpu_windows.go:148 msg=packages count=1
+time=2026-06-08T17:56:53.334+09:00 level=INFO source=cpu_windows.go:164 msg="efficiency cores detected" maxEfficiencyClass=1
+time=2026-06-08T17:56:53.334+09:00 level=INFO source=cpu_windows.go:195 msg="" package=0 cores=14 efficiency=8 threads=20
+llama_model_loader: loaded meta data with 32 key-value pairs and 292 tensors from C:\Users\suhwa\.ollama\models\blobs\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = exaone
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = EXAONE 3.5 7.8B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = EXAONE-3.5
+llama_model_loader: - kv   5:                         general.size_label str              = 7.8B
+llama_model_loader: - kv   6:                            general.license str              = other
+llama_model_loader: - kv   7:                       general.license.name str              = exaone
+llama_model_loader: - kv   8:                       general.license.link str              = LICENSE
+llama_model_loader: - kv   9:                               general.tags arr[str,4]       = ["lg-ai", "exaone", "exaone-3.5", "te...
+llama_model_loader: - kv  10:                          general.languages arr[str,2]       = ["en", "ko"]
+llama_model_loader: - kv  11:                    exaone.embedding_length u32              = 4096
+llama_model_loader: - kv  12:                exaone.attention.head_count u32              = 32
+llama_model_loader: - kv  13:             exaone.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  14:                      exaone.context_length u32              = 32768
+llama_model_loader: - kv  15:    exaone.attention.layer_norm_rms_epsilon f32              = 0.000010
+llama_model_loader: - kv  16:                 exaone.feed_forward_length u32              = 14336
+llama_model_loader: - kv  17:                         exaone.block_count u32              = 32
+llama_model_loader: - kv  18:                          general.file_type u32              = 15
+llama_model_loader: - kv  19:                      exaone.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  20:                exaone.rope.dimension_count u32              = 128
+llama_model_loader: - kv  21:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  22:                         tokenizer.ggml.pre str              = exaone
+llama_model_loader: - kv  23:                      tokenizer.ggml.tokens arr[str,102400]  = ["[PAD]", "[BOS]", "[EOS]", "[UNK]", ...
+llama_model_loader: - kv  24:                  tokenizer.ggml.token_type arr[i32,102400]  = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, ...
+llama_model_loader: - kv  25:                      tokenizer.ggml.merges arr[str,101782]  = ["t h", "Ġ a", "Ġ í", "i n", "Ġ t...
+llama_model_loader: - kv  26:                tokenizer.ggml.bos_token_id u32              = 1
+llama_model_loader: - kv  27:                tokenizer.ggml.eos_token_id u32              = 361
+llama_model_loader: - kv  28:            tokenizer.ggml.unknown_token_id u32              = 3
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  30:                    tokenizer.chat_template str              = {% for message in messages %}{% if lo...
+llama_model_loader: - kv  31:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:   66 tensors
+llama_model_loader: - type q4_K:  193 tensors
+llama_model_loader: - type q6_K:   33 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 4.44 GiB (4.88 BPW) 
+load: special_eos_id is not in special_eog_ids - the tokenizer config may be incorrect
+load: printing all EOG tokens:
+load:   - 42 ('<|endoftext|>')
+load:   - 361 ('[|endofturn|]')
+load: special tokens cache size = 362
+load: token to piece cache size = 0.6622 MB
+print_info: arch             = exaone
+print_info: vocab_only       = 1
+print_info: no_alloc         = 0
+print_info: model type       = ?B
+print_info: model params     = 7.82 B
+print_info: general.name     = EXAONE 3.5 7.8B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 102400
+print_info: n_merges         = 101782
+print_info: BOS token        = 1 '[BOS]'
+print_info: EOS token        = 361 '[|endofturn|]'
+print_info: EOT token        = 42 '<|endoftext|>'
+print_info: UNK token        = 3 '[UNK]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: LF token         = 560 'Ċ'
+print_info: EOG token        = 42 '<|endoftext|>'
+print_info: EOG token        = 361 '[|endofturn|]'
+print_info: max token length = 48
+llama_model_load: vocab only - skipping tensors
+time=2026-06-08T17:56:53.454+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --model C:\\Users\\suhwa\\.ollama\\models\\blobs\\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 --port 54860"
+time=2026-06-08T17:56:53.459+09:00 level=INFO source=sched.go:484 msg="system memory" total="31.8 GiB" free="14.9 GiB" free_swap="9.4 GiB"
+time=2026-06-08T17:56:53.459+09:00 level=INFO source=sched.go:491 msg="gpu memory" id=GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 library=CUDA available="785.7 MiB" free="1.2 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-06-08T17:56:53.460+09:00 level=INFO source=server.go:532 msg="loading model" "model layers"=33 requested=-1
+time=2026-06-08T17:56:53.460+09:00 level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="132.5 MiB"
+time=2026-06-08T17:56:53.460+09:00 level=INFO source=device.go:245 msg="model weights" device=CPU size="4.1 GiB"
+time=2026-06-08T17:56:53.460+09:00 level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="16.0 MiB"
+time=2026-06-08T17:56:53.460+09:00 level=INFO source=device.go:256 msg="kv cache" device=CPU size="496.0 MiB"
+time=2026-06-08T17:56:53.461+09:00 level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="341.3 MiB"
+time=2026-06-08T17:56:53.461+09:00 level=INFO source=device.go:272 msg="total memory" size="5.1 GiB"
+time=2026-06-08T17:56:53.584+09:00 level=INFO source=runner.go:965 msg="starting go runner"
+load_backend: loaded CPU backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\ggml-cpu-alderlake.dll
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 4070, compute capability 8.9, VMM: yes, ID: GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1
+load_backend: loaded CUDA backend from C:\Users\suhwa\AppData\Local\Programs\Ollama\lib\ollama\cuda_v13\ggml-cuda.dll
+time=2026-06-08T17:56:53.682+09:00 level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX_VNNI=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(clang)
+time=2026-06-08T17:56:53.685+09:00 level=INFO source=runner.go:1001 msg="Server listening on 127.0.0.1:54860"
+time=2026-06-08T17:56:53.686+09:00 level=INFO source=runner.go:895 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:512 FlashAttention:Auto KvSize:4096 KvCacheType: NumThreads:6 GPULayers:1[ID:GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 Layers:1(31..31)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-06-08T17:56:53.687+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-08T17:56:53.687+09:00 level=INFO source=server.go:1428 msg="waiting for server to become available" status="llm server loading model"
+ggml_backend_cuda_device_get_memory device GPU-4a3bd140-53e5-e673-9aba-717b9c2522a1 utilizing NVML memory reporting free: 1303101440 total: 12878610432
+llama_model_load_from_file_impl: using device CUDA0 (NVIDIA GeForce RTX 4070) (0000:01:00.0) - 1242 MiB free
+llama_model_loader: loaded meta data with 32 key-value pairs and 292 tensors from C:\Users\suhwa\.ollama\models\blobs\sha256-fffbdeec0c334b27ebb42cbdd75a3e869cf9a3efc45abd7b3e6d739343089038 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = exaone
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = EXAONE 3.5 7.8B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = EXAONE-3.5
+llama_model_loader: - kv   5:                         general.size_label str              = 7.8B
+llama_model_loader: - kv   6:                            general.license str              = other
+llama_model_loader: - kv   7:                       general.license.name str              = exaone
+llama_model_loader: - kv   8:                       general.license.link str              = LICENSE
+llama_model_loader: - kv   9:                               general.tags arr[str,4]       = ["lg-ai", "exaone", "exaone-3.5", "te...
+llama_model_loader: - kv  10:                          general.languages arr[str,2]       = ["en", "ko"]
+llama_model_loader: - kv  11:                    exaone.embedding_length u32              = 4096
+llama_model_loader: - kv  12:                exaone.attention.head_count u32              = 32
+llama_model_loader: - kv  13:             exaone.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  14:                      exaone.context_length u32              = 32768
+llama_model_loader: - kv  15:    exaone.attention.layer_norm_rms_epsilon f32              = 0.000010
+llama_model_loader: - kv  16:                 exaone.feed_forward_length u32              = 14336
+llama_model_loader: - kv  17:                         exaone.block_count u32              = 32
+llama_model_loader: - kv  18:                          general.file_type u32              = 15
+llama_model_loader: - kv  19:                      exaone.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  20:                exaone.rope.dimension_count u32              = 128
+llama_model_loader: - kv  21:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  22:                         tokenizer.ggml.pre str              = exaone
+llama_model_loader: - kv  23:                      tokenizer.ggml.tokens arr[str,102400]  = ["[PAD]", "[BOS]", "[EOS]", "[UNK]", ...
+llama_model_loader: - kv  24:                  tokenizer.ggml.token_type arr[i32,102400]  = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, ...
+llama_model_loader: - kv  25:                      tokenizer.ggml.merges arr[str,101782]  = ["t h", "Ġ a", "Ġ í", "i n", "Ġ t...
+llama_model_loader: - kv  26:                tokenizer.ggml.bos_token_id u32              = 1
+llama_model_loader: - kv  27:                tokenizer.ggml.eos_token_id u32              = 361
+llama_model_loader: - kv  28:            tokenizer.ggml.unknown_token_id u32              = 3
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  30:                    tokenizer.chat_template str              = {% for message in messages %}{% if lo...
+llama_model_loader: - kv  31:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:   66 tensors
+llama_model_loader: - type q4_K:  193 tensors
+llama_model_loader: - type q6_K:   33 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 4.44 GiB (4.88 BPW) 
+load: special_eos_id is not in special_eog_ids - the tokenizer config may be incorrect
+load: printing all EOG tokens:
+load:   - 42 ('<|endoftext|>')
+load:   - 361 ('[|endofturn|]')
+load: special tokens cache size = 362
+load: token to piece cache size = 0.6622 MB
+print_info: arch             = exaone
+print_info: vocab_only       = 0
+print_info: no_alloc         = 0
+print_info: n_ctx_train      = 32768
+print_info: n_embd           = 4096
+print_info: n_embd_inp       = 4096
+print_info: n_layer          = 32
+print_info: n_head           = 32
+print_info: n_head_kv        = 8
+print_info: n_rot            = 128
+print_info: n_swa            = 0
+print_info: is_swa_any       = 0
+print_info: n_embd_head_k    = 128
+print_info: n_embd_head_v    = 128
+print_info: n_gqa            = 4
+print_info: n_embd_k_gqa     = 1024
+print_info: n_embd_v_gqa     = 1024
+print_info: f_norm_eps       = 0.0e+00
+print_info: f_norm_rms_eps   = 1.0e-05
+print_info: f_clamp_kqv      = 0.0e+00
+print_info: f_max_alibi_bias = 0.0e+00
+print_info: f_logit_scale    = 0.0e+00
+print_info: f_attn_scale     = 0.0e+00
+print_info: n_ff             = 14336
+print_info: n_expert         = 0
+print_info: n_expert_used    = 0
+print_info: n_expert_groups  = 0
+print_info: n_group_used     = 0
+print_info: causal attn      = 1
+print_info: pooling type     = 0
+print_info: rope type        = 2
+print_info: rope scaling     = linear
+print_info: freq_base_train  = 1000000.0
+print_info: freq_scale_train = 1
+print_info: n_ctx_orig_yarn  = 32768
+print_info: rope_yarn_log_mul= 0.0000
+print_info: rope_finetuned   = unknown
+print_info: model type       = 8B
+print_info: model params     = 7.82 B
+print_info: general.name     = EXAONE 3.5 7.8B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 102400
+print_info: n_merges         = 101782
+print_info: BOS token        = 1 '[BOS]'
+print_info: EOS token        = 361 '[|endofturn|]'
+print_info: EOT token        = 42 '<|endoftext|>'
+print_info: UNK token        = 3 '[UNK]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: LF token         = 560 'Ċ'
+print_info: EOG token        = 42 '<|endoftext|>'
+print_info: EOG token        = 361 '[|endofturn|]'
+print_info: max token length = 48
+load_tensors: loading model tensors, this can take a while... (mmap = false)
+load_tensors: offloading 1 repeating layers to GPU
+load_tensors: offloaded 1/33 layers to GPU
+load_tensors:          CPU model buffer size =   225.00 MiB
+load_tensors:        CUDA0 model buffer size =   132.50 MiB
+load_tensors:    CUDA_Host model buffer size =  4188.14 MiB
+llama_context: constructing llama_context
+llama_context: n_seq_max     = 1
+llama_context: n_ctx         = 4096
+llama_context: n_ctx_seq     = 4096
+llama_context: n_batch       = 512
+llama_context: n_ubatch      = 512
+llama_context: causal_attn   = 1
+llama_context: flash_attn    = auto
+llama_context: kv_unified    = false
+llama_context: freq_base     = 1000000.0
+llama_context: freq_scale    = 1
+llama_context: n_ctx_seq (4096) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+llama_context:        CPU  output buffer size =     0.41 MiB
+llama_kv_cache:        CPU KV buffer size =   496.00 MiB
+llama_kv_cache:      CUDA0 KV buffer size =    16.00 MiB
+llama_kv_cache: size =  512.00 MiB (  4096 cells,  32 layers,  1/1 seqs), K (f16):  256.00 MiB, V (f16):  256.00 MiB
+llama_context: Flash Attention was auto, set to enabled
+llama_context:      CUDA0 compute buffer size =   536.13 MiB
+llama_context:  CUDA_Host compute buffer size =    16.01 MiB
+llama_context: graph nodes  = 999
+llama_context: graph splits = 377 (with bs=512), 3 (with bs=1)
+time=2026-06-08T17:56:55.690+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.23 seconds"
+time=2026-06-08T17:56:55.691+09:00 level=INFO source=sched.go:561 msg="loaded runners" count=1
+time=2026-06-08T17:56:55.691+09:00 level=INFO source=server.go:1385 msg="waiting for llama runner to start responding"
+time=2026-06-08T17:56:55.691+09:00 level=INFO source=server.go:1432 msg="llama runner started in 2.23 seconds"
+time=2026-06-08T18:22:43.254+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 63572"
+time=2026-06-08T18:22:43.820+09:00 level=INFO source=server.go:433 msg="starting runner" cmd="C:\\Users\\suhwa\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner --ollama-engine --port 63592"
+time=2026-06-08T19:44:34.695+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h18m20.744074887s consecutive_failures=0
+time=2026-06-09T00:02:58.153+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h35m41.321302219s consecutive_failures=0
+time=2026-06-09T04:38:40.334+09:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=3h28m46.022338462s consecutive_failures=0
