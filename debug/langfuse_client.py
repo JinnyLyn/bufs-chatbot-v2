@@ -49,6 +49,9 @@ def _rest_get(path: str, **params) -> dict:
     pk = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
     sk = os.environ.get("LANGFUSE_SECRET_KEY", "")
     auth = (pk, sk)
+    # Explicitly True (system CAs) when no custom bundle — never accidentally None.
+    verify = _CA if _CA is not None else True
+    last_exc: Exception | None = None
     for attempt in range(5):
         try:
             r = requests.get(
@@ -56,16 +59,17 @@ def _rest_get(path: str, **params) -> dict:
                 params=params,
                 auth=auth,
                 timeout=60,
-                verify=_CA,
+                verify=verify,
             )
             if r.status_code in (429, 500, 502, 503, 504):
                 time.sleep(2 * (attempt + 1))
                 continue
             r.raise_for_status()
             return r.json()
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as exc:
+            last_exc = exc
             time.sleep(2 * (attempt + 1))
-    raise RuntimeError(f"REST GET {path} failed after 5 attempts")
+    raise RuntimeError(f"REST GET {path} failed after 5 attempts") from last_exc
 
 
 # ── SDK client (langfuse 4.6.1) ───────────────────────────────────────────────

@@ -69,7 +69,9 @@ Claude Code 에이전트가 인터랙티브하게 Langfuse를 조회할 수 있�
 }
 ```
 
-**env-expansion 전용** — 키 리터럴 없음. `uvx`는 `/home/jin/.local/bin/uvx`에 있습니다.
+**env-expansion 전용** — 키 리터럴 없음. `uvx`는 PATH에 있어야 합니다
+(예: `/home/<사용자>/.local/bin/uvx` — 경로는 환경마다 다릅니다;
+필요 시 `.mcp.json`의 `"command"` 값을 절대경로로 변경하세요).
 
 ### 2-2. 실행 시 env 주입
 
