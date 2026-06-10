@@ -1,7 +1,6 @@
 .DS_Store
 # KB data committed by choice (2026-06-08): markdown_docs(source), parent_store + qdrant_db
 # (regenerable via `python project/reindex.py` — committed for clone-and-run convenience).
-logs/
 backups/
 docs/*
 !docs/observability/
