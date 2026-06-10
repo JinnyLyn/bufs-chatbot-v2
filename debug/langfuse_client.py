@@ -15,10 +15,14 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-# ── dotenv: anchored to repo root regardless of cwd ──────────────────────────
+# ── env bootstrap: anchored to repo root, loaded LAZILY (never at import) ─────
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _ENV_PATH = _REPO_ROOT / "project" / ".env"
-load_dotenv(_ENV_PATH, override=False)
+
+_BASE: str | None = None
+_CA: str | None = None
+_env_ready = False
+
 
 # ── WSL/Linux: unset CA bundle env-vars if they point at Windows paths ────────
 def _neutralise_windows_ca() -> None:
@@ -32,20 +36,32 @@ def _neutralise_windows_ca() -> None:
             del os.environ[var]
 
 
-_neutralise_windows_ca()
+def ensure_env() -> None:
+    """Idempotent env bootstrap: dotenv → CA neutralisation → HOST mirror → REST base.
 
-# ── mirror LANGFUSE_BASE_URL → LANGFUSE_HOST (as config.py does) ─────────────
-_BASE_URL = os.environ.get("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
-if _BASE_URL and not os.environ.get("LANGFUSE_HOST"):
-    os.environ["LANGFUSE_HOST"] = _BASE_URL
+    Deliberately NOT run at import time: importing this module must never mutate
+    os.environ (pytest hermeticity — see tests/debug/test_import_purity.py).
+    Every public function calls this first; CLIs call it from their entrypoints.
+    """
+    global _BASE, _CA, _env_ready
+    if _env_ready:
+        return
+    load_dotenv(_ENV_PATH, override=False)
+    _neutralise_windows_ca()
+    base_url = os.environ.get("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
+    # mirror LANGFUSE_BASE_URL → LANGFUSE_HOST (as config.py does; SDK reads HOST)
+    if base_url and not os.environ.get("LANGFUSE_HOST"):
+        os.environ["LANGFUSE_HOST"] = base_url
+    _BASE = base_url.rstrip("/")
+    _CA = os.environ.get("REQUESTS_CA_BUNDLE")  # None after neutralisation on Linux
+    _env_ready = True
+
 
 # ── REST helpers (proven pattern from eval_tools/_langfuse_analyze.py) ────────
-_BASE = _BASE_URL.rstrip("/")
-_CA = os.environ.get("REQUESTS_CA_BUNDLE")  # will be None after neutralisation on Linux
-
 
 def _rest_get(path: str, **params) -> dict:
     """Authenticated REST GET with retry for transient server errors."""
+    ensure_env()
     pk = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
     sk = os.environ.get("LANGFUSE_SECRET_KEY", "")
     auth = (pk, sk)
@@ -79,6 +95,7 @@ _sdk_client = None
 def get_client():
     """Return the singleton Langfuse SDK client (lazily initialised)."""
     global _sdk_client
+    ensure_env()
     if _sdk_client is None:
         from langfuse import get_client as _lf_get_client
         _sdk_client = _lf_get_client()
@@ -150,6 +167,7 @@ def fetch_trace_detail(trace_id: str) -> dict:
 if __name__ == "__main__":
     # Quick smoke test: python debug/langfuse_client.py
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    ensure_env()
     print(f"dotenv loaded from: {_ENV_PATH}")
     print(f"LANGFUSE_HOST = {os.environ.get('LANGFUSE_HOST')}")
     print("Running auth_check()...")
