@@ -97,6 +97,24 @@ TRACE LATENCY (s): n=199  p50=10.8  p90=20.3  p95=27.6  max=43.5  min=3.8
       32.6s  sess=e428f6a5  {'messages': [{'content': '기존 규정말고 그냥 2020학번 졸업요건  tid=091e75b9
 ```
 
+### 6. First-run smoke: verify `repro search` copy-open (production box only)
+
+`repro search` copies the committed Qdrant index to a temp dir (avoids the
+server's process lock) and opens the copy. Run once on the production box to
+confirm the copy-open works and to record the index fingerprint:
+
+```bash
+.venv/bin/python -m debug.repro search "수강신청"
+```
+
+Expect a fingerprint line (`meta=… sqlite=[…B mtime=…] git=…`) before results.
+If the `git=` component shows a commit different from the live index, the
+production index was re-ingested without committing — re-commit `qdrant_db/`
+or pass `--db <live path>` (server stopped) to debug against the real index.
+
+> On a dev box (WSL, no `torch`/`sentence-transformers`) this step degrades with
+> a message naming the missing deps — that is expected; it is a production-box tool.
+
 ---
 
 ## Module Runbooks (index)
