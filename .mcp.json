@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "langfuse": {
+      "command": "uvx",
+      "args": ["langfuse-mcp"],
+      "env": {
+        "LANGFUSE_PUBLIC_KEY": "${LANGFUSE_PUBLIC_KEY}",
+        "LANGFUSE_SECRET_KEY": "${LANGFUSE_SECRET_KEY}",
+        "LANGFUSE_HOST": "${LANGFUSE_BASE_URL}"
+      }
+    }
+  }
+}
