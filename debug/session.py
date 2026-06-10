@@ -39,8 +39,6 @@ from ._query import (
 )
 from .logs import grep_app_logs
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
-
 # Sentinel substring — "제공된 자료에서...찾지 못했습니다"
 _SENTINEL = "찾지 못했습니다"
 
@@ -188,6 +186,7 @@ def display_session(traces: list[dict]) -> None:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None) -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
     parser = argparse.ArgumentParser(
         prog="python -m debug.session",
         description=(
@@ -225,35 +224,41 @@ def main(argv: list[str] | None = None) -> int:
     )
     _hex32 = re.compile(r"^[0-9a-fA-F]{32}$")
 
-    if _uuid.match(raw):
-        # Full session UUID
-        session_id = raw
-        print(f"Fetching session {session_id[:8]}… …", file=sys.stderr)
-        traces = fetch_session_traces(session_id)
-    elif _hex32.match(raw):
-        # 32-hex Langfuse trace id — fetch trace to get session
-        print(f"Resolving Langfuse trace {raw[:16]}… …", file=sys.stderr)
-        detail = get_trace_detail(raw)
-        session_id = str(detail.get("sessionId") or "")
-        print(f"  → session {session_id[:8]}", file=sys.stderr)
-        traces = fetch_session_traces(session_id)
-    elif _hex8.match(raw):
-        # 8-hex app tid — resolve to Langfuse id, then get session
-        print(f"Resolving tid={raw!r} …", file=sys.stderr)
-        try:
-            lf_id = resolve_tid(raw.lower())
-        except (ValueError, LookupError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 1
-        print(f"  → {lf_id}", file=sys.stderr)
-        detail = get_trace_detail(lf_id)
-        session_id = str(detail.get("sessionId") or "")
-        print(f"  → session {session_id[:8]}", file=sys.stderr)
-        traces = fetch_session_traces(session_id)
-    else:
-        # Treat as partial session id prefix — fetch with sessionId filter
-        print(f"Fetching session prefix={raw!r} …", file=sys.stderr)
-        traces = fetch_session_traces(raw)
+    # All Langfuse calls below can raise (network / auth / malformed response).
+    # Catch and exit 1 with a readable message (mirrors pipeline.py main()).
+    try:
+        if _uuid.match(raw):
+            # Full session UUID
+            session_id = raw
+            print(f"Fetching session {session_id[:8]}… …", file=sys.stderr)
+            traces = fetch_session_traces(session_id)
+        elif _hex32.match(raw):
+            # 32-hex Langfuse trace id — fetch trace to get session
+            print(f"Resolving Langfuse trace {raw[:16]}… …", file=sys.stderr)
+            detail = get_trace_detail(raw)
+            session_id = str(detail.get("sessionId") or "")
+            print(f"  → session {session_id[:8]}", file=sys.stderr)
+            traces = fetch_session_traces(session_id)
+        elif _hex8.match(raw):
+            # 8-hex app tid — resolve to Langfuse id, then get session
+            print(f"Resolving tid={raw!r} …", file=sys.stderr)
+            try:
+                lf_id = resolve_tid(raw.lower())
+            except (ValueError, LookupError) as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 1
+            print(f"  → {lf_id}", file=sys.stderr)
+            detail = get_trace_detail(lf_id)
+            session_id = str(detail.get("sessionId") or "")
+            print(f"  → session {session_id[:8]}", file=sys.stderr)
+            traces = fetch_session_traces(session_id)
+        else:
+            # Treat as partial session id prefix — fetch with sessionId filter
+            print(f"Fetching session prefix={raw!r} …", file=sys.stderr)
+            traces = fetch_session_traces(raw)
+    except (RuntimeError, ValueError, KeyError, ConnectionError) as exc:
+        print(f"error: failed to fetch session data: {exc}", file=sys.stderr)
+        return 1
 
     print(f"Found {len(traces)} trace(s) in session.", file=sys.stderr)
     display_session(traces)

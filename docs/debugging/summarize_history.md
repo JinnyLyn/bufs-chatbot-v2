@@ -17,7 +17,7 @@ context. For first messages in a session (no history), it returns immediately wi
 
 - Follow-up questions answered as if a different topic was discussed
 - Summary bleeds in content from a previous user's session
-- PIPELINE_TIMING `summarize=<large>ms` (normally 0–7 s)
+- PIPELINE_TIMING `summarize=<large>ms` (normally 0–7000 ms)
 - Multi-turn sessions where context progressively worsens
 
 ---

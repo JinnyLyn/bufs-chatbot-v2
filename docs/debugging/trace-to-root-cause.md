@@ -9,7 +9,7 @@ module-isolated re-execution.
 
 ---
 
-## Five-Stage Attribution → Repro Lever Map
+## Six-Stage Attribution → Repro Lever Map
 
 Every wrong answer traces to one of these pipeline stages.
 Find the stage, pick its repro lever, re-run with the real failing input.
@@ -199,7 +199,7 @@ Trace: 51c47a5061f70aa2  latency=290.438s  metadata.trace_id=a687e093
 | Stage | Evidence | Verdict |
 |---|---|---|
 | 1. Rewrite | `rewrite=1.7s`, query looks reasonable | ✓ Normal |
-| 2/3. Retrieval | `agent=4.1s`, `num_results=4`, `sources=1` | ⚠️ 4 chunks from학사안내 — **wrong document for a cafeteria question** |
+| 2/3. Retrieval | `agent=4.1s`, `num_results=4`, `sources=1` | ⚠️ 4 chunks from 학사안내 — **wrong document for a cafeteria question** |
 | 6. Aggregation | `aggregate=284.6s`, `answer_chars=21511` | ✗ **Root cause: runaway generation** |
 
 The fast-refuse path (`is_clear=False` → clarification request) did NOT fire.

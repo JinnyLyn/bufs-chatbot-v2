@@ -30,8 +30,6 @@ import sys
 from .langfuse_client import ensure_env
 from ._query import get_trace_detail, resolve_tid
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
-
 # ── annotation map: what wrong looks like at each stage → suspect module ──────
 
 _STAGE_NOTES: dict[str, tuple[str, str]] = {
@@ -330,6 +328,7 @@ def _print_flags(trace: dict, obs: list[dict]) -> None:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None) -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
     parser = argparse.ArgumentParser(
         prog="python -m debug.pipeline",
         description=(

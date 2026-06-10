@@ -62,3 +62,39 @@ def test_import_does_not_mutate_environ(mod: str) -> None:
         f"importing debug.{mod} mutated os.environ: {result} — "
         "load_dotenv/env writes belong in main()/ensure_env(), never at import"
     )
+
+
+_STREAM_PROBE = (
+    "import sys, json;"
+    "sys.path.insert(0, {root!r});"
+    "before = (sys.stdout.encoding, sys.stdout.errors, sys.stderr.encoding, sys.stderr.errors);"
+    "import importlib; importlib.import_module('debug.{mod}');"
+    "after = (sys.stdout.encoding, sys.stdout.errors, sys.stderr.encoding, sys.stderr.errors);"
+    "print(json.dumps({{'before': before, 'after': after}}))"
+)
+
+
+@pytest.mark.parametrize("mod", _DEBUG_MODULES)
+def test_import_does_not_reconfigure_streams(mod: str) -> None:
+    """`import debug.<mod>` must not call sys.stdout/stderr.reconfigure().
+
+    A module-level reconfigure() mutates the process's stream encoding for any
+    importer (pytest, another tool). UTF-8 reconfiguration belongs in main(),
+    not at import. (CodeRabbit flagged this in pipeline.py/session.py; the same
+    pattern existed in analyze.py/status.py — this tripwire covers all of them.)
+    """
+    code = _STREAM_PROBE.format(root=str(_REPO_ROOT), mod=mod)
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        cwd=_REPO_ROOT,
+        timeout=60,
+    )
+    assert proc.returncode == 0, f"import debug.{mod} crashed:\n{proc.stderr}"
+    result = json.loads(proc.stdout)
+    assert result["before"] == result["after"], (
+        f"importing debug.{mod} reconfigured stdout/stderr: "
+        f"{result['before']} → {result['after']} — "
+        "sys.stdout.reconfigure() belongs in main(), never at import"
+    )

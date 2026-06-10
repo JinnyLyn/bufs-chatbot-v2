@@ -47,8 +47,6 @@ from .langfuse_client import ensure_env
 from ._query import fetch_observations_by_name, fetch_traces_window
 from .logs import grep_app_logs, iter_app_log_files
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
-
 # ── known pipeline nodes to check for liveness ───────────────────────────────
 
 # Nodes observed in production (should appear in any healthy 7d window):
@@ -240,6 +238,7 @@ def check_orphans(tail_lines: int = 500) -> tuple[bool, list[str]]:
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None) -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
     ensure_env()  # load project/.env before parser defaults + credential check
     parser = argparse.ArgumentParser(
         prog="python -m debug.status",

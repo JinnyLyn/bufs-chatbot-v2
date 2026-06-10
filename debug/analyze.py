@@ -30,8 +30,6 @@ from datetime import datetime, timedelta
 from .langfuse_client import ensure_env, fetch_observations, fetch_traces
 from ._query import fetch_observations_by_name, fetch_traces_window
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
-
 
 # ── percentile helper (mirrors eval_tools/_langfuse_analyze.py) ──────────────
 
@@ -210,6 +208,7 @@ def error_summary(obs: list[dict]) -> None:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None) -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
     parser = argparse.ArgumentParser(
         prog="python -m debug.analyze",
         description=(
