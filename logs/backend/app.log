@@ -1,0 +1,5 @@
+2026-06-10 11:31:52,882 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-10 11:31:52,882 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-10 11:31:54,459 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-10 11:31:54,676 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-10 11:32:04,180 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11434', 'num_ctx': 16384, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 11}

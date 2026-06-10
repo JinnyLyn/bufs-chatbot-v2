@@ -1,0 +1,136 @@
+2026-06-05 15:09:28,650 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 15:09:28,650 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 15:09:30,602 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:30,602 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 15:09:30,626 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/modules.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:30,848 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:30,864 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:30,864 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 15:09:31,246 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:31,259 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:31,471 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:31,484 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/README.md "HTTP/1.1 200 OK"
+2026-06-05 15:09:31,691 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:31,703 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/modules.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:31,917 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/sentence_bert_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:31,938 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/sentence_bert_config.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:32,159 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:32,378 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:32,390 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/config.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:32,690 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/model.safetensors "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:32,899 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3 "HTTP/1.1 200 OK"
+2026-06-05 15:09:33,023 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/processor_config.json "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:33,144 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3/commits/main "HTTP/1.1 200 OK"
+2026-06-05 15:09:33,239 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:33,403 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3/discussions?p=0 "HTTP/1.1 200 OK"
+2026-06-05 15:09:33,451 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/video_preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:33,641 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3/commits/refs%2Fpr%2F130 "HTTP/1.1 200 OK"
+2026-06-05 15:09:33,659 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:33,851 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/refs%2Fpr%2F130/model.safetensors.index.json "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:33,876 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:33,891 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:34,058 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/refs%2Fpr%2F130/model.safetensors "HTTP/1.1 302 Found"
+2026-06-05 15:09:34,100 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:34,114 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/config.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:34,324 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:34,338 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/config.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:34,546 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:34,557 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:34,786 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-06-05 15:09:35,353 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-06-05 15:09:37,128 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3 "HTTP/1.1 200 OK"
+2026-06-05 15:09:37,343 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/1_Pooling/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:37,355 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-m3/5617a9f61b028005a4858fdac845db406aefb181/1_Pooling%2Fconfig.json "HTTP/1.1 200 OK"
+2026-06-05 15:09:37,566 [-] INFO httpx:_send_single_request:1025 - HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-m3 "HTTP/1.1 200 OK"
+2026-06-05 15:09:38,614 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': False, 'kb_docs': 68, 'uptime_s': 10}
+2026-06-05 15:10:13,190 [5eda47e8] INFO api.chat:chat_stream:77 - [chat-IN] tid=5eda47e8 sid=91cd84ae q_chars=10 q='졸업 요건이 뭐야?' model=qwen3.5:9b test=False
+2026-06-05 15:10:19,370 [5eda47e8] INFO httpx:_send_single_request:1025 - HTTP Request: POST http://127.0.0.1:11435/api/chat "HTTP/1.1 200 OK"
+2026-06-05 15:10:19,391 [5eda47e8] INFO api.chat:_finalize:36 - [chat-OUT] tid=5eda47e8 sid=91cd84ae answer_chars=186 results=0 sources=0 total_ms=6188
+2026-06-05 15:10:19,391 [5eda47e8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=5eda47e8 total=6188ms summarize=0ms rewrite=6188ms agent=0ms aggregate=0ms other=0ms sub_q=0 tool_calls=0 model=qwen3.5:9b
+2026-06-05 15:32:35,671 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 15:32:35,671 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 15:32:37,052 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 15:32:37,294 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 15:32:44,551 [-] WARNING core.observability:__init__:37 - Could not initialize Langfuse: Please install langchain to use the Langfuse langchain integration: 'pip install langchain'
+2026-06-05 15:32:45,435 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 68, 'uptime_s': 9}
+2026-06-05 15:34:49,919 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 15:34:49,919 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 15:34:51,298 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 15:34:51,543 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 15:35:01,066 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 68, 'uptime_s': 11}
+2026-06-05 15:36:51,910 [a4f2878e] INFO api.chat:chat_stream:77 - [chat-IN] tid=a4f2878e sid=e887585d q_chars=14 q='수강신청은 어떻게 하나요?' model=qwen3.5:9b test=False
+2026-06-05 15:37:08,856 [a4f2878e] INFO api.chat:_finalize:36 - [chat-OUT] tid=a4f2878e sid=e887585d answer_chars=581 results=4 sources=3 total_ms=16937
+2026-06-05 15:37:08,856 [a4f2878e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a4f2878e total=16937ms summarize=0ms rewrite=4766ms agent=7296ms aggregate=4875ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-05 15:39:04,679 [7f37cac8] INFO api.chat:chat_stream:77 - [chat-IN] tid=7f37cac8 sid=ac414acc q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 15:41:34,406 [7f37cac8] INFO api.chat:_finalize:36 - [chat-OUT] tid=7f37cac8 sid=ac414acc answer_chars=358 results=9 sources=3 total_ms=149718
+2026-06-05 15:41:34,406 [7f37cac8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=7f37cac8 total=149718ms summarize=0ms rewrite=1764ms agent=143719ms aggregate=4234ms other=0ms sub_q=1 tool_calls=8 model=qwen3.5:9b
+2026-06-05 15:48:27,420 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 15:48:27,420 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 15:48:29,494 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 15:48:29,727 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 15:48:41,111 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 51, 'uptime_s': 13}
+2026-06-05 15:49:44,403 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 15:49:44,403 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 15:49:46,954 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 15:49:47,167 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 15:49:58,092 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 31, 'uptime_s': 13}
+2026-06-05 16:19:56,745 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 16:19:56,745 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 16:19:58,342 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 16:19:58,588 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 16:20:07,192 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 10}
+2026-06-05 16:20:12,158 [47183847] INFO api.chat:chat_stream:77 - [chat-IN] tid=47183847 sid=d32e5930 q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 16:21:08,250 [47183847] INFO api.chat:_finalize:36 - [chat-OUT] tid=47183847 sid=d32e5930 answer_chars=464 results=4 sources=3 total_ms=56077
+2026-06-05 16:21:08,250 [47183847] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=47183847 total=56077ms summarize=0ms rewrite=5047ms agent=46422ms aggregate=4608ms other=0ms sub_q=1 tool_calls=6 model=qwen3.5:9b
+2026-06-05 16:36:52,668 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 16:36:52,668 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 16:36:54,611 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 16:36:55,571 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 16:37:03,351 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 10}
+2026-06-05 16:37:10,580 [caeb2cac] INFO api.chat:chat_stream:77 - [chat-IN] tid=caeb2cac sid=41bc9305 q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 16:40:10,297 [caeb2cac] INFO api.chat:_finalize:36 - [chat-OUT] tid=caeb2cac sid=41bc9305 answer_chars=1328 results=10 sources=3 total_ms=179702
+2026-06-05 16:40:10,297 [caeb2cac] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=caeb2cac total=179702ms summarize=0ms rewrite=5140ms agent=160922ms aggregate=13640ms other=0ms sub_q=1 tool_calls=8 model=qwen3.5:9b
+2026-06-05 17:30:23,481 [51bb3acc] INFO api.chat:chat_stream:77 - [chat-IN] tid=51bb3acc sid=db2bc032 q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 17:33:28,829 [51bb3acc] INFO api.chat:_finalize:36 - [chat-OUT] tid=51bb3acc sid=db2bc032 answer_chars=1328 results=10 sources=3 total_ms=185343
+2026-06-05 17:33:28,829 [51bb3acc] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=51bb3acc total=185343ms summarize=0ms rewrite=4936ms agent=165875ms aggregate=14531ms other=0ms sub_q=1 tool_calls=8 model=qwen3.5:9b
+2026-06-05 18:02:44,664 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 18:02:44,664 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 18:02:46,815 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 18:02:46,847 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 18:02:55,687 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 11}
+2026-06-05 18:03:03,430 [70801779] INFO api.chat:chat_stream:77 - [chat-IN] tid=70801779 sid=26f919cf q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 18:03:45,799 [70801779] INFO api.chat:_finalize:36 - [chat-OUT] tid=70801779 sid=26f919cf answer_chars=1338 results=8 sources=3 total_ms=42375
+2026-06-05 18:03:45,799 [70801779] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=70801779 total=42375ms summarize=0ms rewrite=5172ms agent=30344ms aggregate=6858ms other=0ms sub_q=1 tool_calls=3 model=qwen3.5:9b
+2026-06-05 18:17:10,894 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 18:17:10,894 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 18:17:13,466 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 18:17:13,711 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 18:17:23,707 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 12}
+2026-06-05 18:17:31,034 [cf747946] INFO api.chat:chat_stream:77 - [chat-IN] tid=cf747946 sid=d33aacfd q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 18:18:11,588 [cf747946] INFO api.agent_stream:run_agent_stream:128 - answer language mismatch — translating to Korean
+2026-06-05 18:18:17,668 [cf747946] INFO api.chat:_finalize:36 - [chat-OUT] tid=cf747946 sid=d33aacfd answer_chars=692 results=8 sources=3 total_ms=46610
+2026-06-05 18:18:17,668 [cf747946] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=cf747946 total=46610ms summarize=0ms rewrite=5828ms agent=28625ms aggregate=6077ms other=0ms sub_q=1 tool_calls=3 model=qwen3.5:9b
+2026-06-05 20:24:21,636 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 20:24:21,636 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 20:24:24,409 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 20:24:24,657 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 20:24:36,015 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 14}
+2026-06-05 20:24:52,879 [6ac3eb5e] INFO api.chat:chat_stream:77 - [chat-IN] tid=6ac3eb5e sid=a3482235 q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 20:25:10,975 [6ac3eb5e] INFO api.chat:_finalize:36 - [chat-OUT] tid=6ac3eb5e sid=a3482235 answer_chars=219 results=2 sources=2 total_ms=18094
+2026-06-05 20:25:10,975 [6ac3eb5e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=6ac3eb5e total=18094ms summarize=0ms rewrite=5609ms agent=10094ms aggregate=2390ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-05 20:26:22,446 [8c7a705a] INFO api.chat:chat_stream:77 - [chat-IN] tid=8c7a705a sid=d8e7b6d8 q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 20:26:31,709 [8c7a705a] INFO api.chat:_finalize:36 - [chat-OUT] tid=8c7a705a sid=d8e7b6d8 answer_chars=219 results=2 sources=2 total_ms=9250
+2026-06-05 20:26:31,709 [8c7a705a] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=8c7a705a total=9250ms summarize=0ms rewrite=1780ms agent=5046ms aggregate=2422ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-05 20:29:17,754 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 20:29:17,754 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 20:29:19,833 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 20:29:19,858 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 20:29:28,648 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 10}
+2026-06-05 20:29:41,453 [118fa886] INFO api.chat:chat_stream:77 - [chat-IN] tid=118fa886 sid=9384f1e2 q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-05 20:29:52,655 [118fa886] INFO api.chat:_finalize:36 - [chat-OUT] tid=118fa886 sid=9384f1e2 answer_chars=371 results=2 sources=2 total_ms=11188
+2026-06-05 20:29:52,655 [118fa886] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=118fa886 total=11188ms summarize=0ms rewrite=1702ms agent=5578ms aggregate=3907ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-05 20:40:03,220 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 20:40:03,220 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 20:40:05,282 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 20:40:05,308 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 20:40:14,019 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 10}

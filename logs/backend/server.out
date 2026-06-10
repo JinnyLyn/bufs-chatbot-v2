@@ -1,0 +1,6 @@
+Langfuse client is authenticated and ready!
+✓ Collection already exists: document_child_chunks
+Compiling agent graph...
+✓ Agent graph compiled successfully.
+INFO:     127.0.0.1:51162 - "GET /health HTTP/1.1" 200 OK
+INFO:     223.195.222.5:0 - "POST /api/session HTTP/1.1" 200 OK
