@@ -3,7 +3,9 @@
 # (regenerable via `python project/reindex.py` — committed for clone-and-run convenience).
 logs/
 backups/
-docs/
+docs/*
+!docs/observability/
+!docs/debugging/
 __pycache__/
 .vscode/
 .env
