@@ -1,0 +1,22 @@
+2026-06-05 15:09:28,650 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-05 15:09:28,650 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-05 15:09:30,602 [-] INFO httpx:_send_single_request:1025 - HTTP Request: HEAD https://huggingface.co/BAAI/bge-m3/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-06-05 15:09:30,602 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-05 15:09:30,864 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-05 15:09:38,614 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': False, 'kb_docs': 68, 'uptime_s': 10}
+2026-06-05 15:32:44,551 [-] WARNING core.observability:__init__:37 - Could not initialize Langfuse: Please install langchain to use the Langfuse langchain integration: 'pip install langchain'
+2026-06-05 15:36:51,910 [a4f2878e] INFO api.chat:chat_stream:77 - [chat-IN] tid=a4f2878e sid=e887585d q_chars=14 q='수강신청은 어떻게 하나요?' model=qwen3.5:9b test=False
+2026-06-05 15:37:08,856 [a4f2878e] INFO api.chat:_finalize:36 - [chat-OUT] tid=a4f2878e sid=e887585d answer_chars=581 results=4 sources=3 total_ms=16937
+2026-06-05 15:37:08,856 [a4f2878e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a4f2878e total=16937ms summarize=0ms rewrite=4766ms agent=7296ms aggregate=4875ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-05 18:18:11,588 [cf747946] INFO api.agent_stream:run_agent_stream:128 - answer language mismatch — translating to Korean
+2026-06-06 16:16:03,103 [e9eb99b1] INFO api.chat:chat_stream:77 - [chat-IN] tid=e9eb99b1 sid=ad777fda q_chars=21 q='2026학년도 2학기 수강신청 언제야?' model=qwen3.5:9b test=False
+2026-06-08 16:30:21,722 [a687e093] INFO api.chat:chat_stream:77 - [chat-IN] tid=a687e093 sid=fb67d251 q_chars=24 q='교내 학생식당의 오늘 점심 메뉴는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-08 16:35:12,165 [a687e093] INFO api.chat:_finalize:36 - [chat-OUT] tid=a687e093 sid=fb67d251 answer_chars=21511 results=4 sources=1 total_ms=290452
+2026-06-08 16:35:12,165 [a687e093] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a687e093 total=290452ms summarize=0ms rewrite=1718ms agent=4125ms aggregate=284594ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-05 15:41:34,406 [7f37cac8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=7f37cac8 total=149718ms summarize=0ms rewrite=1764ms agent=143719ms aggregate=4234ms other=0ms sub_q=1 tool_calls=8 model=qwen3.5:9b
+2026-06-10 11:31:52,882 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-10 11:31:52,882 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-10 11:31:54,459 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-10 11:31:54,676 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-10 11:32:04,180 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11434', 'num_ctx': 16384, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 11}
+2026-06-08 20:08:30,709 [c12fa94e] INFO api.chat:chat_stream:77 - [chat-IN] tid=c12fa94e sid=ca78e27a q_chars=153 q="They are not CI checks, and ticking them runs nothing and gates nothing. They're" model=qwen3.5:9b test=False

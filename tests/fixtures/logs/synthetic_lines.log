@@ -1,0 +1,19 @@
+# SYNTHETIC FIXTURES — zero real production occurrences as of 2026-06-10
+#
+# [chat-ERR] and Q&A-write-failure lines are code paths in project/api/chat.py
+# that can be reached in production but have never appeared in the committed
+# log corpus (1,632 real lines across 2026-06-05..10).  These lines are
+# constructed from the code templates in chat.py and are clearly labelled
+# SYNTHETIC.  Do not use them as evidence that these paths are exercised by
+# real traffic.
+#
+# Source: project/api/chat.py
+#   [chat-ERR] written at chat.py:114 via  logger.error("[chat-ERR] tid=%s %s", tid, exc)
+#   Q&A log failed written at chat.py:57  via  logger.warning("Q&A log failed: %s", e)
+#
+# Lines below follow the verified grammar:
+#   YYYY-MM-DD HH:MM:SS,mmm [tid|-] LEVEL name:func:lineno - msg
+2026-06-09 14:23:45,001 [deadbeef] WARNING api.chat:_finalize:57 - Q&A log failed: [Errno 28] No space left on device
+2026-06-09 14:23:50,002 [deadbeef] WARNING api.chat:chat_stream:114 - [chat-ERR] tid=deadbeef Connection reset by peer
+2026-06-09 14:24:00,003 [cafe1234] WARNING api.chat:_finalize:57 - Q&A log failed: PermissionError: [Errno 13] Permission denied: '/logs/qa/qa_2026-06-09.jsonl'
+2026-06-09 14:24:10,004 [cafe1234] WARNING api.chat:chat_stream:114 - [chat-ERR] tid=cafe1234 Timeout waiting for LLM response after 120s
