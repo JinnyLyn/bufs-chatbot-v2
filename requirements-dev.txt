@@ -1,3 +1,12 @@
+# Unit-test runtime (fully self-sufficient — no torch/sentence-transformers needed)
 pytest>=8.3
 pytest-asyncio>=0.24
 pytest-cov>=6.0
+pydantic
+langgraph==1.2.0
+langchain-text-splitters==1.1.2
+tiktoken==0.13.0
+pymupdf4llm==1.27.2.3
+
+# Integration-test extras (install separately — not required for offline unit suite)
+# pip install langchain-ollama==1.1.0

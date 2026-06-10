@@ -60,15 +60,20 @@ pytest -m integration
 | `tests/db/test_vector_db_manager.py` | `db/vector_db_manager.py` | `qdrant-client`, `langchain-qdrant`, `langchain-huggingface` 설치 필요 |
 | `tests/rag_agent/test_tools.py` | `rag_agent/tools.py` | 가짜 스토어 사용 (오프라인 가능), 그래프 컴파일 확인 포함 |
 | `tests/api/test_chat_integration.py` | `api/chat.py`, `api/agent_stream.py` | 가짜 RAG 테스트는 오프라인, 실제 LLM 테스트는 `OLLAMA_BASE_URL` 필요 |
+| `tests/test_live_llm.py` | 실 Ollama 엔드포인트 | `OLLAMA_BASE_URL` + `langchain-ollama` 필요 |
 
 #### 통합 테스트 실행 방법
 
 ```bash
+# 통합 테스트 전용 extras 설치 (requirements-dev.txt에 포함되지 않음)
+pip install langchain-ollama==1.1.0
+
 # 모든 통합 테스트 (서비스 미설정 시 대부분 스킵)
 pytest -m integration -v
 
-# 서비스 환경 변수 설정 후 실행
+# 서비스 환경 변수 설정 후 실행 (실 LLM 포함)
 OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+LLM_MODEL=qwen3.5:9b \
 QDRANT_DB_PATH=./qdrant_db \
 pytest -m integration -v
 ```
@@ -76,6 +81,16 @@ pytest -m integration -v
 > **참고**: `pytest -m integration` 실행 시 테스트가 하나도 수집되지 않으면 pytest는
 > **exit code 5**를 반환합니다 (테스트 없음). CI에서 이를 성공으로 처리하려면
 > `|| true` 또는 `--ignore-glob` 등을 활용하세요.
+
+---
+
+### requirements-dev.txt에 torch/sentence-transformers가 없는 이유
+
+`requirements.txt`의 `sentence-transformers`와 `torch`는 4GB+ 다운로드가 필요하며,
+단위 테스트 대상 8개 모듈(`config.py`, `edges.py`, `schemas.py` 등)은 임베딩 모델에
+의존하지 않습니다. 또한 Python 3.14 환경에서는 바이너리 호환성 문제가 발생할 수 있어
+최소 서브셋만 설치합니다. 전체 requirements는 프로덕션 설치(`pip install -r requirements.txt`)
+시 그대로 사용하세요.
 
 ---
 

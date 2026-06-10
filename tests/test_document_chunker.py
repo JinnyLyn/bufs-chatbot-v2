@@ -114,7 +114,12 @@ class TestBasicChunking:
 
 class TestCohortSectionAwareness:
     def test_cohort_sections_not_merged_across_boundaries(self, tmp_path):
-        """두 학번 섹션의 내용이 하나의 parent chunk에 합쳐지지 않아야 합니다."""
+        """두 학번 섹션의 내용이 하나의 parent chunk에 합쳐지지 않아야 합니다.
+
+        학번 경계는 hard boundary — 두 개의 별도 학번 헤더가 같은 청크에 나타나면 실패.
+        range-expansion이 "2017~2020학번" 청크에 "2021학번" 토큰을 추가하지 않으므로
+        두 헤더 문자열이 동시에 나타나는 경우는 오직 병합 오류(boundary 위반)뿐.
+        """
         chunker = _make_chunker()
         md = _write_md(tmp_path, "cohort.md", """\
             ## 2017~2020학번
@@ -144,20 +149,16 @@ class TestCohortSectionAwareness:
             끝입니다.
         """)
         parents, _ = chunker.create_chunks_single(md)
-        # No single parent should contain BOTH 2017 and 2021 in its content
+        # Hard assertion: no parent may contain BOTH cohort section headers.
+        # Range-expansion only adds individual year tokens (2017학번…2020학번),
+        # never "## 2021학번", so co-occurrence is unambiguously a boundary
+        # violation regardless of what else is in the chunk.
         for _, parent in parents:
             content = parent.page_content
-            has_2017 = "2017" in content
-            has_2021 = "2021" in content
-            # They may appear individually, but the 2021학번 specific content
-            # must not appear in the same chunk as 2017 cohort content
-            # (cohort hard boundary should prevent merge)
-            if has_2017 and has_2021:
-                # Acceptable only if it's the range expansion "2017~2020학번 (2017학번 ... 2021학번..."
-                # which does NOT happen here since 2021 is a separate header.
-                # A strict check: the 2021학번 header must start a fresh chunk.
-                assert "2021학번" not in content or "2017~2020학번" not in content, \
-                    "Cohort boundary violated: both cohort sections in one parent"
+            assert not ("2017~2020학번" in content and "## 2021학번" in content), (
+                "Cohort boundary violated: 2017~2020학번 and ## 2021학번 "
+                f"both found in a single parent chunk:\n{content[:300]}"
+            )
 
     def test_cohort_range_header_expanded_with_individual_years(self, tmp_path):
         """## 2017~2020학번 헤더는 2017학번 2018학번 2019학번 2020학번을 포함해야 합니다."""
