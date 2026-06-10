@@ -24,11 +24,9 @@ Requires LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 
-from .langfuse_client import ensure_env
-from ._query import get_trace_detail, resolve_tid
+from ._query import get_trace_detail, require_env, resolve_tid
 
 # ── annotation map: what wrong looks like at each stage → suspect module ──────
 
@@ -351,7 +349,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    _require_env("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY")
+    require_env("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY")
 
     # Resolve tid → 32-hex Langfuse ID
     raw_tid = args.tid.strip().lower()
@@ -383,18 +381,6 @@ def main(argv: list[str] | None = None) -> int:
         render_annotated(trace)
 
     return 0
-
-
-def _require_env(*keys: str) -> None:
-    ensure_env()  # load project/.env first so the check sees it (never at import)
-    missing = [k for k in keys if not os.environ.get(k)]
-    if missing:
-        print(
-            f"error: missing environment variable(s): {', '.join(missing)}\n"
-            "       Set them in project/.env (see .env.example)",
-            file=sys.stderr,
-        )
-        sys.exit(1)
 
 
 if __name__ == "__main__":

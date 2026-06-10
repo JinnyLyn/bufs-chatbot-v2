@@ -11,12 +11,16 @@ fetch_observations_by_trace(trace_id_32) -> list[dict]
 fetch_session_traces(session_id, want)   -> list[dict]
 get_trace_detail(trace_id_32)            -> dict
 resolve_tid(tid)                         -> str  (8-hex or 32-hex → 32-hex)
+require_env(*keys)                       -> None (exit 1 if any key missing)
 """
 from __future__ import annotations
 
+import os
+import sys
 from datetime import datetime, timedelta
 
 from .langfuse_client import (
+    ensure_env,
     fetch_observations,
     fetch_trace_detail,
     fetch_traces,
@@ -29,20 +33,39 @@ __all__ = [
     "fetch_session_traces",
     "get_trace_detail",
     "resolve_tid",
+    "require_env",
 ]
+
+
+def require_env(*keys: str) -> None:
+    """Exit 1 with a readable message if any *keys* are missing from the env.
+
+    Loads project/.env first via ensure_env() (never at import time).
+    """
+    ensure_env()
+    missing = [k for k in keys if not os.environ.get(k)]
+    if missing:
+        print(
+            f"error: missing environment variable(s): {', '.join(missing)}\n"
+            "       Set them in project/.env (see .env.example)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 def fetch_traces_window(days: int = 7, want: int = 200, **filters) -> list[dict]:
     """Fetch up to *want* traces from the last *days* days (UTC).
 
     Passes RFC 3339 ``fromTimestamp`` to the REST API; additional **filters
-    are forwarded verbatim (e.g. ``sessionId=``, ``userId=``).
+    are forwarded verbatim (e.g. ``sessionId=``, ``userId=``). A caller-supplied
+    ``fromTimestamp`` overrides the *days* window (no duplicate-kwarg TypeError).
     """
     since = (
         (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
         + "+00:00"
     )
-    return fetch_traces(want=want, fromTimestamp=since, **filters)
+    filters.setdefault("fromTimestamp", since)
+    return fetch_traces(want=want, **filters)
 
 
 def fetch_observations_by_name(name: str, want: int = 500) -> list[dict]:

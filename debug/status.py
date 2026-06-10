@@ -302,7 +302,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         recent_traces = fetch_traces_window(days=7, want=200)
         prior_traces = fetch_traces_window(days=14, want=400)
-        prior_only = [t for t in prior_traces if t not in recent_traces]
+        recent_ids = {t.get("id") for t in recent_traces}
+        prior_only = [t for t in prior_traces if t.get("id") not in recent_ids]
         from .langfuse_client import fetch_observations
         obs = fetch_observations(want=1200)
         print(f"    Pulled: {len(recent_traces)} recent traces, {len(prior_only)} prior, {len(obs)} obs")

@@ -22,13 +22,11 @@ Requires LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
 
-from .langfuse_client import ensure_env, fetch_observations, fetch_traces
-from ._query import fetch_observations_by_name, fetch_traces_window
+from .langfuse_client import fetch_observations, fetch_traces
+from ._query import fetch_observations_by_name, fetch_traces_window, require_env
 
 
 # ── percentile helper (mirrors eval_tools/_langfuse_analyze.py) ──────────────
@@ -104,7 +102,7 @@ def fleet_stats(traces: list[dict], obs: list[dict]) -> None:
     gen_per_trace: Counter = Counter()
     for o in obs:
         if o.get("type") == "GENERATION":
-            gen_per_trace[o["traceId"]] += 1
+            gen_per_trace[o.get("traceId") or "unknown"] += 1
     if gen_per_trace:
         vals = list(gen_per_trace.values())
         print(f"\n{sep}\nLLM CALLS PER TRACE (agent-loop depth):")
@@ -234,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     # Validate credentials exist
-    _require_env("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY")
+    require_env("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY")
 
     # Determine fetch window
     days = 7
@@ -242,6 +240,7 @@ def main(argv: list[str] | None = None) -> int:
     extra_filters: dict = {}
 
     if args.since:
+        # Explicit range overrides the default 7d window (see fetch_traces_window)
         extra_filters["fromTimestamp"] = args.since
         want = 500  # wider when given explicit range
     if args.last:
@@ -265,18 +264,6 @@ def main(argv: list[str] | None = None) -> int:
         fleet_stats(traces, obs)
 
     return 0
-
-
-def _require_env(*keys: str) -> None:
-    ensure_env()  # load project/.env first so the check sees it (never at import)
-    missing = [k for k in keys if not os.environ.get(k)]
-    if missing:
-        print(
-            f"error: missing environment variable(s): {', '.join(missing)}\n"
-            "       Set them in project/.env (see .env.example)",
-            file=sys.stderr,
-        )
-        sys.exit(1)
 
 
 if __name__ == "__main__":

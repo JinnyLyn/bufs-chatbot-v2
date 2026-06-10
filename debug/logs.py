@@ -36,10 +36,9 @@ from pathlib import Path
 from typing import Iterator
 
 # ── repo-root anchor; dotenv runs in main() ONLY (importing stays env-pure) ───
-from pathlib import Path as _Path
 from dotenv import load_dotenv as _load_dotenv
 
-_REPO_ROOT = _Path(__file__).resolve().parents[1]
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # ── constants ─────────────────────────────────────────────────────────────────
 
@@ -98,8 +97,8 @@ def _log_root() -> Path:
 def iter_app_log_files(log_root: Path | None = None) -> list[Path]:
     """Return all app.log* files under <log_root>/backend/, sorted by name.
 
-    The active file ``app.log`` sorts last (alphanumerically after any
-    dated ``app.log.YYYY-MM-DD`` file).
+    The active file ``app.log`` sorts first (lexicographically before any
+    dated ``app.log.YYYY-MM-DD`` file, being a prefix of those names).
     """
     root = log_root or _log_root()
     backend = root / "backend"

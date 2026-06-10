@@ -27,14 +27,13 @@ BUFS_LOG_DIR  — log tree root for orphan detection (default: logs/).
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import sys
 
-from .langfuse_client import ensure_env
 from ._query import (
     fetch_session_traces,
     get_trace_detail,
+    require_env,
     resolve_tid,
 )
 from .logs import grep_app_logs
@@ -61,13 +60,10 @@ def _verdicts(trace: dict, obs: list[dict]) -> list[str]:
     elif isinstance(trace.get("output"), dict):
         answer_text = str(trace["output"].get("content") or trace["output"].get("output") or "")
 
-    # Agent latency from observations
-    agg_obs = next((o for o in obs if o.get("name") == "aggregate_answers"), None)
-    agent_lat = next((o.get("latency") or 0 for o in obs if o.get("name") == "agent"), 0)
-
-    # REFUSE: no retrieval path
+    # REFUSE: no retrieval path. Fires only on an explicit tool_calls == 0 —
+    # a missing metadata key (None) means "unknown", not "refused".
     search_obs = [o for o in obs if o.get("name") == "search_child_chunks"]
-    if not search_obs and (tool_calls_count == 0 or tool_calls_count is None):
+    if not search_obs and tool_calls_count == 0:
         flags.append("REFUSE")
 
     # NO-RESULTS
@@ -130,7 +126,12 @@ def display_session(traces: list[dict]) -> None:
         lat = t.get("latency")
         lf_id = t.get("id", "")
 
-        # Fetch full detail for observations
+        # Fetch full detail for observations (one REST call per trace — show
+        # progress so large sessions don't look hung)
+        print(
+            f"  [{i:02d}/{len(traces_sorted)}] fetching trace detail …",
+            file=sys.stderr,
+        )
         try:
             detail = get_trace_detail(lf_id)
             obs = detail.get("observations", [])
@@ -213,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    _require_env("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY")
+    require_env("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY")
 
     raw = args.session_or_tid.strip()
 
@@ -263,18 +264,6 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Found {len(traces)} trace(s) in session.", file=sys.stderr)
     display_session(traces)
     return 0
-
-
-def _require_env(*keys: str) -> None:
-    ensure_env()  # load project/.env first so the check sees it (never at import)
-    missing = [k for k in keys if not os.environ.get(k)]
-    if missing:
-        print(
-            f"error: missing environment variable(s): {', '.join(missing)}\n"
-            "       Set them in project/.env (see .env.example)",
-            file=sys.stderr,
-        )
-        sys.exit(1)
 
 
 if __name__ == "__main__":
