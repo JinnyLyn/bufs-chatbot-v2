@@ -1,0 +1,341 @@
+2026-06-06 13:45:43,138 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-06 13:45:43,139 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-06 13:45:43,943 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-06 13:45:44,186 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-06 13:45:53,704 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 10}
+2026-06-06 13:46:04,088 [962bbfec] INFO api.chat:chat_stream:77 - [chat-IN] tid=962bbfec sid=fc619e7b q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-06 13:46:37,357 [962bbfec] INFO api.chat:_finalize:36 - [chat-OUT] tid=962bbfec sid=fc619e7b answer_chars=251 results=4 sources=1 total_ms=33266
+2026-06-06 13:46:37,358 [962bbfec] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=962bbfec total=33266ms summarize=0ms rewrite=6797ms agent=23312ms aggregate=3156ms other=0ms sub_q=1 tool_calls=2 model=qwen3.5:9b
+2026-06-06 13:58:32,128 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-06 13:58:32,129 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+2026-06-06 13:58:33,106 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-06 13:58:33,130 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+2026-06-06 13:58:41,916 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11435', 'num_ctx': 8192, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 9}
+2026-06-06 13:58:52,018 [326b1d3f] INFO api.chat:chat_stream:77 - [chat-IN] tid=326b1d3f sid=1554d909 q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-06 13:59:56,590 [326b1d3f] INFO api.chat:_finalize:36 - [chat-OUT] tid=326b1d3f sid=1554d909 answer_chars=665 results=7 sources=1 total_ms=64562
+2026-06-06 13:59:56,594 [326b1d3f] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=326b1d3f total=64562ms summarize=0ms rewrite=4906ms agent=52203ms aggregate=7452ms other=0ms sub_q=1 tool_calls=3 model=qwen3.5:9b
+2026-06-06 14:00:28,671 [30d33c1e] INFO api.chat:chat_stream:77 - [chat-IN] tid=30d33c1e sid=8483aa8d q_chars=26 q='2020학번 학점별로 필수 졸업요건 학점 알려줘' model=qwen3.5:9b test=False
+2026-06-06 14:01:30,222 [30d33c1e] INFO api.chat:_finalize:36 - [chat-OUT] tid=30d33c1e sid=8483aa8d answer_chars=665 results=7 sources=1 total_ms=61563
+2026-06-06 14:01:30,222 [30d33c1e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=30d33c1e total=61563ms summarize=0ms rewrite=1797ms agent=52391ms aggregate=7358ms other=0ms sub_q=1 tool_calls=3 model=qwen3.5:9b
+2026-06-06 15:04:27,766 [460e37d6] INFO api.chat:chat_stream:77 - [chat-IN] tid=460e37d6 sid=b71c1934 q_chars=21 q='성적 처리 방법과 이의신청 절차 알려줘' model=qwen3.5:9b test=False
+2026-06-06 15:04:59,885 [460e37d6] INFO api.chat:_finalize:36 - [chat-OUT] tid=460e37d6 sid=b71c1934 answer_chars=705 results=9 sources=6 total_ms=32109
+2026-06-06 15:04:59,885 [460e37d6] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=460e37d6 total=32109ms summarize=0ms rewrite=5093ms agent=19078ms aggregate=7937ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:05:43,922 [82c79a33] INFO api.chat:chat_stream:77 - [chat-IN] tid=82c79a33 sid=b71c1934 q_chars=6 q='ocu 말고' model=qwen3.5:9b test=False
+2026-06-06 15:05:48,947 [82c79a33] INFO api.chat:_finalize:36 - [chat-OUT] tid=82c79a33 sid=b71c1934 answer_chars=149 results=9 sources=6 total_ms=5032
+2026-06-06 15:05:48,947 [82c79a33] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=82c79a33 total=5032ms summarize=2203ms rewrite=2828ms agent=0ms aggregate=0ms other=0ms sub_q=2 tool_calls=0 model=qwen3.5:9b
+2026-06-06 15:06:09,701 [9661f820] INFO api.chat:chat_stream:77 - [chat-IN] tid=9661f820 sid=b71c1934 q_chars=34 q='ocu 말고 우리 학교 성적 처리 방법과 이의신청 절차 알려줘' model=qwen3.5:9b test=False
+2026-06-06 15:06:42,656 [9661f820] INFO api.chat:_finalize:36 - [chat-OUT] tid=9661f820 sid=b71c1934 answer_chars=423 results=8 sources=3 total_ms=32952
+2026-06-06 15:06:42,656 [9661f820] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=9661f820 total=32952ms summarize=0ms rewrite=2406ms agent=25203ms aggregate=5327ms other=0ms sub_q=3 tool_calls=3 model=qwen3.5:9b
+2026-06-06 15:11:27,929 [60d09177] INFO api.chat:chat_stream:77 - [chat-IN] tid=60d09177 sid=30d607b4 q_chars=22 q='2026학년도 1학기 개강일은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:11:34,685 [60d09177] INFO api.chat:_finalize:36 - [chat-OUT] tid=60d09177 sid=30d607b4 answer_chars=102 results=4 sources=2 total_ms=6733
+2026-06-06 15:11:34,685 [60d09177] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=60d09177 total=6733ms summarize=0ms rewrite=1858ms agent=3468ms aggregate=1406ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:11:38,786 [514f526a] INFO api.chat:chat_stream:77 - [chat-IN] tid=514f526a sid=f3863f9d q_chars=26 q='2026학년도 1학기 중간고사 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:11:45,843 [514f526a] INFO api.chat:_finalize:36 - [chat-OUT] tid=514f526a sid=f3863f9d answer_chars=119 results=3 sources=2 total_ms=7047
+2026-06-06 15:11:45,844 [514f526a] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=514f526a total=7047ms summarize=0ms rewrite=1782ms agent=3656ms aggregate=1608ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:11:49,909 [bcd15785] INFO api.chat:chat_stream:77 - [chat-IN] tid=bcd15785 sid=0e2625be q_chars=14 q='수강신청 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:12:05,930 [bcd15785] INFO api.chat:_finalize:36 - [chat-OUT] tid=bcd15785 sid=0e2625be answer_chars=544 results=2 sources=1 total_ms=16016
+2026-06-06 15:12:05,931 [bcd15785] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=bcd15785 total=16016ms summarize=0ms rewrite=1782ms agent=8062ms aggregate=6171ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:12:10,011 [06680b7b] INFO api.chat:chat_stream:77 - [chat-IN] tid=06680b7b sid=7a3c7688 q_chars=27 q='2023학번 이후 최대 수강신청 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:12:26,045 [06680b7b] INFO api.chat:_finalize:36 - [chat-OUT] tid=06680b7b sid=7a3c7688 answer_chars=598 results=5 sources=2 total_ms=16014
+2026-06-06 15:12:26,045 [06680b7b] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=06680b7b total=16014ms summarize=0ms rewrite=1812ms agent=8156ms aggregate=6046ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:12:30,169 [dc86b080] INFO api.chat:chat_stream:77 - [chat-IN] tid=dc86b080 sid=a1077a99 q_chars=20 q='재수강 가능한 성적 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:12:45,452 [dc86b080] INFO api.chat:_finalize:36 - [chat-OUT] tid=dc86b080 sid=a1077a99 answer_chars=654 results=3 sources=1 total_ms=15282
+2026-06-06 15:12:45,452 [dc86b080] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=dc86b080 total=15282ms summarize=0ms rewrite=1703ms agent=7235ms aggregate=6343ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:12:49,552 [3b19368d] INFO api.chat:chat_stream:77 - [chat-IN] tid=3b19368d sid=6dfda676 q_chars=30 q='2019학번 이후 학생의 재수강 제한 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:13:01,575 [3b19368d] INFO api.chat:_finalize:36 - [chat-OUT] tid=3b19368d sid=6dfda676 answer_chars=440 results=4 sources=2 total_ms=12016
+2026-06-06 15:13:01,576 [3b19368d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=3b19368d total=12016ms summarize=0ms rewrite=1797ms agent=6000ms aggregate=4218ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:13:05,696 [14d68632] INFO api.chat:chat_stream:77 - [chat-IN] tid=14d68632 sid=200b67e3 q_chars=31 q='OCU 정규학기에 수강할 수 있는 최대 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:13:37,603 [14d68632] INFO api.chat:_finalize:36 - [chat-OUT] tid=14d68632 sid=200b67e3 answer_chars=817 results=4 sources=1 total_ms=31891
+2026-06-06 15:13:37,603 [14d68632] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=14d68632 total=31891ms summarize=0ms rewrite=1781ms agent=21906ms aggregate=8203ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:13:41,626 [d3c30171] INFO api.chat:chat_stream:77 - [chat-IN] tid=d3c30171 sid=f48102ea q_chars=30 q='2024학번 이후 졸업에 필요한 최소 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:13:47,707 [d3c30171] INFO api.chat:_finalize:36 - [chat-OUT] tid=d3c30171 sid=f48102ea answer_chars=77 results=4 sources=2 total_ms=6077
+2026-06-06 15:13:47,707 [d3c30171] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=d3c30171 total=6077ms summarize=0ms rewrite=1843ms agent=3093ms aggregate=1125ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:13:51,760 [3c4030e8] INFO api.chat:chat_stream:77 - [chat-IN] tid=3c4030e8 sid=f2ab5780 q_chars=28 q='2022학번의 졸업에 필요한 최소 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:14:04,593 [3c4030e8] INFO api.chat:_finalize:36 - [chat-OUT] tid=3c4030e8 sid=f2ab5780 answer_chars=456 results=4 sources=1 total_ms=12827
+2026-06-06 15:14:04,593 [3c4030e8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=3c4030e8 total=12827ms summarize=0ms rewrite=1858ms agent=6187ms aggregate=4781ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:14:08,691 [cfbc3f2d] INFO api.chat:chat_stream:77 - [chat-IN] tid=cfbc3f2d sid=c11633ce q_chars=28 q='2024학번 이후 교양과정 총 이수학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:14:20,948 [cfbc3f2d] INFO api.chat:_finalize:36 - [chat-OUT] tid=cfbc3f2d sid=c11633ce answer_chars=452 results=4 sources=1 total_ms=12250
+2026-06-06 15:14:20,948 [cfbc3f2d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=cfbc3f2d total=12250ms summarize=0ms rewrite=1812ms agent=5718ms aggregate=4718ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:14:25,018 [65aff06e] INFO api.chat:chat_stream:77 - [chat-IN] tid=65aff06e sid=5edd2232 q_chars=48 q='2023학번이 방법1(주전공+복수전공)로 졸업할 경우 각각 몇 학점을 이수해야 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:14:43,979 [65aff06e] INFO api.chat:_finalize:36 - [chat-OUT] tid=65aff06e sid=5edd2232 answer_chars=382 results=5 sources=2 total_ms=18953
+2026-06-06 15:14:43,979 [65aff06e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=65aff06e total=18953ms summarize=0ms rewrite=2453ms agent=12358ms aggregate=4141ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:14:48,065 [41f99778] INFO api.chat:chat_stream:77 - [chat-IN] tid=41f99778 sid=73762937 q_chars=54 q='2024학번 이후, 2023학번, 2022학번, 2021학번의 복수전공 이수학점은 각각 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:15:11,896 [41f99778] INFO api.chat:_finalize:36 - [chat-OUT] tid=41f99778 sid=73762937 answer_chars=380 results=5 sources=3 total_ms=23827
+2026-06-06 15:15:11,896 [41f99778] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=41f99778 total=23827ms summarize=0ms rewrite=2717ms agent=16313ms aggregate=4796ms other=0ms sub_q=4 tool_calls=4 model=qwen3.5:9b
+2026-06-06 15:19:44,789 [a6bff1d7] INFO api.chat:chat_stream:77 - [chat-IN] tid=a6bff1d7 sid=c46735df q_chars=22 q='2026학년도 1학기 개강일은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:19:51,473 [a6bff1d7] INFO api.chat:_finalize:36 - [chat-OUT] tid=a6bff1d7 sid=c46735df answer_chars=102 results=4 sources=2 total_ms=6672
+2026-06-06 15:19:51,473 [a6bff1d7] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a6bff1d7 total=6672ms summarize=0ms rewrite=1812ms agent=3453ms aggregate=1406ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:19:55,526 [5d255c82] INFO api.chat:chat_stream:77 - [chat-IN] tid=5d255c82 sid=3d7e65ca q_chars=26 q='2026학년도 1학기 기말고사 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:20:01,765 [5d255c82] INFO api.chat:_finalize:36 - [chat-OUT] tid=5d255c82 sid=3d7e65ca answer_chars=55 results=3 sources=2 total_ms=6219
+2026-06-06 15:20:01,765 [5d255c82] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=5d255c82 total=6219ms summarize=0ms rewrite=1860ms agent=3328ms aggregate=1031ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:20:05,836 [fbf2ee1b] INFO api.chat:chat_stream:77 - [chat-IN] tid=fbf2ee1b sid=79c82cdc q_chars=16 q='수업일수 1/4선은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:20:12,987 [fbf2ee1b] INFO api.chat:_finalize:36 - [chat-OUT] tid=fbf2ee1b sid=79c82cdc answer_chars=114 results=4 sources=2 total_ms=7156
+2026-06-06 15:20:12,990 [fbf2ee1b] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=fbf2ee1b total=7156ms summarize=0ms rewrite=2047ms agent=3452ms aggregate=1656ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:20:17,059 [29178d67] INFO api.chat:chat_stream:77 - [chat-IN] tid=29178d67 sid=c0895562 q_chars=23 q='2025학년도 전기 학위수여식은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:20:24,923 [29178d67] INFO api.chat:_finalize:36 - [chat-OUT] tid=29178d67 sid=c0895562 answer_chars=205 results=4 sources=2 total_ms=7842
+2026-06-06 15:20:24,923 [29178d67] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=29178d67 total=7842ms summarize=0ms rewrite=1781ms agent=3811ms aggregate=2250ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:20:29,006 [ed4628c8] INFO api.chat:chat_stream:77 - [chat-IN] tid=ed4628c8 sid=ce64aa34 q_chars=26 q='2026학년도 1학기 수강신청 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:20:40,255 [ed4628c8] INFO api.chat:_finalize:36 - [chat-OUT] tid=ed4628c8 sid=ce64aa34 answer_chars=355 results=4 sources=1 total_ms=11250
+2026-06-06 15:20:40,255 [ed4628c8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=ed4628c8 total=11250ms summarize=0ms rewrite=1733ms agent=5610ms aggregate=3906ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:20:44,373 [e6a0e67f] INFO api.chat:chat_stream:77 - [chat-IN] tid=e6a0e67f sid=06c83b93 q_chars=26 q='장바구니에 담을 수 있는 최대 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:20:55,580 [e6a0e67f] INFO api.chat:_finalize:36 - [chat-OUT] tid=e6a0e67f sid=06c83b93 answer_chars=333 results=5 sources=2 total_ms=11202
+2026-06-06 15:20:55,581 [e6a0e67f] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=e6a0e67f total=11202ms summarize=0ms rewrite=1765ms agent=5812ms aggregate=3610ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:20:59,640 [c99c8af0] INFO api.chat:chat_stream:77 - [chat-IN] tid=c99c8af0 sid=0e5e5841 q_chars=36 q='2023학번 이후 학생의 한 학기 최대 수강신청 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:21:17,255 [c99c8af0] INFO api.chat:_finalize:36 - [chat-OUT] tid=c99c8af0 sid=0e5e5841 answer_chars=715 results=5 sources=2 total_ms=17609
+2026-06-06 15:21:17,255 [c99c8af0] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c99c8af0 total=17609ms summarize=0ms rewrite=1906ms agent=8562ms aggregate=7141ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:21:21,330 [d40c4482] INFO api.chat:chat_stream:77 - [chat-IN] tid=d40c4482 sid=3d1dc516 q_chars=50 q='직전학기 평점 4.0 이상인 2022학번 이전 학생은 최대 몇 학점까지 신청할 수 있는가?' model=qwen3.5:9b test=False
+2026-06-06 15:21:29,384 [d40c4482] INFO api.chat:_finalize:36 - [chat-OUT] tid=d40c4482 sid=3d1dc516 answer_chars=164 results=3 sources=2 total_ms=8047
+2026-06-06 15:21:29,384 [d40c4482] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=d40c4482 total=8047ms summarize=0ms rewrite=1968ms agent=4078ms aggregate=2000ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:21:33,480 [2804ae3d] INFO api.chat:chat_stream:77 - [chat-IN] tid=2804ae3d sid=d2fa5cfb q_chars=30 q='2019학번 이후 학생의 재수강 제한 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:21:45,555 [2804ae3d] INFO api.chat:_finalize:36 - [chat-OUT] tid=2804ae3d sid=d2fa5cfb answer_chars=440 results=4 sources=2 total_ms=12062
+2026-06-06 15:21:45,555 [2804ae3d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=2804ae3d total=12062ms summarize=0ms rewrite=1906ms agent=5968ms aggregate=4187ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:21:49,596 [37b2acf2] INFO api.chat:chat_stream:77 - [chat-IN] tid=37b2acf2 sid=690415d4 q_chars=21 q='수업시간표는 어디서 확인할 수 있는가?' model=qwen3.5:9b test=False
+2026-06-06 15:22:02,286 [37b2acf2] INFO api.chat:_finalize:36 - [chat-OUT] tid=37b2acf2 sid=690415d4 answer_chars=529 results=4 sources=2 total_ms=12686
+2026-06-06 15:22:02,286 [37b2acf2] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=37b2acf2 total=12686ms summarize=0ms rewrite=1781ms agent=6280ms aggregate=4625ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:22:06,362 [6edd489e] INFO api.chat:chat_stream:77 - [chat-IN] tid=6edd489e sid=09f91e96 q_chars=22 q='야간수업 14교시 종료 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:22:12,111 [6edd489e] INFO api.chat:_finalize:36 - [chat-OUT] tid=6edd489e sid=09f91e96 answer_chars=63 results=3 sources=2 total_ms=5735
+2026-06-06 15:22:12,111 [6edd489e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=6edd489e total=5735ms summarize=0ms rewrite=1750ms agent=2937ms aggregate=1047ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:22:16,162 [908cc813] INFO api.chat:chat_stream:77 - [chat-IN] tid=908cc813 sid=0405046d q_chars=28 q='OCU 교과목 개강일과 수강 가능 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:22:36,096 [908cc813] INFO api.chat:_finalize:36 - [chat-OUT] tid=908cc813 sid=0405046d answer_chars=629 results=6 sources=1 total_ms=19938
+2026-06-06 15:22:36,096 [908cc813] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=908cc813 total=19938ms summarize=0ms rewrite=1860ms agent=11625ms aggregate=6437ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:22:40,189 [19125ab7] INFO api.chat:chat_stream:77 - [chat-IN] tid=19125ab7 sid=5db98fd7 q_chars=30 q='2024학번 이후 졸업에 필요한 최소 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:22:46,167 [19125ab7] INFO api.chat:_finalize:36 - [chat-OUT] tid=19125ab7 sid=5db98fd7 answer_chars=77 results=4 sources=2 total_ms=5967
+2026-06-06 15:22:46,167 [19125ab7] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=19125ab7 total=5967ms summarize=0ms rewrite=1827ms agent=3047ms aggregate=1092ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:22:50,223 [73711892] INFO api.chat:chat_stream:77 - [chat-IN] tid=73711892 sid=bb913a39 q_chars=28 q='2022학번의 졸업에 필요한 최소 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:23:03,044 [73711892] INFO api.chat:_finalize:36 - [chat-OUT] tid=73711892 sid=bb913a39 answer_chars=456 results=4 sources=1 total_ms=12811
+2026-06-06 15:23:03,045 [73711892] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=73711892 total=12811ms summarize=0ms rewrite=1889ms agent=6171ms aggregate=4750ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:23:07,112 [3adf9437] INFO api.chat:chat_stream:77 - [chat-IN] tid=3adf9437 sid=d73a79cb q_chars=33 q='외국인 학생의 졸업인증 요건 중 TOPIK 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:23:17,317 [3adf9437] INFO api.chat:_finalize:36 - [chat-OUT] tid=3adf9437 sid=d73a79cb answer_chars=343 results=4 sources=1 total_ms=10203
+2026-06-06 15:23:17,318 [3adf9437] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=3adf9437 total=10203ms summarize=0ms rewrite=1843ms agent=5047ms aggregate=3312ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:23:21,396 [7f68e59b] INFO api.chat:chat_stream:77 - [chat-IN] tid=7f68e59b sid=7830a5f8 q_chars=39 q='2023학번 복수전공 이수학점은 주전공과 제2전공이 각각 몇 학점인가?' model=qwen3.5:9b test=False
+2026-06-06 15:23:39,484 [7f68e59b] INFO api.chat:_finalize:36 - [chat-OUT] tid=7f68e59b sid=7830a5f8 answer_chars=444 results=6 sources=2 total_ms=18078
+2026-06-06 15:23:39,484 [7f68e59b] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=7f68e59b total=18078ms summarize=0ms rewrite=2639ms agent=10407ms aggregate=5031ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:23:43,585 [9aabc33a] INFO api.chat:chat_stream:77 - [chat-IN] tid=9aabc33a sid=7191be9d q_chars=12 q='조기졸업이란 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:23:54,222 [9aabc33a] INFO api.chat:_finalize:36 - [chat-OUT] tid=9aabc33a sid=7191be9d answer_chars=324 results=4 sources=3 total_ms=10641
+2026-06-06 15:23:54,222 [9aabc33a] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=9aabc33a total=10641ms summarize=0ms rewrite=1860ms agent=5500ms aggregate=3281ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:23:58,310 [aa123ff9] INFO api.chat:chat_stream:77 - [chat-IN] tid=aa123ff9 sid=0aafd9c4 q_chars=20 q='조기졸업 신청 자격 요건은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:24:22,991 [aa123ff9] INFO api.chat:_finalize:36 - [chat-OUT] tid=aa123ff9 sid=0aafd9c4 answer_chars=508 results=4 sources=3 total_ms=24671
+2026-06-06 15:24:22,991 [aa123ff9] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=aa123ff9 total=24671ms summarize=0ms rewrite=1717ms agent=17797ms aggregate=5156ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:24:27,085 [2b859202] INFO api.chat:chat_stream:77 - [chat-IN] tid=2b859202 sid=bddeca3c q_chars=26 q='전과(제1전공 변경)는 언제 신청할 수 있는가?' model=qwen3.5:9b test=False
+2026-06-06 15:24:46,041 [2b859202] INFO api.chat:_finalize:36 - [chat-OUT] tid=2b859202 sid=bddeca3c answer_chars=726 results=4 sources=2 total_ms=18952
+2026-06-06 15:24:46,042 [2b859202] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=2b859202 total=18952ms summarize=0ms rewrite=1891ms agent=9577ms aggregate=7483ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:24:50,101 [d38c46d2] INFO api.chat:chat_stream:77 - [chat-IN] tid=d38c46d2 sid=ccb354c4 q_chars=36 q='2024학번 이후 학생이 전공 변경을 하려면 어떻게 해야 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:25:26,642 [d38c46d2] INFO api.chat:_finalize:36 - [chat-OUT] tid=d38c46d2 sid=ccb354c4 answer_chars=925 results=5 sources=3 total_ms=36531
+2026-06-06 15:25:26,642 [d38c46d2] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=d38c46d2 total=36531ms summarize=0ms rewrite=2046ms agent=25578ms aggregate=8906ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:25:30,725 [714f37dd] INFO api.chat:chat_stream:77 - [chat-IN] tid=714f37dd sid=4ebf6316 q_chars=55 q='2022학번이 방법1(주전공+복수전공)로 졸업할 경우 주전공과 제2전공의 이수학점은 각각 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:26:00,107 [714f37dd] INFO api.chat:_finalize:36 - [chat-OUT] tid=714f37dd sid=4ebf6316 answer_chars=454 results=6 sources=3 total_ms=29375
+2026-06-06 15:26:00,107 [714f37dd] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=714f37dd total=29375ms summarize=0ms rewrite=2702ms agent=21453ms aggregate=5218ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:26:04,172 [796b4a76] INFO api.chat:chat_stream:77 - [chat-IN] tid=796b4a76 sid=da3c005b q_chars=21 q='대체과목과 동일과목의 차이는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:26:17,803 [796b4a76] INFO api.chat:_finalize:36 - [chat-OUT] tid=796b4a76 sid=da3c005b answer_chars=564 results=2 sources=1 total_ms=13625
+2026-06-06 15:26:17,804 [796b4a76] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=796b4a76 total=13625ms summarize=0ms rewrite=1891ms agent=6437ms aggregate=5296ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:26:21,897 [b4b6837d] INFO api.chat:chat_stream:77 - [chat-IN] tid=b4b6837d sid=d2e4c353 q_chars=30 q='대체과목으로 인정받은 과목의 성적은 어떻게 처리되는가?' model=qwen3.5:9b test=False
+2026-06-06 15:26:39,884 [b4b6837d] INFO api.chat:_finalize:36 - [chat-OUT] tid=b4b6837d sid=d2e4c353 answer_chars=722 results=4 sources=1 total_ms=17984
+2026-06-06 15:26:39,885 [b4b6837d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=b4b6837d total=17984ms summarize=0ms rewrite=1875ms agent=9343ms aggregate=6766ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:26:43,993 [1d11a5b9] INFO api.chat:chat_stream:77 - [chat-IN] tid=1d11a5b9 sid=874cf991 q_chars=18 q='국가장학금 신청은 어디서 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:27:00,290 [1d11a5b9] INFO api.chat:_finalize:36 - [chat-OUT] tid=1d11a5b9 sid=874cf991 answer_chars=659 results=4 sources=3 total_ms=16280
+2026-06-06 15:27:00,290 [1d11a5b9] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=1d11a5b9 total=16280ms summarize=0ms rewrite=1671ms agent=8797ms aggregate=5811ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:27:04,365 [0c4bfb88] INFO api.chat:chat_stream:77 - [chat-IN] tid=0c4bfb88 sid=44b023bf q_chars=29 q='장학금 지급을 받기 위한 최소 이수 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:27:11,945 [0c4bfb88] INFO api.chat:_finalize:36 - [chat-OUT] tid=0c4bfb88 sid=44b023bf answer_chars=156 results=4 sources=2 total_ms=7578
+2026-06-06 15:27:11,945 [0c4bfb88] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=0c4bfb88 total=7578ms summarize=0ms rewrite=1812ms agent=3937ms aggregate=1828ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:27:15,997 [1fa2065f] INFO api.chat:chat_stream:77 - [chat-IN] tid=1fa2065f sid=71eba863 q_chars=18 q='TA장학생 선발 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:27:31,354 [1fa2065f] INFO api.chat:_finalize:36 - [chat-OUT] tid=1fa2065f sid=71eba863 answer_chars=678 results=3 sources=2 total_ms=15360
+2026-06-06 15:27:31,354 [1fa2065f] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=1fa2065f total=15360ms summarize=0ms rewrite=1828ms agent=7389ms aggregate=6141ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:27:35,404 [4a212bb8] INFO api.chat:chat_stream:77 - [chat-IN] tid=4a212bb8 sid=a2b42820 q_chars=15 q='휴학 신청은 어디서 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:27:47,777 [4a212bb8] INFO api.chat:_finalize:36 - [chat-OUT] tid=4a212bb8 sid=a2b42820 answer_chars=409 results=4 sources=4 total_ms=12360
+2026-06-06 15:27:47,777 [4a212bb8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=4a212bb8 total=12360ms summarize=0ms rewrite=1610ms agent=6922ms aggregate=3827ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:27:51,870 [13924e43] INFO api.chat:chat_stream:77 - [chat-IN] tid=13924e43 sid=dd3a0d5d q_chars=21 q='일반휴학은 최대 몇 학기까지 가능한가?' model=qwen3.5:9b test=False
+2026-06-06 15:28:27,455 [13924e43] INFO api.chat:_finalize:36 - [chat-OUT] tid=13924e43 sid=dd3a0d5d answer_chars=488 results=7 sources=5 total_ms=35562
+2026-06-06 15:28:27,455 [13924e43] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=13924e43 total=35562ms summarize=0ms rewrite=1765ms agent=28828ms aggregate=4968ms other=0ms sub_q=1 tool_calls=3 model=qwen3.5:9b
+2026-06-06 15:28:31,528 [c92e5081] INFO api.chat:chat_stream:77 - [chat-IN] tid=c92e5081 sid=6d4f0c62 q_chars=18 q='수강신청 사이트 주소는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:28:40,273 [c92e5081] INFO api.chat:_finalize:36 - [chat-OUT] tid=c92e5081 sid=6d4f0c62 answer_chars=266 results=5 sources=2 total_ms=8750
+2026-06-06 15:28:40,273 [c92e5081] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c92e5081 total=8750ms summarize=0ms rewrite=1718ms agent=4406ms aggregate=2625ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:28:44,344 [e22fa1e8] INFO api.chat:chat_stream:77 - [chat-IN] tid=e22fa1e8 sid=ec8017f4 q_chars=17 q='학생포털시스템 주소는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:28:51,840 [e22fa1e8] INFO api.chat:_finalize:36 - [chat-OUT] tid=e22fa1e8 sid=ec8017f4 answer_chars=180 results=4 sources=3 total_ms=7500
+2026-06-06 15:28:51,840 [e22fa1e8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=e22fa1e8 total=7500ms summarize=0ms rewrite=1641ms agent=3858ms aggregate=2000ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:28:55,952 [fd1c0f37] INFO api.chat:chat_stream:77 - [chat-IN] tid=fd1c0f37 sid=22c9359c q_chars=16 q='영어학부 전화번호는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:29:03,241 [fd1c0f37] INFO api.chat:_finalize:36 - [chat-OUT] tid=fd1c0f37 sid=22c9359c answer_chars=115 results=2 sources=2 total_ms=7281
+2026-06-06 15:29:03,241 [fd1c0f37] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=fd1c0f37 total=7281ms summarize=0ms rewrite=1593ms agent=4108ms aggregate=1578ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:29:07,329 [37da4d91] INFO api.chat:chat_stream:77 - [chat-IN] tid=37da4d91 sid=8172029f q_chars=24 q='교내 학생식당의 오늘 점심 메뉴는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:29:14,489 [37da4d91] INFO api.chat:_finalize:36 - [chat-OUT] tid=37da4d91 sid=8172029f answer_chars=190 results=4 sources=1 total_ms=7156
+2026-06-06 15:29:14,489 [37da4d91] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=37da4d91 total=7156ms summarize=0ms rewrite=1687ms agent=3764ms aggregate=1703ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:29:18,560 [a2b28ae3] INFO api.chat:chat_stream:77 - [chat-IN] tid=a2b28ae3 sid=81f149dc q_chars=16 q='기숙사 신청 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:29:25,903 [a2b28ae3] INFO api.chat:_finalize:36 - [chat-OUT] tid=a2b28ae3 sid=81f149dc answer_chars=179 results=4 sources=1 total_ms=7327
+2026-06-06 15:29:25,903 [a2b28ae3] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a2b28ae3 total=7327ms summarize=0ms rewrite=1671ms agent=4000ms aggregate=1656ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:29:29,980 [c16659e6] INFO api.chat:chat_stream:77 - [chat-IN] tid=c16659e6 sid=816ef897 q_chars=21 q='캠퍼스 셔틀버스 운행 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:29:37,807 [c16659e6] INFO api.chat:_finalize:36 - [chat-OUT] tid=c16659e6 sid=816ef897 answer_chars=231 results=5 sources=3 total_ms=7812
+2026-06-06 15:29:37,808 [c16659e6] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c16659e6 total=7812ms summarize=0ms rewrite=1687ms agent=4047ms aggregate=2077ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:29:41,920 [52d897ce] INFO api.chat:chat_stream:77 - [chat-IN] tid=52d897ce sid=561af1e2 q_chars=16 q='체육관 운영 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:29:51,932 [52d897ce] INFO api.chat:_finalize:36 - [chat-OUT] tid=52d897ce sid=561af1e2 answer_chars=357 results=3 sources=3 total_ms=10016
+2026-06-06 15:29:51,933 [52d897ce] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=52d897ce total=10016ms summarize=0ms rewrite=1672ms agent=5125ms aggregate=3218ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:29:55,984 [3f0da8b5] INFO api.chat:chat_stream:77 - [chat-IN] tid=3f0da8b5 sid=db9e6bf9 q_chars=19 q='교원자격증 재발급은 어떻게 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:30:33,274 [3f0da8b5] INFO api.chat:_finalize:36 - [chat-OUT] tid=3f0da8b5 sid=db9e6bf9 answer_chars=438 results=9 sources=4 total_ms=37281
+2026-06-06 15:30:33,274 [3f0da8b5] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=3f0da8b5 total=37281ms summarize=0ms rewrite=2187ms agent=30797ms aggregate=4296ms other=0ms sub_q=2 tool_calls=4 model=qwen3.5:9b
+2026-06-06 15:30:37,379 [f8592b25] INFO api.chat:chat_stream:77 - [chat-IN] tid=f8592b25 sid=b8b1ccac q_chars=19 q='동아리 가입 신청은 어떻게 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:30:49,657 [f8592b25] INFO api.chat:_finalize:36 - [chat-OUT] tid=f8592b25 sid=b8b1ccac answer_chars=583 results=4 sources=2 total_ms=12265
+2026-06-06 15:30:49,657 [f8592b25] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=f8592b25 total=12265ms summarize=0ms rewrite=1640ms agent=5843ms aggregate=4781ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:30:53,741 [08db34a1] INFO api.chat:chat_stream:77 - [chat-IN] tid=08db34a1 sid=bf68ae9d q_chars=22 q='2027학년도 수강신청 일정은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:31:00,439 [08db34a1] INFO api.chat:_finalize:36 - [chat-OUT] tid=08db34a1 sid=bf68ae9d answer_chars=116 results=4 sources=1 total_ms=6671
+2026-06-06 15:31:00,440 [08db34a1] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=08db34a1 total=6671ms summarize=0ms rewrite=1765ms agent=3547ms aggregate=1358ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:31:04,525 [4f4d4d90] INFO api.chat:chat_stream:77 - [chat-IN] tid=4f4d4d90 sid=4f845b18 q_chars=26 q='대학원 박사과정 수강신청 학점 한도는 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:31:16,457 [4f4d4d90] INFO api.chat:_finalize:36 - [chat-OUT] tid=4f4d4d90 sid=4f845b18 answer_chars=433 results=5 sources=4 total_ms=11937
+2026-06-06 15:31:16,457 [4f4d4d90] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=4f4d4d90 total=11937ms summarize=0ms rewrite=1797ms agent=6187ms aggregate=3937ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:31:20,573 [ce72fb5b] INFO api.chat:chat_stream:77 - [chat-IN] tid=ce72fb5b sid=528efd52 q_chars=22 q='2026학년도 1학기 개강일은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:31:27,305 [ce72fb5b] INFO api.chat:_finalize:36 - [chat-OUT] tid=ce72fb5b sid=528efd52 answer_chars=102 results=4 sources=2 total_ms=6718
+2026-06-06 15:31:27,305 [ce72fb5b] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=ce72fb5b total=6718ms summarize=0ms rewrite=1875ms agent=3437ms aggregate=1406ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:31:31,384 [9a711b27] INFO api.chat:chat_stream:77 - [chat-IN] tid=9a711b27 sid=2a473c0b q_chars=24 q='2026학년도 1학기 수업시작일은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:31:39,856 [9a711b27] INFO api.chat:_finalize:36 - [chat-OUT] tid=9a711b27 sid=2a473c0b answer_chars=187 results=5 sources=2 total_ms=8453
+2026-06-06 15:31:39,856 [9a711b27] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=9a711b27 total=8453ms summarize=0ms rewrite=1828ms agent=4311ms aggregate=2313ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:31:43,956 [9150f9a7] INFO api.chat:chat_stream:77 - [chat-IN] tid=9150f9a7 sid=2ad09ceb q_chars=24 q='수강신청 확인기간(수강정정기간)은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:31:50,187 [9150f9a7] INFO api.chat:_finalize:36 - [chat-OUT] tid=9150f9a7 sid=2ad09ceb answer_chars=66 results=3 sources=2 total_ms=6218
+2026-06-06 15:31:50,187 [9150f9a7] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=9150f9a7 total=6218ms summarize=0ms rewrite=1860ms agent=3281ms aggregate=1077ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:31:54,275 [c17eaa96] INFO api.chat:chat_stream:77 - [chat-IN] tid=c17eaa96 sid=ebe79875 q_chars=26 q='2026학년도 1학기 중간고사 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:32:01,409 [c17eaa96] INFO api.chat:_finalize:36 - [chat-OUT] tid=c17eaa96 sid=ebe79875 answer_chars=119 results=3 sources=2 total_ms=7139
+2026-06-06 15:32:01,409 [c17eaa96] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c17eaa96 total=7139ms summarize=0ms rewrite=1889ms agent=3625ms aggregate=1625ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:32:05,480 [83fef34f] INFO api.chat:chat_stream:77 - [chat-IN] tid=83fef34f sid=bec704b9 q_chars=26 q='2026학년도 1학기 기말고사 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:32:11,605 [83fef34f] INFO api.chat:_finalize:36 - [chat-OUT] tid=83fef34f sid=bec704b9 answer_chars=55 results=3 sources=2 total_ms=6110
+2026-06-06 15:32:11,605 [83fef34f] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=83fef34f total=6110ms summarize=0ms rewrite=1828ms agent=3281ms aggregate=1000ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:32:15,671 [eb683b2b] INFO api.chat:chat_stream:77 - [chat-IN] tid=eb683b2b sid=0ffcd596 q_chars=27 q='2026학년도 1학기 하계방학 시작일은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:32:21,978 [eb683b2b] INFO api.chat:_finalize:36 - [chat-OUT] tid=eb683b2b sid=0ffcd596 answer_chars=69 results=5 sources=2 total_ms=6297
+2026-06-06 15:32:21,979 [eb683b2b] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=eb683b2b total=6297ms summarize=0ms rewrite=1843ms agent=3297ms aggregate=1156ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:32:26,067 [a106d152] INFO api.chat:chat_stream:77 - [chat-IN] tid=a106d152 sid=c21e694e q_chars=23 q='2025학년도 후기 학위수여식은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:32:33,930 [a106d152] INFO api.chat:_finalize:36 - [chat-OUT] tid=a106d152 sid=c21e694e answer_chars=155 results=4 sources=1 total_ms=7858
+2026-06-06 15:32:33,930 [a106d152] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a106d152 total=7858ms summarize=0ms rewrite=1812ms agent=4218ms aggregate=1827ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:32:37,998 [4995e80c] INFO api.chat:chat_stream:77 - [chat-IN] tid=4995e80c sid=b1c555d5 q_chars=22 q='수강신청 장바구니 신청 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:32:47,221 [4995e80c] INFO api.chat:_finalize:36 - [chat-OUT] tid=4995e80c sid=b1c555d5 answer_chars=234 results=3 sources=1 total_ms=9218
+2026-06-06 15:32:47,225 [4995e80c] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=4995e80c total=9218ms summarize=0ms rewrite=1843ms agent=4686ms aggregate=2688ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:32:51,320 [527706d9] INFO api.chat:chat_stream:77 - [chat-IN] tid=527706d9 sid=8f151e28 q_chars=14 q='수강신청 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:33:06,870 [527706d9] INFO api.chat:_finalize:36 - [chat-OUT] tid=527706d9 sid=8f151e28 answer_chars=512 results=2 sources=1 total_ms=15531
+2026-06-06 15:33:06,871 [527706d9] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=527706d9 total=15531ms summarize=0ms rewrite=1718ms agent=7953ms aggregate=5858ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:33:10,952 [ee298f3a] INFO api.chat:chat_stream:77 - [chat-IN] tid=ee298f3a sid=4e568fb3 q_chars=28 q='수강신청 시작 전에 로그인 가능한 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:33:24,744 [ee298f3a] INFO api.chat:_finalize:36 - [chat-OUT] tid=ee298f3a sid=4e568fb3 answer_chars=470 results=4 sources=2 total_ms=13781
+2026-06-06 15:33:24,745 [ee298f3a] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=ee298f3a total=13781ms summarize=0ms rewrite=1735ms agent=7312ms aggregate=4733ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:33:28,795 [c67d512c] INFO api.chat:chat_stream:77 - [chat-IN] tid=c67d512c sid=b7cd00c0 q_chars=31 q='2026학년도 1학기 수강신청 취소는 언제까지 가능한가?' model=qwen3.5:9b test=False
+2026-06-06 15:33:37,057 [c67d512c] INFO api.chat:_finalize:36 - [chat-OUT] tid=c67d512c sid=b7cd00c0 answer_chars=186 results=4 sources=1 total_ms=8250
+2026-06-06 15:33:37,057 [c67d512c] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c67d512c total=8250ms summarize=0ms rewrite=1858ms agent=4235ms aggregate=2156ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:33:41,155 [cf8aa5dd] INFO api.chat:chat_stream:77 - [chat-IN] tid=cf8aa5dd sid=f50a576a q_chars=16 q='수업일수 1/2선은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:33:47,435 [cf8aa5dd] INFO api.chat:_finalize:36 - [chat-OUT] tid=cf8aa5dd sid=f50a576a answer_chars=51 results=4 sources=1 total_ms=6266
+2026-06-06 15:33:47,435 [cf8aa5dd] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=cf8aa5dd total=6266ms summarize=0ms rewrite=1797ms agent=3500ms aggregate=968ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:33:51,514 [5689f1e0] INFO api.chat:chat_stream:77 - [chat-IN] tid=5689f1e0 sid=9da19402 q_chars=16 q='수업일수 3/4선은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:36:05,978 [5689f1e0] INFO api.chat:_finalize:36 - [chat-OUT] tid=5689f1e0 sid=9da19402 answer_chars=242 results=7 sources=2 total_ms=134468
+2026-06-06 15:36:05,978 [5689f1e0] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=5689f1e0 total=134468ms summarize=0ms rewrite=1733ms agent=129937ms aggregate=2797ms other=0ms sub_q=1 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:36:10,081 [8ff24220] INFO api.chat:chat_stream:77 - [chat-IN] tid=8ff24220 sid=2d5add18 q_chars=17 q='중간 수업평가 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:36:18,305 [8ff24220] INFO api.chat:_finalize:36 - [chat-OUT] tid=8ff24220 sid=2d5add18 answer_chars=197 results=4 sources=2 total_ms=8218
+2026-06-06 15:36:18,305 [8ff24220] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=8ff24220 total=8218ms summarize=0ms rewrite=1610ms agent=4500ms aggregate=2108ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:36:22,398 [b97c432d] INFO api.chat:chat_stream:77 - [chat-IN] tid=b97c432d sid=87c96bea q_chars=17 q='기말 수업평가 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:36:31,439 [b97c432d] INFO api.chat:_finalize:36 - [chat-OUT] tid=b97c432d sid=87c96bea answer_chars=197 results=4 sources=2 total_ms=9016
+2026-06-06 15:36:31,439 [b97c432d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=b97c432d total=9016ms summarize=0ms rewrite=1750ms agent=4828ms aggregate=2437ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:36:35,508 [655a10f3] INFO api.chat:chat_stream:77 - [chat-IN] tid=655a10f3 sid=bb5f07cb q_chars=27 q='2023학번 이후 최대 수강신청 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:36:51,509 [655a10f3] INFO api.chat:_finalize:36 - [chat-OUT] tid=655a10f3 sid=bb5f07cb answer_chars=598 results=5 sources=2 total_ms=15984
+2026-06-06 15:36:51,509 [655a10f3] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=655a10f3 total=15984ms summarize=0ms rewrite=1906ms agent=8047ms aggregate=6031ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:36:55,559 [3e5277e3] INFO api.chat:chat_stream:77 - [chat-IN] tid=3e5277e3 sid=fb0b7afb q_chars=27 q='2022학번 이전 최대 수강신청 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:37:02,970 [3e5277e3] INFO api.chat:_finalize:36 - [chat-OUT] tid=3e5277e3 sid=fb0b7afb answer_chars=145 results=3 sources=1 total_ms=7406
+2026-06-06 15:37:02,971 [3e5277e3] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=3e5277e3 total=7406ms summarize=0ms rewrite=1843ms agent=3781ms aggregate=1781ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:37:07,082 [ddc3f263] INFO api.chat:chat_stream:77 - [chat-IN] tid=ddc3f263 sid=2c5f595d q_chars=51 q='2023학번 이후 학생이 직전학기 평점 4.0 이상이면 최대 몇 학점까지 신청할 수 있는가?' model=qwen3.5:9b test=False
+2026-06-06 15:37:16,036 [ddc3f263] INFO api.chat:_finalize:36 - [chat-OUT] tid=ddc3f263 sid=2c5f595d answer_chars=187 results=4 sources=2 total_ms=8952
+2026-06-06 15:37:16,036 [ddc3f263] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=ddc3f263 total=8952ms summarize=0ms rewrite=2031ms agent=4766ms aggregate=2155ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:37:20,123 [55ed062a] INFO api.chat:chat_stream:77 - [chat-IN] tid=55ed062a sid=dafac269 q_chars=51 q='2022학번 이전 학생이 직전학기 평점 4.0 이상이면 최대 몇 학점까지 신청할 수 있는가?' model=qwen3.5:9b test=False
+2026-06-06 15:37:41,009 [55ed062a] INFO api.chat:_finalize:36 - [chat-OUT] tid=55ed062a sid=dafac269 answer_chars=291 results=6 sources=2 total_ms=20875
+2026-06-06 15:37:41,009 [55ed062a] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=55ed062a total=20875ms summarize=0ms rewrite=2046ms agent=15703ms aggregate=3125ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:37:45,075 [a2e7119a] INFO api.chat:chat_stream:77 - [chat-IN] tid=a2e7119a sid=ce8632fa q_chars=26 q='장바구니에 담을 수 있는 최대 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:37:56,401 [a2e7119a] INFO api.chat:_finalize:36 - [chat-OUT] tid=a2e7119a sid=ce8632fa answer_chars=333 results=5 sources=2 total_ms=11327
+2026-06-06 15:37:56,404 [a2e7119a] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a2e7119a total=11327ms summarize=0ms rewrite=1906ms agent=5811ms aggregate=3610ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:38:00,487 [6e6f2dc6] INFO api.chat:chat_stream:77 - [chat-IN] tid=6e6f2dc6 sid=f2424109 q_chars=29 q='장학금 지급을 받기 위한 최소 이수 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:38:08,070 [6e6f2dc6] INFO api.chat:_finalize:36 - [chat-OUT] tid=6e6f2dc6 sid=f2424109 answer_chars=156 results=4 sources=2 total_ms=7578
+2026-06-06 15:38:08,070 [6e6f2dc6] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=6e6f2dc6 total=7578ms summarize=0ms rewrite=1812ms agent=3922ms aggregate=1843ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:38:12,156 [3f229fec] INFO api.chat:chat_stream:77 - [chat-IN] tid=3f229fec sid=87295cbf q_chars=39 q='학점이월제는 어떤 학번에 적용되며, 이월 가능한 최대 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:38:43,793 [3f229fec] INFO api.chat:_finalize:36 - [chat-OUT] tid=3f229fec sid=87295cbf answer_chars=535 results=8 sources=3 total_ms=31625
+2026-06-06 15:38:43,794 [3f229fec] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=3f229fec total=31625ms summarize=0ms rewrite=2250ms agent=23875ms aggregate=5500ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:38:47,854 [d98c91d8] INFO api.chat:chat_stream:77 - [chat-IN] tid=d98c91d8 sid=8e84b820 q_chars=33 q='OCU 수강 신청자에게 허용되는 초과 학점 예외는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:39:17,276 [d98c91d8] INFO api.chat:_finalize:36 - [chat-OUT] tid=d98c91d8 sid=8e84b820 answer_chars=539 results=4 sources=2 total_ms=29421
+2026-06-06 15:39:17,276 [d98c91d8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=d98c91d8 total=29421ms summarize=0ms rewrite=1858ms agent=22016ms aggregate=5546ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:39:21,337 [8e768284] INFO api.chat:chat_stream:77 - [chat-IN] tid=8e768284 sid=58a5c201 q_chars=50 q='사회봉사 및 서비스러닝 교과목을 수강하면 최대 신청학점보다 몇 학점 더 신청할 수 있는가?' model=qwen3.5:9b test=False
+2026-06-06 15:39:27,573 [8e768284] INFO api.chat:_finalize:36 - [chat-OUT] tid=8e768284 sid=58a5c201 answer_chars=59 results=4 sources=1 total_ms=6235
+2026-06-06 15:39:27,573 [8e768284] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=8e768284 total=6235ms summarize=0ms rewrite=2031ms agent=3360ms aggregate=843ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:39:31,654 [792007cc] INFO api.chat:chat_stream:77 - [chat-IN] tid=792007cc sid=2d73dc12 q_chars=18 q='수강신청 사이트 주소는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:39:40,317 [792007cc] INFO api.chat:_finalize:36 - [chat-OUT] tid=792007cc sid=2d73dc12 answer_chars=266 results=5 sources=2 total_ms=8657
+2026-06-06 15:39:40,317 [792007cc] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=792007cc total=8657ms summarize=0ms rewrite=1657ms agent=4358ms aggregate=2641ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:39:44,426 [794044c5] INFO api.chat:chat_stream:77 - [chat-IN] tid=794044c5 sid=0a2dddca q_chars=20 q='재수강 가능한 성적 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:39:59,734 [794044c5] INFO api.chat:_finalize:36 - [chat-OUT] tid=794044c5 sid=0a2dddca answer_chars=654 results=3 sources=1 total_ms=15297
+2026-06-06 15:39:59,735 [794044c5] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=794044c5 total=15297ms summarize=0ms rewrite=1733ms agent=7235ms aggregate=6328ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:40:03,838 [f819fc2c] INFO api.chat:chat_stream:77 - [chat-IN] tid=f819fc2c sid=437cf05b q_chars=26 q='재수강 후 받을 수 있는 최고 성적은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:40:18,640 [f819fc2c] INFO api.chat:_finalize:36 - [chat-OUT] tid=f819fc2c sid=437cf05b answer_chars=143 results=5 sources=1 total_ms=14781
+2026-06-06 15:40:18,640 [f819fc2c] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=f819fc2c total=14781ms summarize=0ms rewrite=1764ms agent=11391ms aggregate=1625ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:40:22,764 [2691b3a1] INFO api.chat:chat_stream:77 - [chat-IN] tid=2691b3a1 sid=cdb1bb59 q_chars=30 q='2019학번 이후 학생의 재수강 제한 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:40:34,783 [2691b3a1] INFO api.chat:_finalize:36 - [chat-OUT] tid=2691b3a1 sid=cdb1bb59 answer_chars=440 results=4 sources=2 total_ms=12014
+2026-06-06 15:40:34,783 [2691b3a1] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=2691b3a1 total=12014ms summarize=0ms rewrite=1812ms agent=6000ms aggregate=4187ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:40:38,829 [cbd60e17] INFO api.chat:chat_stream:77 - [chat-IN] tid=cbd60e17 sid=8cea106a q_chars=30 q='휴학생이 수강신청을 하기 위해 필요한 절차는 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:40:57,134 [cbd60e17] INFO api.chat:_finalize:36 - [chat-OUT] tid=cbd60e17 sid=8cea106a answer_chars=694 results=5 sources=4 total_ms=18297
+2026-06-06 15:40:57,134 [cbd60e17] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=cbd60e17 total=18297ms summarize=0ms rewrite=1906ms agent=9937ms aggregate=6453ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:41:01,217 [6f758247] INFO api.chat:chat_stream:77 - [chat-IN] tid=6f758247 sid=e49e93e4 q_chars=32 q='2026학년도 1학기 온라인 휴복학 신청 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:41:22,916 [6f758247] INFO api.chat:_finalize:36 - [chat-OUT] tid=6f758247 sid=e49e93e4 answer_chars=207 results=4 sources=1 total_ms=21686
+2026-06-06 15:41:22,916 [6f758247] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=6f758247 total=21686ms summarize=0ms rewrite=1968ms agent=17187ms aggregate=2530ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:41:26,987 [c14067a1] INFO api.chat:chat_stream:77 - [chat-IN] tid=c14067a1 sid=92867c91 q_chars=41 q='2024~2025학번의 제1·2전공 신청 및 변경(전과) 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:42:04,286 [c14067a1] INFO api.chat:_finalize:36 - [chat-OUT] tid=c14067a1 sid=92867c91 answer_chars=572 results=7 sources=1 total_ms=37296
+2026-06-06 15:42:04,286 [c14067a1] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c14067a1 total=37296ms summarize=0ms rewrite=3046ms agent=28313ms aggregate=5921ms other=0ms sub_q=3 tool_calls=3 model=qwen3.5:9b
+2026-06-06 15:42:08,339 [20769e69] INFO api.chat:chat_stream:77 - [chat-IN] tid=20769e69 sid=b5d09a59 q_chars=52 q='수강신청 정정기간 이후 수업일수 1/4선 이내에 복학한 복학생의 수강신청은 어떻게 처리되는가?' model=qwen3.5:9b test=False
+2026-06-06 15:42:37,443 [20769e69] INFO api.chat:_finalize:36 - [chat-OUT] tid=20769e69 sid=b5d09a59 answer_chars=628 results=7 sources=3 total_ms=29093
+2026-06-06 15:42:37,443 [20769e69] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=20769e69 total=29093ms summarize=0ms rewrite=1875ms agent=21343ms aggregate=5875ms other=0ms sub_q=1 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:42:41,522 [f568573c] INFO api.chat:chat_stream:77 - [chat-IN] tid=f568573c sid=3264ed20 q_chars=28 q='OCU 교과목 개강일과 수강 가능 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:43:00,739 [f568573c] INFO api.chat:_finalize:36 - [chat-OUT] tid=f568573c sid=3264ed20 answer_chars=629 results=6 sources=1 total_ms=19218
+2026-06-06 15:43:00,739 [f568573c] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=f568573c total=19218ms summarize=0ms rewrite=1859ms agent=11171ms aggregate=6187ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:43:04,839 [e4ee0a95] INFO api.chat:chat_stream:77 - [chat-IN] tid=e4ee0a95 sid=ed069bc5 q_chars=18 q='OCU 수강신청 기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:43:14,638 [e4ee0a95] INFO api.chat:_finalize:36 - [chat-OUT] tid=e4ee0a95 sid=ed069bc5 answer_chars=287 results=3 sources=2 total_ms=9797
+2026-06-06 15:43:14,640 [e4ee0a95] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=e4ee0a95 total=9797ms summarize=0ms rewrite=1735ms agent=4967ms aggregate=3094ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:43:18,738 [f831364c] INFO api.chat:chat_stream:77 - [chat-IN] tid=f831364c sid=ba160b9f q_chars=31 q='OCU 정규학기에 수강할 수 있는 최대 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:43:49,278 [f831364c] INFO api.chat:_finalize:36 - [chat-OUT] tid=f831364c sid=ba160b9f answer_chars=817 results=4 sources=1 total_ms=30515
+2026-06-06 15:43:49,278 [f831364c] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=f831364c total=30515ms summarize=0ms rewrite=1671ms agent=20968ms aggregate=7875ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:43:53,361 [49e2cedb] INFO api.chat:chat_stream:77 - [chat-IN] tid=49e2cedb sid=d00b4956 q_chars=32 q='OCU를 졸업까지 인정받을 수 있는 최대 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:44:21,629 [49e2cedb] INFO api.chat:_finalize:36 - [chat-OUT] tid=49e2cedb sid=d00b4956 answer_chars=586 results=5 sources=1 total_ms=28266
+2026-06-06 15:44:21,630 [49e2cedb] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=49e2cedb total=28266ms summarize=0ms rewrite=1812ms agent=20733ms aggregate=5719ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:44:25,719 [9bcb63f3] INFO api.chat:chat_stream:77 - [chat-IN] tid=9bcb63f3 sid=b5d531f3 q_chars=22 q='OCU 시스템 사용료는 과목당 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:44:37,227 [9bcb63f3] INFO api.chat:_finalize:36 - [chat-OUT] tid=9bcb63f3 sid=b5d531f3 answer_chars=349 results=4 sources=1 total_ms=11500
+2026-06-06 15:44:37,227 [9bcb63f3] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=9bcb63f3 total=11500ms summarize=0ms rewrite=1781ms agent=5765ms aggregate=3953ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:44:41,297 [1f0b6199] INFO api.chat:chat_stream:77 - [chat-IN] tid=1f0b6199 sid=767cc472 q_chars=23 q='OCU 시스템 사용료 납부기간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:44:49,457 [1f0b6199] INFO api.chat:_finalize:36 - [chat-OUT] tid=1f0b6199 sid=767cc472 answer_chars=176 results=3 sources=1 total_ms=8156
+2026-06-06 15:44:49,457 [1f0b6199] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=1f0b6199 total=8156ms summarize=0ms rewrite=1843ms agent=4343ms aggregate=1968ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:44:53,543 [5714d98d] INFO api.chat:chat_stream:77 - [chat-IN] tid=5714d98d sid=c0c861d0 q_chars=27 q='OCU 교과목 수강 시 ID는 어떻게 생성되는가?' model=qwen3.5:9b test=False
+2026-06-06 15:45:06,395 [5714d98d] INFO api.chat:_finalize:36 - [chat-OUT] tid=5714d98d sid=c0c861d0 answer_chars=562 results=3 sources=1 total_ms=12860
+2026-06-06 15:45:06,395 [5714d98d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=5714d98d total=12860ms summarize=0ms rewrite=1797ms agent=5985ms aggregate=5077ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:45:10,469 [5b2c282d] INFO api.chat:chat_stream:77 - [chat-IN] tid=5b2c282d sid=67280e88 q_chars=44 q='OCU 최대 수강학점을 초과하여 1과목(3학점) 신청 시 초과수강료는 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:45:29,957 [5b2c282d] INFO api.chat:_finalize:36 - [chat-OUT] tid=5b2c282d sid=67280e88 answer_chars=349 results=6 sources=2 total_ms=19468
+2026-06-06 15:45:29,957 [5b2c282d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=5b2c282d total=19468ms summarize=0ms rewrite=2296ms agent=13312ms aggregate=3860ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:45:34,009 [6ce5b287] INFO api.chat:chat_stream:77 - [chat-IN] tid=6ce5b287 sid=e8f033f5 q_chars=30 q='2024학번 이후 졸업에 필요한 최소 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:45:39,758 [6ce5b287] INFO api.chat:_finalize:36 - [chat-OUT] tid=6ce5b287 sid=e8f033f5 answer_chars=77 results=4 sources=2 total_ms=5734
+2026-06-06 15:45:39,758 [6ce5b287] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=6ce5b287 total=5734ms summarize=0ms rewrite=1764ms agent=2907ms aggregate=1062ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:45:43,833 [df91e3e6] INFO api.chat:chat_stream:77 - [chat-IN] tid=df91e3e6 sid=f0ef9de7 q_chars=28 q='2022학번의 졸업에 필요한 최소 학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:45:56,110 [df91e3e6] INFO api.chat:_finalize:36 - [chat-OUT] tid=df91e3e6 sid=f0ef9de7 answer_chars=456 results=4 sources=1 total_ms=12266
+2026-06-06 15:45:56,110 [df91e3e6] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=df91e3e6 total=12266ms summarize=0ms rewrite=1750ms agent=5952ms aggregate=4563ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:46:00,183 [3e10453d] INFO api.chat:chat_stream:77 - [chat-IN] tid=3e10453d sid=1893e6bd q_chars=28 q='2024학번 이후 교양과정 총 이수학점은 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:46:12,376 [3e10453d] INFO api.chat:_finalize:36 - [chat-OUT] tid=3e10453d sid=1893e6bd answer_chars=452 results=4 sources=1 total_ms=12187
+2026-06-06 15:46:12,376 [3e10453d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=3e10453d total=12187ms summarize=0ms rewrite=1812ms agent=5718ms aggregate=4656ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:46:16,470 [00f13745] INFO api.chat:chat_stream:77 - [chat-IN] tid=00f13745 sid=17b52229 q_chars=48 q='2023학번이 방법1(주전공+복수전공)로 졸업할 경우 각각 몇 학점을 이수해야 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:46:37,215 [00f13745] INFO api.chat:_finalize:36 - [chat-OUT] tid=00f13745 sid=17b52229 answer_chars=379 results=5 sources=2 total_ms=20733
+2026-06-06 15:46:37,215 [00f13745] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=00f13745 total=20733ms summarize=0ms rewrite=2577ms agent=13937ms aggregate=4218ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:46:41,292 [311275d9] INFO api.chat:chat_stream:77 - [chat-IN] tid=311275d9 sid=e99ba027 q_chars=48 q='2022학번이 방법1(주전공+복수전공)로 졸업할 경우 각각 몇 학점을 이수해야 하는가?' model=qwen3.5:9b test=False
+2026-06-06 15:46:59,075 [311275d9] INFO api.chat:_finalize:36 - [chat-OUT] tid=311275d9 sid=e99ba027 answer_chars=260 results=5 sources=2 total_ms=17766
+2026-06-06 15:46:59,075 [311275d9] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=311275d9 total=17766ms summarize=0ms rewrite=2781ms agent=11937ms aggregate=3047ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-06 15:47:03,153 [ca42f37c] INFO api.chat:chat_stream:77 - [chat-IN] tid=ca42f37c sid=ca601f32 q_chars=33 q='외국인 학생의 졸업인증 요건 중 TOPIK 기준은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:47:13,016 [ca42f37c] INFO api.chat:_finalize:36 - [chat-OUT] tid=ca42f37c sid=ca601f32 answer_chars=343 results=4 sources=1 total_ms=9859
+2026-06-06 15:47:13,017 [ca42f37c] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=ca42f37c total=9859ms summarize=0ms rewrite=1812ms agent=4860ms aggregate=3187ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:47:17,073 [53bf7ebb] INFO api.chat:chat_stream:77 - [chat-IN] tid=53bf7ebb sid=1cb8f6c1 q_chars=22 q='야간수업 10교시 시작 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:47:23,032 [53bf7ebb] INFO api.chat:_finalize:36 - [chat-OUT] tid=53bf7ebb sid=1cb8f6c1 answer_chars=63 results=3 sources=2 total_ms=5952
+2026-06-06 15:47:23,032 [53bf7ebb] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=53bf7ebb total=5952ms summarize=0ms rewrite=1796ms agent=3156ms aggregate=1000ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:47:27,139 [cb5cab2d] INFO api.chat:chat_stream:77 - [chat-IN] tid=cb5cab2d sid=e7e6c560 q_chars=22 q='야간수업 14교시 종료 시간은 언제인가?' model=qwen3.5:9b test=False
+2026-06-06 15:47:32,802 [cb5cab2d] INFO api.chat:_finalize:36 - [chat-OUT] tid=cb5cab2d sid=e7e6c560 answer_chars=63 results=3 sources=2 total_ms=5656
+2026-06-06 15:47:32,802 [cb5cab2d] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=cb5cab2d total=5656ms summarize=0ms rewrite=1797ms agent=2842ms aggregate=1016ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:47:36,884 [582429ce] INFO api.chat:chat_stream:77 - [chat-IN] tid=582429ce sid=8390ee65 q_chars=28 q='OCU 성적이 부여되기 위한 출석 요건은 무엇인가?' model=qwen3.5:9b test=False
+2026-06-06 15:47:57,007 [582429ce] INFO api.chat:_finalize:36 - [chat-OUT] tid=582429ce sid=8390ee65 answer_chars=428 results=5 sources=1 total_ms=20109
+2026-06-06 15:47:57,011 [582429ce] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=582429ce total=20109ms summarize=0ms rewrite=1812ms agent=14141ms aggregate=4156ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 15:48:01,105 [99df7b26] INFO api.chat:chat_stream:77 - [chat-IN] tid=99df7b26 sid=ae9e8dfd q_chars=54 q='2024학번 이후, 2023학번, 2022학번, 2021학번의 복수전공 이수학점은 각각 얼마인가?' model=qwen3.5:9b test=False
+2026-06-06 15:48:23,094 [99df7b26] INFO api.chat:_finalize:36 - [chat-OUT] tid=99df7b26 sid=ae9e8dfd answer_chars=380 results=5 sources=3 total_ms=21968
+2026-06-06 15:48:23,095 [99df7b26] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=99df7b26 total=21968ms summarize=0ms rewrite=2391ms agent=15250ms aggregate=4327ms other=0ms sub_q=4 tool_calls=4 model=qwen3.5:9b
+2026-06-06 16:14:40,009 [c02ff165] INFO api.chat:chat_stream:77 - [chat-IN] tid=c02ff165 sid=16f2fd38 q_chars=19 q='학사 관련 자주 묻는 질문을 알려줘' model=qwen3.5:9b test=False
+2026-06-06 16:14:54,866 [c02ff165] INFO api.chat:_finalize:36 - [chat-OUT] tid=c02ff165 sid=16f2fd38 answer_chars=530 results=4 sources=3 total_ms=14858
+2026-06-06 16:14:54,866 [c02ff165] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c02ff165 total=14858ms summarize=0ms rewrite=4452ms agent=5860ms aggregate=4546ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-06 16:15:00,538 [81d59e7b] INFO api.chat:chat_stream:77 - [chat-IN] tid=81d59e7b sid=ad777fda q_chars=8 q='G동이 어디야?' model=qwen3.5:9b test=False
+2026-06-06 16:15:02,996 [81d59e7b] INFO api.chat:_finalize:36 - [chat-OUT] tid=81d59e7b sid=ad777fda answer_chars=114 results=0 sources=0 total_ms=2453
+2026-06-06 16:15:02,996 [81d59e7b] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=81d59e7b total=2453ms summarize=0ms rewrite=2453ms agent=0ms aggregate=0ms other=0ms sub_q=0 tool_calls=0 model=qwen3.5:9b
+2026-06-06 16:15:34,594 [81967ec5] INFO api.chat:chat_stream:77 - [chat-IN] tid=81967ec5 sid=bf83186a q_chars=20 q='2026년 2학기 수강신청이 언제야?' model=qwen3.5:9b test=False
+2026-06-06 16:16:03,103 [e9eb99b1] INFO api.chat:chat_stream:77 - [chat-IN] tid=e9eb99b1 sid=ad777fda q_chars=21 q='2026학년도 2학기 수강신청 언제야?' model=qwen3.5:9b test=False
+2026-06-06 16:17:30,860 [81967ec5] INFO api.chat:_finalize:36 - [chat-OUT] tid=81967ec5 sid=bf83186a answer_chars=99 results=5 sources=1 total_ms=116250
+2026-06-06 16:17:30,860 [81967ec5] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=81967ec5 total=116250ms summarize=0ms rewrite=1406ms agent=112577ms aggregate=2266ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b

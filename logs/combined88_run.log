@@ -1,0 +1,111 @@
+running 89 questions vs http://localhost:8000
+[ 1/89] s01   PASS         ans_pass=1 contains=1/1 ref=0/0  (0.2m)
+[ 2/89] s02   FAIL         ans_pass=1 contains=1/2 ref=0/0  (0.4m)
+[ 3/89] s03   PASS         ans_pass=2 contains=2/3 ref=0/0  (0.5m)
+[ 4/89] s04   FAIL         ans_pass=2 contains=2/4 ref=0/0  (0.7m)
+[ 5/89] r01   CONTAINS     ans_pass=2 contains=3/5 ref=0/0  (1.0m)
+[ 6/89] r02   PASS         ans_pass=3 contains=4/6 ref=0/0  (1.2m)
+[ 7/89] r03   PASS         ans_pass=4 contains=5/7 ref=0/0  (1.6m)
+[ 8/89] r04   PASS         ans_pass=5 contains=6/8 ref=0/0  (1.8m)
+[ 9/89] r05   PASS         ans_pass=6 contains=7/9 ref=0/0  (2.1m)
+[10/89] c01   CONTAINS     ans_pass=6 contains=8/10 ref=0/0  (2.4m)
+[11/89] c02   PASS         ans_pass=7 contains=9/11 ref=0/0  (2.5m)
+[12/89] c03   PASS         ans_pass=8 contains=10/12 ref=0/0  (2.9m)
+[13/89] g01   PASS         ans_pass=9 contains=11/13 ref=0/0  (3.1m)
+[14/89] g02   FAIL         ans_pass=9 contains=11/14 ref=0/0  (3.4m)
+[15/89] g03   PASS         ans_pass=10 contains=12/15 ref=0/0  (3.6m)
+[16/89] g04   PASS         ans_pass=11 contains=13/16 ref=0/0  (4.0m)
+[17/89] e01   FAIL         ans_pass=11 contains=13/17 ref=0/0  (4.2m)
+[18/89] e02   FAIL         ans_pass=11 contains=13/18 ref=0/0  (4.7m)
+[19/89] m01   FAIL         ans_pass=11 contains=13/19 ref=0/0  (5.1m)
+[20/89] m02   FAIL         ans_pass=11 contains=13/20 ref=0/0  (5.8m)
+[21/89] m03   PASS         ans_pass=12 contains=14/21 ref=0/0  (6.3m)
+[22/89] a01   FAIL         ans_pass=12 contains=14/22 ref=0/0  (6.6m)
+[23/89] a02   FAIL         ans_pass=12 contains=14/23 ref=0/0  (7.0m)
+[24/89] sc01  CONTAINS     ans_pass=12 contains=15/24 ref=0/0  (7.3m)
+[25/89] sc02  PASS         ans_pass=13 contains=16/25 ref=0/0  (7.5m)
+[26/89] sc03  FAIL         ans_pass=13 contains=16/26 ref=0/0  (7.8m)
+[27/89] l01   PASS         ans_pass=14 contains=17/27 ref=0/0  (8.1m)
+[28/89] l02   FAIL         ans_pass=14 contains=17/28 ref=0/0  (8.8m)
+[29/89] n01   PASS         ans_pass=15 contains=18/29 ref=0/0  (9.0m)
+[30/89] n02   PASS         ans_pass=16 contains=19/30 ref=0/0  (9.2m)
+[31/89] n03   PASS         ans_pass=17 contains=20/31 ref=0/0  (9.4m)
+[32/89] u01   REFUSE_OK    ans_pass=17 contains=20/31 ref=1/1  (9.6m)
+[33/89] u02   REFUSE_OK    ans_pass=17 contains=20/31 ref=2/2  (9.8m)
+[34/89] u03   REFUSE_OK    ans_pass=17 contains=20/31 ref=3/3  (10.0m)
+[35/89] u04   REFUSE_OK    ans_pass=17 contains=20/31 ref=4/4  (10.2m)
+[36/89] u05   REFUSE_OK    ans_pass=17 contains=20/31 ref=5/5  (10.9m)
+[37/89] u06   REFUSE_OK    ans_pass=17 contains=20/31 ref=6/6  (11.1m)
+[38/89] u07   REFUSE_OK    ans_pass=17 contains=20/31 ref=7/7  (11.3m)
+[39/89] u08   HALLUCINATED ans_pass=17 contains=20/31 ref=7/8  (11.6m)
+[40/89] q001  PASS         ans_pass=18 contains=21/32 ref=7/8  (11.8m)
+[41/89] q002  PASS         ans_pass=19 contains=22/33 ref=7/8  (12.0m)
+[42/89] q003  PASS         ans_pass=20 contains=23/34 ref=7/8  (12.2m)
+[43/89] q004  CONTAINS     ans_pass=20 contains=24/35 ref=7/8  (12.3m)
+[44/89] q005  FAIL         ans_pass=20 contains=24/36 ref=7/8  (12.5m)
+[45/89] q006  FAIL         ans_pass=20 contains=24/37 ref=7/8  (12.7m)
+[46/89] q007  FAIL         ans_pass=20 contains=24/38 ref=7/8  (12.9m)
+[47/89] q008  CONTAINS     ans_pass=20 contains=25/39 ref=7/8  (13.1m)
+[48/89] q009  PASS         ans_pass=21 contains=26/40 ref=7/8  (13.4m)
+[49/89] q010  PASS         ans_pass=22 contains=27/41 ref=7/8  (13.7m)
+[50/89] q011  FAIL         ans_pass=22 contains=27/42 ref=7/8  (13.9m)
+[51/89] q012  PASS         ans_pass=23 contains=28/43 ref=7/8  (14.1m)
+[52/89] q013  PASS         ans_pass=24 contains=29/44 ref=7/8  (16.4m)
+[53/89] q014  FAIL         ans_pass=24 contains=29/45 ref=7/8  (16.6m)
+[54/89] q015  FAIL         ans_pass=24 contains=29/46 ref=7/8  (16.8m)
+[55/89] q016  PASS         ans_pass=25 contains=30/47 ref=7/8  (17.2m)
+[56/89] q017  PASS         ans_pass=26 contains=31/48 ref=7/8  (17.4m)
+[57/89] q018  PASS         ans_pass=27 contains=32/49 ref=7/8  (17.6m)
+[58/89] q019  FAIL         ans_pass=27 contains=32/50 ref=7/8  (18.0m)
+[59/89] q020  PASS         ans_pass=28 contains=33/51 ref=7/8  (18.3m)
+[60/89] q021  PASS         ans_pass=29 contains=34/52 ref=7/8  (18.5m)
+[61/89] q022  FAIL         ans_pass=29 contains=34/53 ref=7/8  (19.1m)
+[62/89] q023  PASS         ans_pass=30 contains=35/54 ref=7/8  (19.6m)
+[63/89] q024  PASS         ans_pass=31 contains=36/55 ref=7/8  (19.8m)
+[64/89] q025  PASS         ans_pass=32 contains=37/56 ref=7/8  (20.0m)
+[65/89] q026  FAIL         ans_pass=32 contains=37/57 ref=7/8  (20.3m)
+[66/89] q027  FAIL         ans_pass=32 contains=37/58 ref=7/8  (20.6m)
+[67/89] q028  PASS         ans_pass=33 contains=38/59 ref=7/8  (20.9m)
+[68/89] q029  FAIL         ans_pass=33 contains=38/60 ref=7/8  (21.3m)
+[69/89] q030  CONTAINS     ans_pass=33 contains=39/61 ref=7/8  (21.7m)
+[70/89] q031  FAIL         ans_pass=33 contains=39/62 ref=7/8  (22.4m)
+[71/89] q032  FAIL         ans_pass=33 contains=39/63 ref=7/8  (22.9m)
+[72/89] q033  PASS         ans_pass=34 contains=40/64 ref=7/8  (23.3m)
+[73/89] q034  PASS         ans_pass=35 contains=41/65 ref=7/8  (23.6m)
+[74/89] q035  FAIL         ans_pass=35 contains=41/66 ref=7/8  (24.1m)
+[75/89] q036  PASS         ans_pass=36 contains=42/67 ref=7/8  (24.7m)
+[76/89] q037  PASS         ans_pass=37 contains=43/68 ref=7/8  (24.9m)
+[77/89] q038  PASS         ans_pass=38 contains=44/69 ref=7/8  (25.1m)
+[78/89] q039  CONTAINS     ans_pass=38 contains=45/70 ref=7/8  (25.4m)
+[79/89] q040  PASS         ans_pass=39 contains=46/71 ref=7/8  (25.8m)
+[80/89] q041  PASS         ans_pass=40 contains=47/72 ref=7/8  (26.0m)
+[81/89] q042  FAIL         ans_pass=40 contains=47/73 ref=7/8  (26.3m)
+[82/89] q043  PASS         ans_pass=41 contains=48/74 ref=7/8  (26.5m)
+[83/89] q044  CONTAINS     ans_pass=41 contains=49/75 ref=7/8  (26.9m)
+[84/89] q045  CONTAINS     ans_pass=41 contains=50/76 ref=7/8  (27.3m)
+[85/89] q046  PASS         ans_pass=42 contains=51/77 ref=7/8  (27.5m)
+[86/89] q047  PASS         ans_pass=43 contains=52/78 ref=7/8  (27.7m)
+[87/89] q048  PASS         ans_pass=44 contains=53/79 ref=7/8  (27.9m)
+[88/89] q049  PASS         ans_pass=45 contains=54/80 ref=7/8  (28.3m)
+[89/89] q050  PASS         ans_pass=46 contains=55/81 ref=7/8  (28.7m)
+
+=== SUMMARY ===
+{
+  "new_chatbot": {
+    "answerable_total": 81,
+    "strict_pass": 46,
+    "strict_pass_rate": 0.5679,
+    "contains_correct": 55,
+    "contains_rate": 0.679,
+    "unanswerable_total": 8,
+    "correct_refusals": 7,
+    "refusal_rate": 0.875
+  },
+  "bufs_baseline": {
+    "contains_correct": 65,
+    "contains_rate": 0.8025,
+    "refusal_correct": 4,
+    "refusal_rate": 0.5
+  }
+}
+report -> C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\combined88_new_result.json

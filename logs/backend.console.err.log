@@ -1,0 +1,89 @@
+INFO:     Started server process [32108]
+INFO:     Waiting for application startup.
+2026-06-08 19:19:50,463 [-] INFO __main__:lifespan:49 - 🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...
+2026-06-08 19:19:50,463 [-] INFO __main__:lifespan:50 - log file: C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\backend\app.log
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-08 19:19:51,514 [-] WARNING huggingface_hub.utils._http:_warn_on_warning_headers:916 - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-06-08 19:19:51,538 [-] INFO sentence_transformers.base.model:_load_modules:992 - Loading SentenceTransformer model from BAAI/bge-m3.
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 28406.65it/s]
+2026-06-08 19:20:00,628 [-] INFO __main__:lifespan:52 - 🚀 RAG system ready. Serving. runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11434', 'num_ctx': 16384, 'reasoning': False, 'embedding_model': 'BAAI/bge-m3', 'embedding_device': 'cpu', 'langfuse_enabled': True, 'kb_docs': 23, 'uptime_s': 10}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-06-08 20:04:15,653 [2d2560e7] INFO api.chat:chat_stream:77 - [chat-IN] tid=2d2560e7 sid=be495ee8 q_chars=15 q='2020학번 졸업요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:04:33,761 [2d2560e7] INFO api.chat:_finalize:36 - [chat-OUT] tid=2d2560e7 sid=be495ee8 answer_chars=352 results=4 sources=1 total_ms=18094
+2026-06-08 20:04:33,773 [2d2560e7] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=2d2560e7 total=18094ms summarize=0ms rewrite=7141ms agent=6890ms aggregate=4063ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:04:55,522 [f11fa074] INFO api.chat:chat_stream:77 - [chat-IN] tid=f11fa074 sid=c1034563 q_chars=59 q='Tell me about the registration schedule and how to register' model=qwen3.5:9b test=False
+2026-06-08 20:05:02,023 [6694121f] INFO api.chat:chat_stream:77 - [chat-IN] tid=6694121f sid=15598d27 q_chars=21 q='성적 처리 방법과 이의신청 절차 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:05:23,129 [f11fa074] INFO api.chat:_finalize:36 - [chat-OUT] tid=f11fa074 sid=c1034563 answer_chars=924 results=7 sources=3 total_ms=27594
+2026-06-08 20:05:23,137 [f11fa074] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=f11fa074 total=27594ms summarize=0ms rewrite=1672ms agent=14907ms aggregate=11015ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-08 20:05:45,323 [6694121f] INFO api.chat:_finalize:36 - [chat-OUT] tid=6694121f sid=15598d27 answer_chars=614 results=9 sources=6 total_ms=43297
+2026-06-08 20:05:45,324 [6694121f] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=6694121f total=43297ms summarize=0ms rewrite=11500ms agent=25110ms aggregate=6686ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-08 20:06:24,874 [308fce34] INFO api.chat:chat_stream:77 - [chat-IN] tid=308fce34 sid=737e056f q_chars=19 q='학사 관련 자주 묻는 질문을 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:06:37,392 [308fce34] INFO api.chat:_finalize:36 - [chat-OUT] tid=308fce34 sid=737e056f answer_chars=552 results=4 sources=3 total_ms=12516
+2026-06-08 20:06:37,402 [308fce34] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=308fce34 total=12516ms summarize=0ms rewrite=1766ms agent=5796ms aggregate=4953ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:07:02,942 [e8bbff73] INFO api.chat:chat_stream:77 - [chat-IN] tid=e8bbff73 sid=15598d27 q_chars=18 q='이번 학기 주요 학사일정을 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:07:22,942 [e8bbff73] INFO api.chat:_finalize:36 - [chat-OUT] tid=e8bbff73 sid=15598d27 answer_chars=601 results=4 sources=1 total_ms=19984
+2026-06-08 20:07:22,952 [e8bbff73] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=e8bbff73 total=19984ms summarize=1984ms rewrite=1890ms agent=9875ms aggregate=6234ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:07:45,551 [a0a53f36] INFO api.chat:chat_stream:77 - [chat-IN] tid=a0a53f36 sid=ca78e27a q_chars=13 q='이번학기 학사일정 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:08:12,666 [a0a53f36] INFO api.chat:_finalize:36 - [chat-OUT] tid=a0a53f36 sid=ca78e27a answer_chars=912 results=4 sources=1 total_ms=27108
+2026-06-08 20:08:12,675 [a0a53f36] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=a0a53f36 total=27108ms summarize=0ms rewrite=1797ms agent=15061ms aggregate=10250ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:08:18,592 [14418e38] INFO api.chat:chat_stream:77 - [chat-IN] tid=14418e38 sid=15598d27 q_chars=19 q='학사 관련 자주 묻는 질문을 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:08:30,709 [c12fa94e] INFO api.chat:chat_stream:77 - [chat-IN] tid=c12fa94e sid=ca78e27a q_chars=153 q="They are not CI checks, and ticking them runs nothing and gates nothing. They're" model=qwen3.5:9b test=False
+2026-06-08 20:08:45,475 [681f5bce] INFO api.chat:chat_stream:77 - [chat-IN] tid=681f5bce sid=59f8bc60 q_chars=18 q='이번 학기 주요 학사일정을 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:08:46,300 [14418e38] INFO api.chat:_finalize:36 - [chat-OUT] tid=14418e38 sid=15598d27 answer_chars=816 results=5 sources=2 total_ms=27686
+2026-06-08 20:08:46,308 [14418e38] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=14418e38 total=27686ms summarize=1920ms rewrite=2063ms agent=14125ms aggregate=9577ms other=0ms sub_q=1 tool_calls=2 model=qwen3.5:9b
+2026-06-08 20:08:49,586 [c12fa94e] INFO api.chat:_finalize:36 - [chat-OUT] tid=c12fa94e sid=ca78e27a answer_chars=262 results=4 sources=1 total_ms=18875
+2026-06-08 20:08:49,587 [c12fa94e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c12fa94e total=18875ms summarize=7656ms rewrite=11202ms agent=0ms aggregate=0ms other=0ms sub_q=1 tool_calls=0 model=qwen3.5:9b
+2026-06-08 20:09:15,479 [681f5bce] INFO api.chat:_finalize:36 - [chat-OUT] tid=681f5bce sid=59f8bc60 answer_chars=763 results=4 sources=1 total_ms=29983
+2026-06-08 20:09:15,480 [681f5bce] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=681f5bce total=29983ms summarize=0ms rewrite=5342ms agent=14641ms aggregate=10000ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:09:42,148 [c6ba0d43] INFO api.chat:chat_stream:77 - [chat-IN] tid=c6ba0d43 sid=15598d27 q_chars=15 q='24학번인데 졸업요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:09:56,251 [c6ba0d43] INFO api.chat:_finalize:36 - [chat-OUT] tid=c6ba0d43 sid=15598d27 answer_chars=283 results=4 sources=2 total_ms=14094
+2026-06-08 20:09:56,251 [c6ba0d43] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=c6ba0d43 total=14094ms summarize=2907ms rewrite=2047ms agent=5906ms aggregate=3233ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:10:22,036 [54c51942] INFO api.chat:chat_stream:77 - [chat-IN] tid=54c51942 sid=c602747c q_chars=15 q='2024학번 졸업요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:10:26,635 [86e2c51e] INFO api.chat:chat_stream:77 - [chat-IN] tid=86e2c51e sid=15598d27 q_chars=18 q='2024학번이야. 졸업요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:10:32,996 [54c51942] INFO api.chat:_finalize:36 - [chat-OUT] tid=54c51942 sid=c602747c answer_chars=202 results=5 sources=1 total_ms=10953
+2026-06-08 20:10:33,006 [54c51942] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=54c51942 total=10953ms summarize=0ms rewrite=1891ms agent=4750ms aggregate=4312ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:10:40,536 [86e2c51e] INFO api.chat:_finalize:36 - [chat-OUT] tid=86e2c51e sid=15598d27 answer_chars=106 results=4 sources=1 total_ms=13889
+2026-06-08 20:10:40,545 [86e2c51e] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=86e2c51e total=13889ms summarize=4108ms rewrite=3843ms agent=4500ms aggregate=1436ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:11:52,014 [34a27c84] INFO api.chat:chat_stream:77 - [chat-IN] tid=34a27c84 sid=15598d27 q_chars=26 q='2022학번 사이버경찰학과야. 졸업요건 알려줘.' model=qwen3.5:9b test=False
+2026-06-08 20:12:02,582 [34a27c84] INFO api.chat:_finalize:36 - [chat-OUT] tid=34a27c84 sid=15598d27 answer_chars=207 results=4 sources=2 total_ms=10547
+2026-06-08 20:12:02,582 [34a27c84] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=34a27c84 total=10547ms summarize=1500ms rewrite=1672ms agent=5077ms aggregate=2297ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:13:17,158 [b3db8f49] INFO api.chat:chat_stream:77 - [chat-IN] tid=b3db8f49 sid=15598d27 q_chars=13 q='조기 졸업은 어떻게 해?' model=qwen3.5:9b test=False
+2026-06-08 20:13:20,959 [b3db8f49] INFO api.chat:_finalize:36 - [chat-OUT] tid=b3db8f49 sid=15598d27 answer_chars=109 results=4 sources=2 total_ms=3797
+2026-06-08 20:13:20,959 [b3db8f49] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=b3db8f49 total=3797ms summarize=1469ms rewrite=2327ms agent=0ms aggregate=0ms other=0ms sub_q=1 tool_calls=0 model=qwen3.5:9b
+2026-06-08 20:13:32,484 [37d6dfdf] INFO api.chat:chat_stream:77 - [chat-IN] tid=37d6dfdf sid=15598d27 q_chars=14 q='일반적인 조기 졸업 절차야' model=qwen3.5:9b test=False
+2026-06-08 20:13:40,623 [37d6dfdf] INFO api.chat:_finalize:36 - [chat-OUT] tid=37d6dfdf sid=15598d27 answer_chars=214 results=4 sources=2 total_ms=8125
+2026-06-08 20:13:40,633 [37d6dfdf] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=37d6dfdf total=8125ms summarize=0ms rewrite=1780ms agent=4250ms aggregate=2094ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:14:07,175 [cb317573] INFO api.chat:chat_stream:77 - [chat-IN] tid=cb317573 sid=15598d27 q_chars=12 q='조기졸업은 어떻게 해?' model=qwen3.5:9b test=False
+2026-06-08 20:14:19,540 [cb317573] INFO api.chat:_finalize:36 - [chat-OUT] tid=cb317573 sid=15598d27 answer_chars=365 results=5 sources=3 total_ms=12358
+2026-06-08 20:14:19,548 [cb317573] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=cb317573 total=12358ms summarize=1592ms rewrite=1657ms agent=5390ms aggregate=3702ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:15:26,388 [461132c8] INFO api.chat:chat_stream:77 - [chat-IN] tid=461132c8 sid=5527361b q_chars=18 q='조기졸업 신청 절차가 어떻게 돼?' model=qwen3.5:9b test=False
+2026-06-08 20:15:41,037 [461132c8] INFO api.chat:_finalize:36 - [chat-OUT] tid=461132c8 sid=5527361b answer_chars=504 results=4 sources=4 total_ms=14639
+2026-06-08 20:15:41,046 [461132c8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=461132c8 total=14639ms summarize=0ms rewrite=1811ms agent=8032ms aggregate=4795ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:16:12,057 [18d8b599] INFO api.chat:chat_stream:77 - [chat-IN] tid=18d8b599 sid=069246e1 q_chars=11 q='조기졸업 요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:16:16,728 [13d9d8d8] INFO api.chat:chat_stream:77 - [chat-IN] tid=13d9d8d8 sid=5527361b q_chars=12 q='휴학신청은 어떻게 해?' model=qwen3.5:9b test=False
+2026-06-08 20:16:23,503 [18d8b599] INFO api.chat:_finalize:36 - [chat-OUT] tid=18d8b599 sid=069246e1 answer_chars=319 results=4 sources=2 total_ms=11437
+2026-06-08 20:16:23,504 [18d8b599] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=18d8b599 total=11437ms summarize=0ms rewrite=1733ms agent=5313ms aggregate=4390ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:16:38,956 [439a53a6] INFO api.chat:chat_stream:77 - [chat-IN] tid=439a53a6 sid=069246e1 q_chars=15 q='조기취업 공인결석 신청 요건' model=qwen3.5:9b test=False
+2026-06-08 20:16:48,304 [13d9d8d8] INFO api.chat:_finalize:36 - [chat-OUT] tid=13d9d8d8 sid=5527361b answer_chars=565 results=10 sources=3 total_ms=31561
+2026-06-08 20:16:48,304 [13d9d8d8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=13d9d8d8 total=31561ms summarize=3733ms rewrite=5343ms agent=15328ms aggregate=7155ms other=0ms sub_q=3 tool_calls=3 model=qwen3.5:9b
+2026-06-08 20:17:08,121 [439a53a6] INFO api.chat:_finalize:36 - [chat-OUT] tid=439a53a6 sid=069246e1 answer_chars=789 results=4 sources=2 total_ms=29156
+2026-06-08 20:17:08,129 [439a53a6] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=439a53a6 total=29156ms summarize=3875ms rewrite=7016ms agent=10640ms aggregate=7625ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:20:45,716 [e55080c1] INFO api.chat:chat_stream:77 - [chat-IN] tid=e55080c1 sid=5527361b q_chars=15 q='2020학번 졸업요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:21:00,004 [e55080c1] INFO api.chat:_finalize:36 - [chat-OUT] tid=e55080c1 sid=5527361b answer_chars=352 results=4 sources=1 total_ms=14281
+2026-06-08 20:21:00,013 [e55080c1] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=e55080c1 total=14281ms summarize=1968ms rewrite=1640ms agent=6625ms aggregate=4047ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:21:34,708 [81dbbfb6] INFO api.chat:chat_stream:77 - [chat-IN] tid=81dbbfb6 sid=e428f6a5 q_chars=15 q='2020학번 졸업요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:21:47,154 [81dbbfb6] INFO api.chat:_finalize:36 - [chat-OUT] tid=81dbbfb6 sid=e428f6a5 answer_chars=352 results=4 sources=1 total_ms=12436
+2026-06-08 20:21:47,154 [81dbbfb6] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=81dbbfb6 total=12436ms summarize=0ms rewrite=1766ms agent=6625ms aggregate=4045ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:21:53,619 [1992debf] INFO api.chat:chat_stream:77 - [chat-IN] tid=1992debf sid=5527361b q_chars=10 q='기존 규정이 뭔데?' model=qwen3.5:9b test=False
+2026-06-08 20:21:57,788 [091e75b9] INFO api.chat:chat_stream:77 - [chat-IN] tid=091e75b9 sid=e428f6a5 q_chars=26 q='기존 규정말고 그냥 2020학번 졸업요건 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:22:21,087 [1992debf] INFO api.chat:_finalize:36 - [chat-OUT] tid=1992debf sid=5527361b answer_chars=585 results=5 sources=1 total_ms=27468
+2026-06-08 20:22:21,095 [1992debf] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=1992debf total=27468ms summarize=2375ms rewrite=2312ms agent=15717ms aggregate=7047ms other=0ms sub_q=2 tool_calls=2 model=qwen3.5:9b
+2026-06-08 20:22:30,411 [091e75b9] INFO api.chat:_finalize:36 - [chat-OUT] tid=091e75b9 sid=e428f6a5 answer_chars=336 results=4 sources=1 total_ms=32608
+2026-06-08 20:22:30,411 [091e75b9] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=091e75b9 total=32608ms summarize=2453ms rewrite=4421ms agent=21797ms aggregate=3936ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:29:32,518 [e8fb81e8] INFO api.chat:chat_stream:77 - [chat-IN] tid=e8fb81e8 sid=5527361b q_chars=19 q='학사 관련 자주 묻는 질문을 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:29:39,510 [f1653782] INFO api.chat:chat_stream:77 - [chat-IN] tid=f1653782 sid=73afe21d q_chars=19 q='학사 관련 자주 묻는 질문을 알려줘' model=qwen3.5:9b test=False
+2026-06-08 20:29:47,807 [e8fb81e8] INFO api.chat:_finalize:36 - [chat-OUT] tid=e8fb81e8 sid=5527361b answer_chars=190 results=4 sources=2 total_ms=15296
+2026-06-08 20:29:47,816 [e8fb81e8] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=e8fb81e8 total=15296ms summarize=5202ms rewrite=1656ms agent=5530ms aggregate=2907ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b
+2026-06-08 20:29:56,915 [f1653782] INFO api.chat:_finalize:36 - [chat-OUT] tid=f1653782 sid=73afe21d answer_chars=552 results=4 sources=3 total_ms=17405
+2026-06-08 20:29:56,917 [f1653782] INFO api.chat:_finalize:41 - PIPELINE_TIMING tid=f1653782 total=17405ms summarize=0ms rewrite=2796ms agent=9717ms aggregate=4891ms other=0ms sub_q=1 tool_calls=1 model=qwen3.5:9b

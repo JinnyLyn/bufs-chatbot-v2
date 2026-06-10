@@ -1,0 +1,63 @@
+RAGAS eval | judge=ollama:exaone3.5:7.8b | n=25 | gen=new chatbot(qwen3.5:9b)
+Phase 1 — generation (new chatbot / qwen3.5:9b)
+  gen [ 1/25] s01   ans=106자 ctx=1237
+  gen [ 2/25] s02   ans=59자 ctx=2069
+  gen [ 3/25] s03   ans=113자 ctx=1406
+  gen [ 4/25] s04   ans=207자 ctx=1711
+  gen [ 5/25] r01   ans=250자 ctx=1980
+  gen [ 6/25] r02   ans=212자 ctx=2015
+  gen [ 7/25] r03   ans=687자 ctx=1876
+  gen [ 8/25] r04   ans=164자 ctx=1309
+  gen [ 9/25] r05   ans=348자 ctx=1880
+  gen [10/25] c01   ans=505자 ctx=1263
+  gen [11/25] c02   ans=63자 ctx=1278
+  gen [12/25] c03   ans=493자 ctx=2014
+  gen [13/25] g01   ans=103자 ctx=805
+  gen [14/25] g02   ans=192자 ctx=1231
+  gen [15/25] g03   ans=407자 ctx=1128
+  gen [16/25] g04   ans=370자 ctx=2604
+  gen [17/25] e01   ans=832자 ctx=3468
+  gen [18/25] e02   ans=575자 ctx=1928
+  gen [19/25] m01   ans=495자 ctx=1900
+  gen [20/25] m02   ans=889자 ctx=2330
+  gen [21/25] m03   ans=540자 ctx=2490
+  gen [22/25] a01   ans=662자 ctx=1631
+  gen [23/25] a02   ans=484자 ctx=1634
+  gen [24/25] sc01  ans=874자 ctx=1609
+  gen [25/25] sc02  ans=110자 ctx=1693
+
+Phase 2 — judge (ollama:exaone3.5:7.8b)
+  judge [ 1/25] s01   fait=1.00 answ=0.90 cont=0.90 cont=0.90 answ=0.90
+  judge [ 2/25] s02   fait=1.00 answ=0.90 cont=0.80 cont=0.00 answ=0.30
+  judge [ 3/25] s03   fait=1.00 answ=0.80 cont=0.80 cont=0.90 answ=0.90
+  judge [ 4/25] s04   fait=0.80 answ=0.60 cont=0.10 cont=0.00 answ=0.00
+  judge [ 5/25] r01   fait=0.50 answ=0.60 cont=0.80 cont=0.90 answ=0.10
+  judge [ 6/25] r02   fait=0.90 answ=0.90 cont=0.90 cont=0.90 answ=0.90
+  judge [ 7/25] r03   fait=0.90 answ=0.90 cont=0.90 cont=0.90 answ=0.70
+  judge [ 8/25] r04   fait=0.80 answ=0.85 cont=0.80 cont=0.80 answ=0.90
+  judge [ 9/25] r05   fait=1.00 answ=0.90 cont=0.90 cont=0.90 answ=0.90
+  judge [10/25] c01   fait=1.00 answ=0.90 cont=0.70 cont=0.50 answ=0.70
+  judge [11/25] c02   fait=1.00 answ=0.90 cont=0.80 cont=0.00 answ=0.90
+  judge [12/25] c03   fait=1.00 answ=0.90 cont=0.90 cont=0.90 answ=0.70
+  judge [13/25] g01   fait=0.80 answ=0.90 cont=0.80 cont=0.90 answ=0.90
+  judge [14/25] g02   fait=0.80 answ=0.90 cont=0.10 cont=0.20 answ=0.90
+  judge [15/25] g03   fait=0.90 answ=0.90 cont=0.80 cont=0.90 answ=0.70
+  judge [16/25] g04   fait=0.50 answ=0.90 cont=0.70 cont=0.80 answ=0.90
+  judge [17/25] e01   fait=0.80 answ=0.60 cont=0.10 cont=0.50 answ=0.20
+  judge [18/25] e02   fait=0.90 answ=0.85 cont=0.20 cont=0.70 answ=0.40
+  judge [19/25] m01   fait=0.80 answ=0.90 cont=0.70 cont=0.20 answ=0.40
+  judge [20/25] m02   fait=0.90 answ=0.90 cont=0.70 cont=0.80 answ=0.70
+  judge [21/25] m03   fait=0.80 answ=0.85 cont=0.70 cont=0.90 answ=0.70
+  judge [22/25] a01   fait=0.90 answ=0.85 cont=0.40 cont=0.80 answ=0.70
+  judge [23/25] a02   fait=0.80 answ=0.60 cont=0.20 cont=0.80 answ=0.10
+  judge [24/25] sc01  fait=0.80 answ=0.60 cont=0.20 cont=0.90 answ=0.20
+  judge [25/25] sc02  fait=0.90 answ=0.85 cont=0.90 cont=0.90 answ=0.90
+
+=== RAGAS SUMMARY (new chatbot) ===
+  Faithfulness 성실성           █████████████████░░░ 0.86
+  Answer Relevancy 관련성       ████████████████░░░░ 0.826
+  Context Precision 정밀도      ████████████░░░░░░░░ 0.632
+  Context Recall 재현율         █████████████░░░░░░░ 0.676
+  Answer Correctness 정확도     ████████████░░░░░░░░ 0.624
+  AVG                        0.7236
+report -> C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\ragas_new_ollama_20260607_213154.json
