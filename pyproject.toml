@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+# pythonpath MANDATORY: app modules use top-level imports (import config, from db...)
+# entrypoints do sys.path.insert(0, "project/") — mirror that here.
+pythonpath = ["project"]
+testpaths  = ["tests"]
+markers = [
+    "unit: pure offline unit tests (no Ollama/Qdrant/Langfuse/network)",
+    "integration: live-service tests; deselected by default",
+]
+# Integration tests are opt-in; default runs skip them.
+addopts = "-m 'not integration'"
+asyncio_mode = "auto"
