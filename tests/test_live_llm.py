@@ -2,6 +2,11 @@
 
 Skipped automatically when OLLAMA_BASE_URL is not set (safe for offline CI).
 
+The target LLM (local Ollama, or the remote H100 Ollama reached via the SSH
+tunnel that scripts/start-all-h100.ps1 forwards to 127.0.0.1:11434) is served
+by Ollama, so this test talks to it through the Ollama API regardless of where
+it physically runs.
+
 Uses the `ollama` Python client directly (installed as a transitive dep of
 langchain-ollama) because it supports `think=False` natively.  The langchain-
 ollama 1.1.0 ChatOllama wrapper does not expose a `think` parameter; without
@@ -11,7 +16,8 @@ tokens and returns empty content.
 Install extras before running:
     pip install langchain-ollama==1.1.0   # brings in ollama client
 
-Run:
+Run (LLM_MODEL must be a model actually pulled on the target Ollama —
+check with `curl http://127.0.0.1:11434/api/tags`):
     OLLAMA_BASE_URL=http://127.0.0.1:11434 LLM_MODEL=qwen3.5:9b \\
         pytest tests/test_live_llm.py -v
 """
@@ -52,7 +58,8 @@ def test_live_ollama_returns_nonempty_response():
     parameter, so we use the underlying ollama client directly — it is the
     same SDK that ChatOllama delegates to.
 
-    Timeout 60 s is generous for first-call VRAM load on RTX 4090.
+    Timeout 60 s is generous for the first-call model load into VRAM (covers
+    both a local GPU and the remote H100 reached over the SSH tunnel).
     """
     client = ollama.Client(host=_OLLAMA_URL, timeout=60.0)
     response = client.chat(
