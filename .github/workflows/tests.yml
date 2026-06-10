@@ -1,0 +1,84 @@
+name: Unit Tests
+
+on:
+  pull_request:
+
+jobs:
+  unit:
+    name: Offline unit tests (Python 3.14)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Match the Python version used in the project (see Dockerfile / README)
+          python-version: "3.14"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}-minimal
+          restore-keys: |
+            ${{ runner.os }}-pip-minimal-
+
+      - name: Install test dependencies (minimal — no torch/sentence-transformers)
+        # Full requirements.txt includes sentence-transformers/torch which are
+        # ~4 GB and slow to install.  The 8 unit-target modules only need the
+        # subset below.  If you need the full install, uncomment the next line:
+        #   pip install -r requirements.txt
+        # and remove the manual install below.
+        run: |
+          pip install \
+            "pytest>=8.3" \
+            "pytest-asyncio>=0.24" \
+            "pytest-cov>=6.0" \
+            pydantic \
+            "langgraph==1.2.0" \
+            "langchain-text-splitters==1.1.2" \
+            "tiktoken==0.13.0" \
+            "pymupdf4llm==1.27.2.3"
+
+      - name: Run offline unit tests with coverage
+        run: |
+          pytest -m "not integration" \
+            --cov=project \
+            --cov-report=term \
+            -v
+
+  # Integration tests are opt-in (workflow_dispatch only).
+  # They require a running Ollama + Qdrant instance, which is not available in
+  # standard CI runners.  Trigger manually on a self-hosted runner that has
+  # OLLAMA_BASE_URL, QDRANT_DB_PATH, and optionally LANGFUSE_* set.
+  integration:
+    name: Integration tests (manual trigger only)
+    runs-on: self-hosted
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install all dependencies
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run integration tests
+        env:
+          OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL }}
+          QDRANT_DB_PATH: ${{ vars.QDRANT_DB_PATH }}
+          LANGFUSE_ENABLED: ${{ vars.LANGFUSE_ENABLED }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
+        run: |
+          pytest -m integration -v
