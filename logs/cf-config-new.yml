@@ -1,0 +1,12 @@
+tunnel: a20ee14c-cb8c-4de1-ae03-db7cb096e558
+credentials-file: C:\ProgramData\Cloudflared\a20ee14c-cb8c-4de1-ae03-db7cb096e558.json
+
+ingress:
+  # API + SSE (chat stream, session) -> FastAPI backend on :8000 (same origin -> no CORS).
+  - hostname: maruvis.co.kr
+    path: ^/api/
+    service: http://localhost:8000
+  # Everything else -> Next.js frontend on :3000.
+  - hostname: maruvis.co.kr
+    service: http://localhost:3000
+  - service: http_status:404
