@@ -201,6 +201,75 @@ def cmd_rewrite(args: argparse.Namespace) -> None:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+#  Search-k resolution (PURE — unit-testable offline, no torch/qdrant/Langfuse)
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Langfuse observation name for the production retrieval tool call
+# (rag_agent/tools.py: _search_child_chunks(query, limit) → similarity_search(k=limit)).
+_SEARCH_OBS_NAME = "search_child_chunks"
+
+
+def _extract_trace_search_limits(trace_detail: dict) -> list[tuple[str, int]]:
+    """Pull every LLM-specified retrieval ``limit`` out of a trace_detail dict.
+
+    Production retrieval k is the LLM-chosen ``limit`` arg of the
+    ``search_child_chunks`` tool call (rag_agent/tools.py), recorded as the
+    ``input`` of each ``search_child_chunks`` observation. Returns a list of
+    ``(observation_label, limit)`` pairs (one per search observation that carried
+    an integer ``limit``/``k``), preserving provenance for the caller.
+    """
+    out: list[tuple[str, int]] = []
+    for o in trace_detail.get("observations") or []:
+        if not isinstance(o, dict) or o.get("name") != _SEARCH_OBS_NAME:
+            continue
+        inp = o.get("input")
+        if not isinstance(inp, dict):
+            continue
+        raw = inp.get("limit", inp.get("k"))
+        # production limit is always an int; reject bool (an int subclass) and any
+        # non-int (str/float) so we never silently coerce anomalous trace data.
+        if isinstance(raw, bool) or not isinstance(raw, int):
+            continue
+        label = o.get("id") or o.get("startTime") or _SEARCH_OBS_NAME
+        out.append((str(label), raw))
+    return out
+
+
+def _resolve_search_k(cli_k: int, trace_detail: dict | None) -> tuple[int, str]:
+    """Resolve the retrieval k and a human-readable provenance string.
+
+    Pure: operates only on the supplied *trace_detail* dict (no I/O), so it is
+    unit-testable offline without torch/qdrant/Langfuse.
+
+    Fallback semantics:
+      * trace_detail is None → use *cli_k* (the --k flag).
+      * trace_detail with no tool-call limits → fall back to *cli_k*.
+      * exactly one limit → use it.
+      * multiple differing limits → use max() and report provenance.
+    """
+    if trace_detail is None:
+        return cli_k, f"--k flag; production LLM picks limit≈5-7 per call (cli_k={cli_k})"
+
+    limits = _extract_trace_search_limits(trace_detail)
+    if not limits:
+        return cli_k, (
+            f"--k flag (cli_k={cli_k}); no {_SEARCH_OBS_NAME} tool-call limit found in trace"
+        )
+
+    distinct = sorted({lim for _, lim in limits})
+    if len(distinct) == 1:
+        only = distinct[0]
+        return only, f"trace LLM limit={only} (from {len(limits)} {_SEARCH_OBS_NAME} call(s))"
+
+    chosen = max(distinct)
+    provenance = ", ".join(f"{label}→limit={lim}" for label, lim in limits)
+    return chosen, (
+        f"max of {len(limits)} differing trace limits {distinct} → k={chosen}; "
+        f"provenance: {provenance}"
+    )
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 #  Subcommand: search
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -244,14 +313,23 @@ def cmd_search(args: argparse.Namespace) -> None:
 
     db_path = Path(args.db) if args.db else Path(config.QDRANT_DB_PATH)
     threshold = args.threshold if args.threshold is not None else config.SEARCH_SCORE_THRESHOLD
-    k = config.MAX_TOOL_CALLS  # matches production: rag_agent/tools.py:20 uses no explicit k override
+
+    # ── resolve retrieval k (production k = LLM-chosen `limit`, not MAX_TOOL_CALLS) ──
+    # Lazy imports keep this module Langfuse-free at import time (test_import_purity).
+    trace_detail: dict | None = None
+    if args.from_trace:
+        from ._query import get_trace_detail, resolve_tid  # lazy: no Langfuse at import
+
+        lf_id = resolve_tid(args.from_trace)
+        trace_detail = get_trace_detail(lf_id)
+    k, k_source = _resolve_search_k(args.k, trace_detail)
 
     # ── index fingerprint (EVERY run — fidelity contract #2) ─────────────────────
     fingerprint = _qdrant_fingerprint(db_path)
     print(f"[repro search] index fingerprint: {fingerprint}")
     print(f"  query     : {args.query!r}")
     print(f"  threshold : {threshold}  (production default = {config.SEARCH_SCORE_THRESHOLD})")
-    print(f"  k         : {k}  (= config.MAX_TOOL_CALLS, matches tools.py:20)")
+    print(f"  k         : {k}  ({k_source})")
     print(f"  db_path   : {db_path}")
     print()
 
@@ -524,6 +602,27 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p_sr.add_argument(
+        "--k",
+        type=int,
+        default=7,
+        metavar="N",
+        help=(
+            "Retrieval k (default: 7). Production k is the LLM-chosen `limit` "
+            "(≈5-7 per call, rag_agent/tools.py), NOT config.MAX_TOOL_CALLS. "
+            "Overridden by --from-trace when that trace carries a limit."
+        ),
+    )
+    p_sr.add_argument(
+        "--from-trace",
+        default=None,
+        metavar="TID",
+        help=(
+            "Read the actual LLM-specified limit from a trace (8-hex app tid or "
+            "Langfuse trace ID). Multiple differing limits → max() with provenance; "
+            "no limit found → falls back to --k."
+        ),
+    )
+    p_sr.add_argument(
         "--db",
         default=None,
         metavar="PATH",
@@ -565,6 +664,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
     _bootstrap_env()
     parser = _build_parser()
     args = parser.parse_args()
