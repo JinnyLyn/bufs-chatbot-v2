@@ -251,7 +251,18 @@ def main(argv: list[str] | None = None) -> int:
 
     # ~10 obs/trace typical; cap at 1200 for full fleet, scale down for --last N
     obs_want = min(max(len(traces) * 10, 100), 1200)
-    obs = fetch_observations(want=obs_want)
+    # Bound observations to the same window as the traces above so the fleet
+    # stats / errors / node history don't mix in pre-window observations.
+    # --since supplies fromTimestamp directly; otherwise mirror the days window
+    # the same way fetch_traces_window computes its `since`.
+    from datetime import datetime, timedelta
+    obs_since = extra_filters.get("fromTimestamp") or (
+        (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
+        + "+00:00"
+    )
+    # NB: observations filter on `fromStartTime` (traces use `fromTimestamp`);
+    # the wrong param name is silently ignored by the REST endpoint.
+    obs = fetch_observations(want=obs_want, fromStartTime=obs_since)
     print(f", {len(obs)} observations")
 
     if args.list_nodes:
