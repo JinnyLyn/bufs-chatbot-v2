@@ -30,6 +30,8 @@ from debug.logs import (
     LINE_RE,
     PIPELINE_TIMING_RE,
     QA_LOG_FAIL_RE,
+    LogLine,
+    display_log_lines,
     grep_app_logs,
     grep_qa_logs,
     parse_chat_err,
@@ -529,11 +531,20 @@ class TestSyntheticPaths:
         for ln in _synthetic_lines():
             assert LINE_RE.match(ln), f"synthetic line does not match grammar: {ln[:80]}"
 
-    def test_synthetic_lines_are_all_warnings(self):
-        """Synthetic [chat-ERR] and Q&A-fail lines are logged at WARNING level."""
+    def test_synthetic_line_levels(self):
+        """Per-line levels match the real logger calls:
+        - "Q&A log failed:" wrapper (chat.py:57)  → WARNING
+        - "[chat-ERR]"      (chat.py:114)          → ERROR
+        - "Q&A log write failed" (qa_logger.py:78) → ERROR
+        """
         for p in self._synth_lines():
             assert p is not None
-            assert p.level == "WARNING"
+            if "[chat-ERR]" in p.message:
+                assert p.level == "ERROR", f"chat-ERR must be ERROR: {p.message}"
+            elif "Q&A log write failed" in p.message:
+                assert p.level == "ERROR", f"qa_logger write-fail must be ERROR: {p.message}"
+            elif "Q&A log failed" in p.message:
+                assert p.level == "WARNING", f"chat.py:57 wrapper must be WARNING: {p.message}"
 
     def test_chat_err_parse_deadbeef(self):
         """[chat-ERR] line for tid deadbeef parses correctly."""
@@ -543,6 +554,7 @@ class TestSyntheticPaths:
         ]
         assert err_lines, "No [chat-ERR] synthetic lines found"
         for p in err_lines:
+            assert p.level == "ERROR", f"chat-ERR line must be ERROR level: {p.message}"
             fields = parse_chat_err(p.message)
             assert fields is not None, f"parse_chat_err returned None for: {p.message}"
             assert len(fields["tid"]) == 8
@@ -557,6 +569,8 @@ class TestSyntheticPaths:
         tids = {parse_chat_err(p.message)["tid"] for p in err_lines}
         assert "deadbeef" in tids
         assert "cafe1234" in tids
+        for p in err_lines:
+            assert p.level == "ERROR", f"chat-ERR line must be ERROR level: {p.message}"
 
     def test_qa_log_fail_parse(self):
         """Q&A log failed: lines parse with parse_qa_log_fail()."""
@@ -599,6 +613,74 @@ class TestSyntheticPaths:
             "Unexpected QA-log-fail lines in real fixture — update this test "
             "and remove the 'synthetic only' caveat if real samples exist."
         )
+
+    def test_qa_log_fail_re_matches_both_wordings(self):
+        """QA_LOG_FAIL_RE matches the chat.py:57 wrapper AND the qa_logger.py:78
+        ERROR ("write failed") wording, capturing the exception text either way."""
+        warn = QA_LOG_FAIL_RE.search("Q&A log failed: foo")
+        assert warn is not None, "must match chat.py:57 'Q&A log failed:' wrapper"
+        assert warn.group(1) == "foo"
+        err = QA_LOG_FAIL_RE.search("Q&A log write failed: bar")
+        assert err is not None, "must match qa_logger.py:78 'Q&A log write failed:'"
+        assert err.group(1) == "bar"
+
+    def test_qa_log_write_failed_is_error_level(self):
+        """The qa_logger.py:78 line is ERROR level and parses via parse_qa_log_fail."""
+        write_fail = [
+            p for p in self._synth_lines()
+            if p and "Q&A log write failed" in p.message
+        ]
+        assert write_fail, "No qa_logger write-failure synthetic line found"
+        for p in write_fail:
+            assert p.level == "ERROR"
+            fields = parse_qa_log_fail(p.message)
+            assert fields is not None and fields["error"]
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# § 6b — display_log_lines rendering (capsys)
+# ═════════════════════════════════════════════════════════════════════════════
+
+@pytest.mark.unit
+class TestDisplayPaths:
+    """The widened LINE_RE means ERROR lines now reach display_log_lines().
+    These assert the formerly-dead chat-ERR / QA-FAIL branches render, and that
+    a generic ERROR line gets the ERROR tag (not 'info')."""
+
+    def _synth_parsed(self):
+        return [p for p in (parse_line(ln) for ln in _synthetic_lines()) if p]
+
+    def test_chat_err_renders_tag(self, capsys):
+        lines = [p for p in self._synth_parsed() if "[chat-ERR]" in p.message]
+        assert lines
+        display_log_lines(lines)
+        out = capsys.readouterr().out
+        assert "[chat-ERR]" in out
+
+    def test_qa_write_failed_renders_qa_fail_tag(self, capsys):
+        lines = [p for p in self._synth_parsed() if "Q&A log write failed" in p.message]
+        assert lines, "No qa_logger write-failure synthetic line found"
+        display_log_lines(lines)
+        out = capsys.readouterr().out
+        assert "[QA-FAIL ]" in out
+
+    def test_generic_error_renders_error_tag_not_info(self, capsys):
+        """A plain ERROR line (not chat-ERR / QA-fail) falls to the else branch
+        and must render the 7-char ERROR tag, not 'info'."""
+        line = LogLine(
+            raw="2026-06-09 15:00:00,000 [abcd1234] ERROR core.foo:bar:9 - boom",
+            timestamp="2026-06-09 15:00:00,000",
+            tid="abcd1234",
+            level="ERROR",
+            logger="core.foo",
+            func="bar",
+            lineno="9",
+            message="boom",
+        )
+        display_log_lines([line])
+        out = capsys.readouterr().out
+        assert "[ERROR  ]" in out
+        assert "[info   ]" not in out
 
 
 # ═════════════════════════════════════════════════════════════════════════════
