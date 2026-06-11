@@ -7,6 +7,8 @@ opens the menu and quits.
 
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -57,6 +59,12 @@ def test_pipeline_accepts_32hex_and_raw(monkeypatch: pytest.MonkeyPatch) -> None
     assert launcher._args_pipeline() == [tid32, "--raw"]
 
 
+def test_pipeline_accepts_16hex_langfuse_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Known production Langfuse ID format (12~40 hex) — resolve_tid() parity."""
+    _feed(monkeypatch, "51c47a5061f70aa2", "n")
+    assert launcher._args_pipeline() == ["51c47a5061f70aa2"]
+
+
 def test_bad_tid_reprompts_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     _feed(monkeypatch, "zzz", "A687E093", "n")  # invalid, then upper (lowered)
     assert launcher._args_pipeline() == ["a687e093"]
@@ -101,7 +109,8 @@ def test_status_default_and_custom_url(monkeypatch: pytest.MonkeyPatch) -> None:
         (("4",), ["--errors"]),
         (("5", "50"), ["--last", "50"]),
         (("b",), None),
-        (("5", "abc"), None),  # non-numeric N cancels
+        (("5", "abc", "50"), ["--last", "50"]),  # non-numeric N re-prompts
+        (("5", "abc", ""), None),  # …and empty backs out
     ],
 )
 def test_analyze_submenu(
@@ -117,6 +126,18 @@ def test_repro_search_builds_args_and_warns(
     _feed(monkeypatch, "2", "졸업학점", "0.5")
     assert launcher._args_repro() == ["search", "졸업학점", "--threshold", "0.5"]
     assert "운영박스 전용" in capsys.readouterr().out
+
+
+def test_repro_threshold_reprompts_on_non_float(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A typo'd threshold must not reach the child (argparse exit 2 would be
+    mislabeled as missing prod deps)."""
+    _feed(monkeypatch, "2", "졸업학점", "0,5", "0.5")
+    assert launcher._args_repro() == ["search", "졸업학점", "--threshold", "0.5"]
+
+
+def test_repro_threshold_empty_uses_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    _feed(monkeypatch, "2", "졸업학점", "0,5", "")
+    assert launcher._args_repro() == ["search", "졸업학점"]
 
 
 @pytest.mark.parametrize(
@@ -239,6 +260,39 @@ def test_passthrough_unknown_tool(
     assert launcher.main(["bogus"]) == 2
     assert rec.calls == []
     assert "unknown tool" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flag", ["--help", "-h"])
+def test_help_prints_usage_and_exits_zero(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], flag: str
+) -> None:
+    rec = _Recorder()
+    monkeypatch.setattr(launcher, "_run", rec)
+    assert launcher.main([flag]) == 0
+    assert rec.calls == []
+    assert "usage" in capsys.readouterr().out
+
+
+@pytest.mark.skipif(os.name != "posix", reason="death-by-signal exit is POSIX-only")
+def test_passthrough_replays_child_signal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Child killed by signal N → launcher re-kills itself with N, so the shell
+    sees the same status as a direct `python -m debug.<tool>` run."""
+    killed: list[tuple[int, int]] = []
+    monkeypatch.setattr(
+        launcher.subprocess, "run",
+        lambda cmd, **kw: type("P", (), {"returncode": -11})(),
+    )
+    monkeypatch.setattr(launcher.signal, "signal", lambda sig, handler: None)
+    monkeypatch.setattr(launcher.os, "kill", lambda pid, sig: killed.append((pid, sig)))
+    assert launcher.main(["logs", "a687e093"]) == 139  # fallback if signal ignored
+    assert killed == [(os.getpid(), 11)]
+
+
+def test_menu_text_matches_dispatch_table() -> None:
+    """Tripwire: the hand-aligned menu text and the _MENU dict can't drift."""
+    rows = re.findall(r"^\s*(\d)\..*\(debug\.(\w+)\)", launcher._MENU_TEXT, re.M)
+    assert dict(rows) == {num: tool for num, (tool, _) in launcher._MENU.items()}
+    assert launcher._TOOLS == tuple(tool for tool, _ in launcher._MENU.values())
 
 
 # ── end-to-end smoke (real subprocess, offline) ──────────────────────────────

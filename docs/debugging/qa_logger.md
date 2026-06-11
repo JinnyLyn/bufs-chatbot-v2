@@ -104,15 +104,20 @@ If absent, QA logging may be disabled (`CHAT_LOG_DISABLED` env, or per-request
 ### 4. Cross-reference chat-OUT count vs QA record count
 
 ```bash
-grep -h '\[chat-OUT\]' logs/backend/app.log* | wc -l   # app.log* — include rotated days
-cat logs/qa/qa_*.jsonl | wc -l                          # qa files span all days too
+grep -h '\[chat-OUT\]' logs/backend/app.log* | wc -l   # only the retained rotated days (LOG_BACKUP_DAYS, default 30)
+cat logs/qa/qa_*.jsonl | wc -l                          # qa files are never pruned — span ALL days
 ```
 
-These counts should roughly match. Test-mode requests skip the QA record but
-still log chat-IN/chat-OUT — the `test=True` marker is on the **[chat-IN]**
-line (chat-OUT has no test field), so exclude them by matching tids from
-`grep 'chat-IN.*test=True'`. A larger remaining gap means some requests
-completed without a QA write.
+These counts only line up while the server is younger than the app.log
+retention window (`LOG_BACKUP_DAYS`, default 30 — `log_setup.py:38`); qa files
+are never rotated away, so on an older deployment qa will exceed chat-OUT and
+you should compare per-day instead (e.g. `app.log.2026-06-08` vs
+`qa_2026-06-08.jsonl`). Test-mode requests skip the QA record but still log
+chat-IN/chat-OUT — the `test=True` marker is on the **[chat-IN]** line
+(chat-OUT has no test field), so exclude them by matching tids from
+`grep 'chat-IN.*test=True'`. After accounting for both, chat-OUT entries
+exceeding same-window QA records mean some requests completed without a QA
+write.
 
 ---
 

@@ -16,29 +16,35 @@ Dispatch is via subprocess, not in-process import, on purpose:
 
 from __future__ import annotations
 
+import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
 from collections.abc import Callable
 
-_TOOLS = ("status", "analyze", "pipeline", "session", "logs", "repro")
-
 # Duplicated on purpose: importing debug.session/_query would break this
 # module's import purity (no env bootstrap from the menu process).
-# Keep in sync with session.py:222-226 / _query.py resolve_tid().
+# Keep in sync with _query.py resolve_tid(): 8-hex app tid, or a Langfuse
+# trace ID of 12~40 hex (확인된 운영 형식 16-hex; 웹 UI는 32-hex일 수도).
 _HEX8 = re.compile(r"^[0-9a-f]{8}$")
-_HEX32 = re.compile(r"^[0-9a-f]{32}$")
+_HEX_LANGFUSE = re.compile(r"^[0-9a-f]{12,40}$")
 
 # Per-tool exit-code meanings shown after a run (fallback: generic message).
-# Source: each tool's --help / debug/README.md §3 표.
+# Source: each tool's --help / debug/README.md §3 표. argparse도 인자 오류에
+# 2를 쓰므로 2번 라벨은 두 원인을 함께 적는다.
 _EXIT_MEANINGS: dict[str, dict[int, str]] = {
-    "status": {0: "정상", 1: "이상 감지", 2: "설정 오류 (project/.env 확인)"},
+    "status": {0: "정상", 1: "이상 감지", 2: "설정 오류 (project/.env 확인) 또는 잘못된 인자"},
     "analyze": {0: "정상", 1: "키 누락·조회 실패"},
     "session": {0: "정상", 1: "키 누락·조회 실패"},
     "pipeline": {0: "정상", 1: "키 누락·조회 실패"},
-    "logs": {0: "정상", 2: "tid 형식 오류"},
-    "repro": {0: "정상", 1: "환경변수·의존성 누락 / 실행 실패", 2: "운영 박스 전용 의존성 누락"},
+    "logs": {0: "정상", 2: "tid·인자 형식 오류"},
+    "repro": {
+        0: "정상",
+        1: "환경변수·의존성 누락 / 실행 실패",
+        2: "운영박스 전용 의존성 누락(search/answer) 또는 잘못된 인자",
+    },
 }
 
 
@@ -47,16 +53,16 @@ def _ask(prompt: str) -> str:
     return input(prompt).strip()
 
 
-def _ask_tid(prompt: str, *, allow_32hex: bool = True) -> str | None:
+def _ask_tid(prompt: str, *, allow_langfuse: bool = True) -> str | None:
     """Prompt for a trace id until valid. Empty or 'b' → None (back to menu)."""
     while True:
         raw = _ask(prompt).lower()
         if raw in ("", "b"):
             return None
-        if _HEX8.match(raw) or (allow_32hex and _HEX32.match(raw)):
+        if _HEX8.match(raw) or (allow_langfuse and _HEX_LANGFUSE.match(raw)):
             return raw
-        forms = "8자리" + (" 또는 32자리" if allow_32hex else "")
-        print(f"  ✗ tid는 소문자 hex {forms}여야 합니다 (예: a687e093). 빈 입력=뒤로")
+        forms = "8자리 (예: a687e093)" + (" 또는 Langfuse ID 12~40자리" if allow_langfuse else "")
+        print(f"  ✗ tid는 소문자 hex {forms}여야 합니다. 빈 입력=뒤로")
 
 
 def _yes(prompt: str) -> bool:
@@ -88,16 +94,18 @@ def _args_analyze() -> list[str] | None:
     if choice == "4":
         return ["--errors"]
     if choice == "5":
-        n = _ask("트레이스 개수 N: ")
-        if not n.isdigit():
-            print("  ✗ 숫자가 아니라서 취소합니다")
-            return None
-        return ["--last", n]
+        while True:
+            n = _ask("트레이스 개수 N: ")
+            if n in ("", "b"):
+                return None
+            if n.isdigit():
+                return ["--last", n]
+            print("  ✗ 숫자를 입력하세요. 빈 입력=뒤로")
     return None
 
 
 def _args_pipeline() -> list[str] | None:
-    tid = _ask_tid("트레이스 ID (8-hex tid 또는 32-hex Langfuse ID): ")
+    tid = _ask_tid("트레이스 ID (8-hex tid 또는 12~40-hex Langfuse ID): ")
     if tid is None:
         return None
     args = [tid]
@@ -112,7 +120,7 @@ def _args_session() -> list[str] | None:
 
 
 def _args_logs() -> list[str] | None:
-    tid = _ask_tid("8-hex tid (예: a687e093): ", allow_32hex=False)
+    tid = _ask_tid("8-hex tid (예: a687e093): ", allow_langfuse=False)
     if tid is None:
         return None
     args = [tid]
@@ -141,9 +149,17 @@ def _args_repro() -> list[str] | None:
         if not q:
             return None
         args = ["search", q]
-        thr = _ask("관련성 게이트 임계값 (엔터=운영 기본값): ")
-        if thr:
+        while True:
+            thr = _ask("관련성 게이트 임계값 (엔터=운영 기본값): ")
+            if not thr:
+                break
+            try:
+                float(thr)
+            except ValueError:
+                print("  ✗ 숫자여야 합니다 (예: 0.3). 엔터=기본값")
+                continue
             args += ["--threshold", thr]
+            break
         return args
     if choice == "3":
         f = _ask("마크다운 파일 경로 (또는 markdown_docs/ 안의 파일명): ")
@@ -167,6 +183,15 @@ _MENU: dict[str, tuple[str, Callable[[], "list[str] | None"]]] = {
     "6": ("repro", _args_repro),
 }
 
+# Passthrough tool names — derived from the dispatch table so the two can't drift.
+_TOOLS = tuple(tool for tool, _ in _MENU.values())
+
+_USAGE = (
+    f"usage: python -m debug [{'|'.join(_TOOLS)}] [args…]\n"
+    "       python -m debug                  (대화형 메뉴)\n"
+    "       python -m debug.<tool> --help    (도구별 옵션)"
+)
+
 _MENU_TEXT = """
 ============================================
  BUFS 디버그 도구  (q: 종료)
@@ -181,6 +206,17 @@ _MENU_TEXT = """
 """
 
 
+def _die_by_signal(sig: int) -> None:
+    """Re-kill self with the child's fatal signal so the shell sees the same
+    thing as a direct `python -m debug.<tool>` run ($?=128+N, 루프가 Ctrl-C에
+    중단되는 동작 포함). POSIX 전용 — Windows에는 시그널 종료 상태가 없다."""
+    try:
+        signal.signal(sig, signal.SIG_DFL)
+    except (OSError, ValueError):
+        pass  # e.g. SIGKILL — default disposition already applies
+    os.kill(os.getpid(), sig)
+
+
 def _run(tool: str, args: list[str], *, verbose: bool = True) -> int:
     """Single dispatch point.
 
@@ -191,18 +227,28 @@ def _run(tool: str, args: list[str], *, verbose: bool = True) -> int:
     """
     cmd = [sys.executable, "-m", f"debug.{tool}", *args]
     if verbose:
-        shown = shlex.join(args)  # quoted — safe to copy-paste questions with spaces
+        # Quoted for the shell the user will paste into — cmd.exe treats
+        # POSIX single quotes as literal characters.
+        shown = subprocess.list2cmdline(args) if os.name == "nt" else shlex.join(args)
         print(f"\n$ python -m debug.{tool} {shown}".rstrip() + "\n")
     try:
         code = subprocess.run(cmd).returncode
     except KeyboardInterrupt:
         if verbose:
             print("\n(중단됨 — 메뉴로 돌아갑니다)")
+        elif os.name == "posix":
+            _die_by_signal(signal.SIGINT)  # passthrough keeps Ctrl-C shell semantics
         return 130
     if verbose:
-        meaning = _EXIT_MEANINGS.get(tool, {}).get(code)
-        label = f" — {meaning}" if meaning else ""
-        print(f"\n[debug.{tool}] 종료코드 {code}{label}")
+        if code < 0:
+            print(f"\n[debug.{tool}] 시그널 {-code}(으)로 종료")
+        else:
+            meaning = _EXIT_MEANINGS.get(tool, {}).get(code)
+            label = f" — {meaning}" if meaning else ""
+            print(f"\n[debug.{tool}] 종료코드 {code}{label}")
+    elif code < 0 and os.name == "posix":
+        _die_by_signal(-code)  # passthrough: child died by signal N → so do we
+        return 128 - code  # fallback if the signal was caught/ignored
     return code
 
 
@@ -213,14 +259,12 @@ def main(argv: list[str] | None = None) -> int:
     # Passthrough: python -m debug <tool> [args…] — adds nothing to the output
     if argv:
         tool = argv[0]
+        if tool in ("-h", "--help"):
+            print(_USAGE)
+            return 0
         if tool in _TOOLS:
             return _run(tool, list(argv[1:]), verbose=False)
-        print(
-            f"error: unknown tool {tool!r}\n"
-            f"usage: python -m debug [{'|'.join(_TOOLS)}] [args…]\n"
-            "       python -m debug            (대화형 메뉴)",
-            file=sys.stderr,
-        )
+        print(f"error: unknown tool {tool!r}\n{_USAGE}", file=sys.stderr)
         return 2
 
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]

@@ -130,7 +130,8 @@ python -m debug.session <세션UUID | 8-hex tid | 32-hex Langfuse ID>
 종료코드: 0 정상 / 1 조회 실패.
 
 > 알려진 한계: **16자리** Langfuse 트레이스 ID와 세션 UUID **앞부분만** 넣는
-> 것은 동작하지 않습니다 — 조용히 0건이 나옵니다 (코드 버그 이슈로 추적 중).
+> 것은 동작하지 않습니다 — 16-hex 등은 조용히 0건이 나오고, 8자리 앞부분은
+> tid로 해석돼 조회 실패(exit 1)로 끝납니다 (코드 버그 이슈로 추적 중).
 > 전체 UUID, 8-hex tid, 32-hex Langfuse ID 중 하나를 쓰세요.
 
 ### 3.4 `debug.pipeline` — 트레이스 1건 단계별 분석
@@ -145,7 +146,7 @@ python -m debug.pipeline <tid> [--raw]
 
 | 옵션 | 의미 |
 |---|---|
-| `tid` | 8-hex app tid **또는** 32-hex Langfuse ID (자동 해석) |
+| `tid` | 8-hex app tid **또는** 12~40-hex Langfuse ID (자동 해석) |
 | `--raw` | 주석 없이 관측 타임라인만 |
 
 종료코드: 0 정상 / 1 조회 실패. 전체 워크플로 예시(290초 폭주 실사례)는
@@ -205,9 +206,10 @@ python -m debug.repro <서브커맨드> [인자]
 | 형식 | 길이 | 예 | 어디서 복사하나 |
 |---|---|---|---|
 | app tid | 8-hex | `a687e093` | `app.log`·`qa.jsonl`·사용자 제보, `debug.analyze` 출력의 `tid=` |
-| Langfuse 트레이스 ID | 32-hex | `51c47a50…07e3` | Langfuse 웹 UI의 트레이스 URL |
+| Langfuse 트레이스 ID | 12~40-hex (운영 확인 형식 16, 웹 UI는 32일 수도) | `51c47a5061f70aa2` | Langfuse 웹 UI의 트레이스 URL |
 
-`pipeline`과 `session`은 둘 다 받습니다. `logs`는 8-hex만 받습니다
+`pipeline`은 둘 다 받습니다. `session`은 전체 세션 UUID·8-hex tid·**32-hex**만
+받습니다 — 16-hex는 미지원입니다 (§3.3 알려진 한계). `logs`는 8-hex만 받습니다
 (아니면 exit 2).
 
 ---
@@ -229,7 +231,9 @@ python -m debug.repro <서브커맨드> [인자]
 - 실행 후 종료코드와 해석(예: `status` 1 = 이상 감지)을 보여줍니다.
 - 메뉴는 각 도구를 별도 프로세스로 실행하므로, cron 등에 직접 거는 경우와
   종료코드가 완전히 동일합니다. 패스스루(`python -m debug <도구> …`)는
-  출력에 아무것도 덧붙이지 않아 파이프에 안전합니다.
+  출력에 아무것도 덧붙이지 않아 파이프에 안전하고, 자식이 시그널로 죽으면
+  런처도 같은 시그널로 종료해 셸에서 직접 실행과 똑같이 보입니다.
+- `python -m debug --help`(또는 `-h`)는 사용법만 출력하고 0으로 끝납니다.
 
 ---
 
@@ -242,7 +246,7 @@ python -m debug.repro <서브커맨드> [인자]
 | `ERROR: missing production deps: torch…` (exit 2) | `repro search/answer`는 운영 박스 전용 — dev에서는 정상 동작 |
 | `tid must be exactly 8 lowercase hex chars` (exit 2) | `debug.logs`는 8-hex만. 32-hex밖에 없으면 `debug.pipeline`으로 metadata의 tid를 먼저 확인 |
 | 시간이 9시간 어긋나 보임 | Langfuse=UTC, app.log·qa.jsonl=KST. 정상입니다 |
-| Windows에서 출력 글자 깨짐 | 도구가 stdout을 UTF-8로 재설정하지만, 리다이렉트 파일을 열 때는 UTF-8로 여세요 |
+| Windows에서 출력 글자 깨짐 | 도구가 stdout을 UTF-8로 재설정합니다 (예외: `repro` — 코드 버그 이슈로 추적 중, `python -X utf8 -m debug.repro …`로 우회). 리다이렉트 파일을 열 때는 UTF-8로 여세요 |
 
 ---
 

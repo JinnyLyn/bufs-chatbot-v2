@@ -149,13 +149,16 @@ or pass `--db <live path>` (server stopped) to debug against the real index.
 | Format | Length | Example | Use |
 |--------|--------|---------|-----|
 | 8-hex app tid | 8 | `a687e093` | In `app.log`, `qa.jsonl`, user reports |
-| Langfuse trace ID | 32 | `51c47a5061f70aa291ce68a70f9407e3` | In Langfuse UI URL |
+| Langfuse trace ID | 12–40 hex (16 observed in production; UI may show 32) | `51c47a5061f70aa2` | In Langfuse UI URL |
 
-`debug.pipeline` accepts both formats (8-hex resolved via `metadata.trace_id`).
+`debug.pipeline` accepts both formats (8-hex resolved via `metadata.trace_id`;
+Langfuse IDs of 12–40 hex taken as-is).
 `debug.logs` accepts **8-hex only** (it greps local files; exit 2 otherwise).
 `debug.session` accepts a full session UUID, an 8-hex app tid, or a 32-hex
-Langfuse trace ID — but **not** a 16-hex trace ID or a session-UUID *prefix*
-(silently returns 0 traces; known gap, tracked in the debug-toolkit code-bug issue).
+Langfuse trace ID — but **not** a 16-hex trace ID or a session-UUID *prefix*:
+a 16-hex ID (or any non-8-hex prefix) silently returns 0 traces, while an
+8-hex prefix is parsed as an app tid and fails loudly with a resolution error
+(exit 1). Known gap, tracked in the debug-toolkit code-bug issue.
 
 ### Quick command cheat-sheet
 
