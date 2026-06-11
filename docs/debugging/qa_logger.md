@@ -87,9 +87,9 @@ Neither line has appeared in real production logs so far (0 occurrences).
 If you see one, the app logged the exception and continued — the request
 itself completed normally.
 
-> Known gap: `debug.logs <tid>` currently parses only INFO/WARNING lines, so the
-> ERROR-level "Q&A log write failed" line would not appear in its output — use
-> the `grep` above directly. Tracked in the debug-toolkit code-bug issue.
+> Note: `debug.logs <tid>` parses INFO/WARNING/ERROR/CRITICAL lines, so the
+> ERROR-level "Q&A log write failed" line now appears in its output (rendered as
+> `[QA-FAIL]`).
 
 ### 3. Verify qa.jsonl files exist
 

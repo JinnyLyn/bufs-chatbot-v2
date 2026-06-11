@@ -21,9 +21,10 @@ Notes
 - Timestamps in app.log are naive KST (+09:00); Langfuse uses UTC.
 - Log grammar is 100% verified against 1,632 real lines — see
   .omc/research/log-study-applog.md.
-- ``[chat-ERR]`` lines and QA-write-failure warnings have never been
-  observed in real production logs (see log-study-code-xcheck.md §2) but
-  are handled here and tested with synthetic fixtures.
+- ``[chat-ERR]`` (ERROR) and QA-write-failure (WARNING from chat.py:57,
+  ERROR from qa_logger.py:78) lines are parsed and displayed. They have 0
+  occurrences in the committed corpus (see log-study-code-xcheck.md §2) and
+  are tested with synthetic fixtures.
 """
 from __future__ import annotations
 
@@ -47,7 +48,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 LINE_RE = re.compile(
     r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})"  # 1: timestamp
     r" \[([0-9a-f]{8}|-)\]"                             # 2: tid or -
-    r" (INFO|WARNING)"                                  # 3: level
+    r" (INFO|WARNING|ERROR|CRITICAL)"                   # 3: level
     r" ([\w.]+):(\w+):(\d+)"                            # 4-6: name:func:lineno
     r" - (.*)$",                                        # 7: message
     re.UNICODE,
@@ -75,13 +76,17 @@ PIPELINE_TIMING_RE = re.compile(
     r" sub_q=(\d+) tool_calls=(\d+) model=(\S+)"
 )
 
-# [chat-ERR] — api.chat (0 real occurrences; synthetic coverage only)
+# [chat-ERR] — api.chat:chat_stream:114 via logger.error (ERROR level).
+# Parsed now that LINE_RE accepts ERROR/CRITICAL; 0 real occurrences in the
+# committed corpus as of 2026-06-10 (synthetic fixture coverage only).
 # Format: [chat-ERR] tid=<8hex> <message>
 CHAT_ERR_RE = re.compile(r"\[chat-ERR\] tid=([0-9a-f]{8}) (.*)")
 
-# QA-write failure warning — api.chat (0 real occurrences; synthetic coverage only)
-# Format: Q&A log failed: <exc>
-QA_LOG_FAIL_RE = re.compile(r"Q&A log failed: (.*)")
+# QA-write failure — two sources, both parsed now that LINE_RE accepts ERROR:
+#   chat.py:57         logger.warning("Q&A log failed: %s", exc)        → WARNING
+#   qa_logger.py:78    logger.error("Q&A log write failed: %s", exc)    → ERROR
+# 0 real occurrences in the committed corpus as of 2026-06-10.
+QA_LOG_FAIL_RE = re.compile(r"Q&A log (?:write )?failed: (.*)")
 
 
 # ── log-directory helpers ─────────────────────────────────────────────────────
@@ -227,10 +232,11 @@ def parse_pipeline_timing(msg: str) -> dict | None:
 
 
 def parse_chat_err(msg: str) -> dict | None:
-    """Extract fields from a [chat-ERR] message (synthetic coverage only).
+    """Extract fields from a [chat-ERR] message.
 
-    NOTE: No [chat-ERR] lines exist in real production logs as of 2026-06-10.
-    This parser covers the code path for completeness.
+    [chat-ERR] is logged at ERROR level (chat.py:114) and is now parsed and
+    displayed. 0 such lines exist in the committed corpus as of 2026-06-10;
+    synthetic-fixture coverage only.
     """
     m = CHAT_ERR_RE.search(msg)
     if not m:
@@ -239,9 +245,11 @@ def parse_chat_err(msg: str) -> dict | None:
 
 
 def parse_qa_log_fail(msg: str) -> dict | None:
-    """Extract the exception text from a QA-write-failure WARNING.
+    """Extract the exception text from a QA-write-failure line.
 
-    NOTE: No such warnings exist in real production logs as of 2026-06-10.
+    Matches both the chat.py:57 WARNING ("Q&A log failed: ...") and the
+    qa_logger.py:78 ERROR ("Q&A log write failed: ..."). 0 such lines exist
+    in the committed corpus as of 2026-06-10.
     """
     m = QA_LOG_FAIL_RE.search(msg)
     if not m:
@@ -354,10 +362,10 @@ def display_log_lines(lines: list[LogLine]) -> None:
             fields = parse_chat_err(msg)
             err_text = fields["error"] if fields else msg
             print(f"  {line.timestamp} [chat-ERR] ⚠  {err_text}")
-        elif "Q&A log failed" in msg:
+        elif "Q&A log" in msg and "failed" in msg:
             print(f"  {line.timestamp} [QA-FAIL ] ⚠  {msg}")
         else:
-            lvl_tag = "WARNING" if line.level == "WARNING" else "info   "
+            lvl_tag = {"WARNING": "WARNING", "ERROR": "ERROR  ", "CRITICAL": "ERROR  "}.get(line.level, "info   ")
             print(f"  {line.timestamp} [{lvl_tag}]  {line.logger}:{line.func}  {msg[:120]}")
 
 

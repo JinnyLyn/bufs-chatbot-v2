@@ -7,13 +7,14 @@ Usage
 Exit codes (documented):
     0   all checks pass, no anomalies detected
     1   one or more anomaly conditions detected (see output for details)
-    2   configuration error (missing env var, unreachable health endpoint)
+    2   configuration error (missing required env var)
 
 Anomaly conditions that trigger exit 1:
     • /health endpoint unreachable or returns non-200
     • Langfuse error/WARNING observations in the last 7 days
     • Trailing 7d median latency has degraded relative to the prior 7d
-    • chat-IN-without-chat-OUT orphan(s) detected in recent app.log tail
+    • chat-IN-without-chat-OUT orphan(s) older than the grace period in the
+      recent app.log tail (sub-grace orphans are DEFERRED to the next run)
     • Any known pipeline node has ZERO observations in the last 7 days
 
 Environment
@@ -38,14 +39,30 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import requests as _requests
 
 # dotenv runs via ensure_env() in main() ONLY — importing stays env-pure
-from .langfuse_client import ensure_env
+from .langfuse_client import ensure_env, fetch_observations
 from ._query import fetch_observations_by_name, fetch_traces_window
 from .logs import grep_app_logs, iter_app_log_files
+
+# ── orphan grace period ───────────────────────────────────────────────────────
+
+# Sub-grace chat-IN-without-chat-OUT pairs are likely still in-flight rather
+# than crashed. 300s > the 60s RUNAWAY threshold in logs.py and covers the
+# observed 290s runaway request, so a long-but-live request is not mis-flagged.
+ORPHAN_GRACE_SECONDS = 300
+
+
+def _utc_since(days: int) -> str:
+    """RFC 3339 timestamp for ``now - days`` (UTC), matching _query's format."""
+    return (
+        (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
+        + "+00:00"
+    )
 
 # ── known pipeline nodes to check for liveness ───────────────────────────────
 
@@ -193,9 +210,16 @@ def check_orphans(tail_lines: int = 500) -> tuple[bool, list[str]]:
     This is the ONLY crash/abort signal app.log provides — no ERROR lines,
     no tracebacks are ever written to app.log.
 
+    A chat-IN within ORPHAN_GRACE_SECONDS of the newest parseable log line is
+    likely still in-flight, not crashed, so it is DEFERRED (re-evaluated on the
+    next run) rather than flagged — this avoids a false cron exit 1 for a slow
+    request. Only chat-INs older than the grace with no chat-OUT are real
+    ORPHANs. The reference clock is the newest parseable line timestamp in the
+    tail (deterministic), NOT wall-clock now().
+
     Reads the last *tail_lines* log lines from the active app.log.
     """
-    from .logs import LINE_RE, _log_root, parse_line
+    from .logs import _log_root, parse_line
 
     log_root = _log_root()
     app_log = log_root / "backend" / "app.log"
@@ -210,28 +234,58 @@ def check_orphans(tail_lines: int = 500) -> tuple[bool, list[str]]:
         return True, [f"could not read app.log: {exc}"]
 
     tail = all_lines[-tail_lines:]
-    in_tids: set[str] = set()
+    in_ts: dict[str, datetime] = {}   # tid → latest chat-IN timestamp
     out_tids: set[str] = set()
+    newest_ts: datetime | None = None
 
     for raw in tail:
         line = parse_line(raw)
         if not line or line.tid == "-":
             continue
+        ts = datetime.strptime(line.timestamp, "%Y-%m-%d %H:%M:%S,%f")
+        if newest_ts is None or ts > newest_ts:
+            newest_ts = ts
         if "[chat-IN]" in line.message:
-            in_tids.add(line.tid)
+            # keep the latest chat-IN timestamp for this tid
+            if line.tid not in in_ts or ts > in_ts[line.tid]:
+                in_ts[line.tid] = ts
         elif "[chat-OUT]" in line.message:
             out_tids.add(line.tid)
 
-    orphans = in_tids - out_tids
-    if not orphans:
+    candidates = [tid for tid in in_ts if tid not in out_tids]
+    if not candidates or newest_ts is None:
         return True, [f"no orphans in last {len(tail)} log lines"]
+
+    orphans: list[str] = []
+    deferred: list[str] = []
+    for tid in candidates:
+        age = (newest_ts - in_ts[tid]).total_seconds()
+        if age < ORPHAN_GRACE_SECONDS:
+            deferred.append(tid)
+        else:
+            orphans.append(tid)
+
+    if not orphans:
+        msgs = [f"no orphans in last {len(tail)} log lines"]
+        if deferred:
+            msgs.append(
+                f"deferred {len(deferred)} tid(s) within {ORPHAN_GRACE_SECONDS}s "
+                "grace (may be in-flight)"
+            )
+        return True, msgs
 
     msgs = [
         f"⚠ {len(orphans)} ORPHAN(S) detected in last {len(tail)} lines "
-        f"(chat-IN without chat-OUT — possible crash/abort):"
+        f"(chat-IN without chat-OUT, older than {ORPHAN_GRACE_SECONDS}s grace "
+        "— possible crash/abort):"
     ]
     for tid in sorted(orphans):
         msgs.append(f"    tid={tid}")
+    if deferred:
+        msgs.append(
+            f"deferred {len(deferred)} tid(s) within {ORPHAN_GRACE_SECONDS}s "
+            "grace (may be in-flight)"
+        )
     return False, msgs
 
 
@@ -300,12 +354,20 @@ def main(argv: list[str] | None = None) -> int:
     prior_only: list[dict] = []
     obs: list[dict] = []
     try:
-        recent_traces = fetch_traces_window(days=7, want=200)
-        prior_traces = fetch_traces_window(days=14, want=400)
+        # Time-bound the two windows so newest-first pagination can't starve the
+        # prior window: recent = [now-7d, now], prior = [now-14d, now-7d).
+        # Bounding by toTimestamp (not a fragile ID set-difference) is the fix —
+        # truncated recent traces can no longer leak into the prior baseline.
+        cutoff_7d = _utc_since(days=7)
+        recent_traces = fetch_traces_window(days=7, want=300)
+        prior_traces = fetch_traces_window(days=14, want=600, toTimestamp=cutoff_7d)
+        # Secondary guard: drop any recent IDs that still slipped into prior.
         recent_ids = {t.get("id") for t in recent_traces}
         prior_only = [t for t in prior_traces if t.get("id") not in recent_ids]
-        from .langfuse_client import fetch_observations
-        obs = fetch_observations(want=1200)
+        # Windowless obs leaks pre-7d data into error/node-liveness; bound to 7d.
+        # NB: the observations REST endpoint filters on `fromStartTime` (the
+        # traces endpoint uses `fromTimestamp`); using the wrong name no-ops.
+        obs = fetch_observations(want=1200, fromStartTime=cutoff_7d)
         print(f"    Pulled: {len(recent_traces)} recent traces, {len(prior_only)} prior, {len(obs)} obs")
     except RuntimeError as exc:
         print(f"[✗] Langfuse fetch failed: {exc}")

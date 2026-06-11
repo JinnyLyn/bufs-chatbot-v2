@@ -238,9 +238,9 @@ $ python -m debug.repro search "오늘 교내 학생식당 점심 메뉴"
 [repro search] index fingerprint: meta=5557288bc54143df sqlite=[18096128B mtime=1781076718] git=152c554
   query     : '오늘 교내 학생식당 점심 메뉴'
   threshold : 0.3  (production default = 0.3)
-  k         : 8  (= config.MAX_TOOL_CALLS, matches tools.py:20)
+  k         : 7  (--k flag; production LLM picks limit≈5-7 per call)
 
-  Running: collection.similarity_search(query, k=8, score_threshold=0.3)
+  Running: collection.similarity_search(query, k=7, score_threshold=0.3)
 
   → 4 chunk(s) PASS (hybrid-fusion score ≥ 0.3):
 
@@ -249,11 +249,10 @@ $ python -m debug.repro search "오늘 교내 학생식당 점심 메뉴"
   ...
 ```
 
-> ⚠ Caution on the `k` line above: production's `k` is the LLM-supplied `limit`
-> tool argument (typically 5–7, see `rag_agent/tools.py:12-20`), NOT
-> `config.MAX_TOOL_CALLS` as the repro output claims — so the PASS set can differ
-> from what production actually retrieved. Tracked in the debug-toolkit code-bug
-> issue; until fixed, read the real `limit` from the trace's `tools` span.
+> Note on the `k` line above: set it with `--k` (default 7), or pass
+> `--from-trace <tid>` to reuse the exact LLM-supplied `limit` (typically 5–7,
+> see `rag_agent/tools.py:12-20`) that production used for that trace — so the
+> PASS set matches what production actually retrieved.
 
 The 4 chunks that passed are from the academic handbook — not a cafeteria menu source.
 The chunks are semantically adjacent to "학교 시설" but contain no actual menu data.

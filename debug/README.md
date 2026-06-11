@@ -85,9 +85,9 @@ python -m debug.status [--server-url URL]
 | 1 | 이상 감지 (어떤 항목인지 STATUS 블록에 출력) |
 | 2 | 설정 오류 — `project/.env`의 Langfuse 키 확인 |
 
-> 주의: 점검 시점에 **아직 처리 중인 긴 요청**도 고아(ORPHAN)로 잡힐 수
-> 있습니다(290초 폭주 사례 실재). 알림을 받으면 몇 분 뒤 한 번 더 돌려
-> 확인하세요.
+> 주의: 마지막 로그 줄 기준 300초(`ORPHAN_GRACE_SECONDS`) 이내의 chat-IN은
+> "아직 처리 중일 수 있음"으로 보고 ORPHAN에서 제외하고 다음 점검으로 이월합니다.
+> 300초를 넘겨도 chat-OUT이 없으면 실제 ORPHAN으로 보고합니다(290초 폭주 사례 참고).
 
 ### 3.2 `debug.analyze` — 운영 전체 통계
 
@@ -129,10 +129,9 @@ python -m debug.session <세션UUID | 8-hex tid | 32-hex Langfuse ID>
 
 종료코드: 0 정상 / 1 조회 실패.
 
-> 알려진 한계: **16자리** Langfuse 트레이스 ID와 세션 UUID **앞부분만** 넣는
-> 것은 동작하지 않습니다 — 16-hex 등은 조용히 0건이 나오고, 8자리 앞부분은
-> tid로 해석돼 조회 실패(exit 1)로 끝납니다 (코드 버그 이슈로 추적 중).
-> 전체 UUID, 8-hex tid, 32-hex Langfuse ID 중 하나를 쓰세요.
+> 입력 형식: 전체 세션 UUID · 8-hex app tid · 12~40-hex Langfuse 트레이스 ID
+> (16-hex 운영 형식 포함). 12~40-hex는 트레이스를 해석해 세션으로 연결합니다.
+> (세션 UUID 앞부분만 넣는 부분일치 조회는 지원하지 않습니다 — 전체 UUID를 쓰세요.)
 
 ### 3.4 `debug.pipeline` — 트레이스 1건 단계별 분석
 
@@ -169,9 +168,8 @@ chat-IN만 있으면 **ORPHAN 경고**를 출력합니다.
 
 종료코드: 0 정상 / 2 tid 형식 오류.
 
-> 알려진 한계: 현재 INFO/WARNING 라인만 파싱하므로 ERROR 레벨의
-> `[chat-ERR]` 라인은 출력에 안 나옵니다 (코드 버그 이슈로 추적 중).
-> 크래시 포렌식 중이면 `grep chat-ERR logs/backend/app.log*`를 병행하세요.
+> 참고: INFO/WARNING/ERROR/CRITICAL 라인을 모두 파싱합니다. ERROR 레벨의
+> `[chat-ERR]`·`Q&A log write failed` 라인도 출력에 표시됩니다.
 
 ### 3.6 `debug.repro` — 모듈 단독 재실행
 
@@ -195,9 +193,9 @@ python -m debug.repro <서브커맨드> [인자]
 종료코드: 0 정상 / 1 환경변수·의존성 누락, 실행 실패 / 2 운영 박스 전용
 의존성 누락 (dev 박스에서 `search`/`answer` 실행 시).
 
-> 알려진 한계: `search`의 `k` 값이 운영과 다르게 잡히는 버그가 있습니다
-> (운영은 LLM이 지정한 limit≈5–7, repro는 `MAX_TOOL_CALLS` 사용 — 코드 버그
-> 이슈로 추적 중). 결과 **집합**을 운영과 비교할 때는 이 점을 감안하세요.
+> 참고: `search`의 `k`는 `--k`(기본 7)로 지정하거나, `--from-trace <tid>`로
+> 해당 트레이스가 실제 사용한 LLM limit(≈5–7)을 그대로 읽어옵니다. 운영과
+> 결과 **집합**을 비교하려면 `--from-trace`로 동일 limit을 맞추세요.
 
 ---
 
@@ -208,9 +206,8 @@ python -m debug.repro <서브커맨드> [인자]
 | app tid | 8-hex | `a687e093` | `app.log`·`qa.jsonl`·사용자 제보, `debug.analyze` 출력의 `tid=` |
 | Langfuse 트레이스 ID | 12~40-hex (운영 확인 형식 16, 웹 UI는 32일 수도) | `51c47a5061f70aa2` | Langfuse 웹 UI의 트레이스 URL |
 
-`pipeline`은 둘 다 받습니다. `session`은 전체 세션 UUID·8-hex tid·**32-hex**만
-받습니다 — 16-hex는 미지원입니다 (§3.3 알려진 한계). `logs`는 8-hex만 받습니다
-(아니면 exit 2).
+`pipeline`은 둘 다 받습니다. `session`은 전체 세션 UUID·8-hex tid·12~40-hex
+Langfuse ID(16-hex 포함)를 받습니다. `logs`는 8-hex만 받습니다 (아니면 exit 2).
 
 ---
 
@@ -246,7 +243,7 @@ python -m debug.repro <서브커맨드> [인자]
 | `ERROR: missing production deps: torch…` (exit 2) | `repro search/answer`는 운영 박스 전용 — dev에서는 정상 동작 |
 | `tid must be exactly 8 lowercase hex chars` (exit 2) | `debug.logs`는 8-hex만. 32-hex밖에 없으면 `debug.pipeline`으로 metadata의 tid를 먼저 확인 |
 | 시간이 9시간 어긋나 보임 | Langfuse=UTC, app.log·qa.jsonl=KST. 정상입니다 |
-| Windows에서 출력 글자 깨짐 | 도구가 stdout을 UTF-8로 재설정합니다 (예외: `repro` — 코드 버그 이슈로 추적 중, `python -X utf8 -m debug.repro …`로 우회). 리다이렉트 파일을 열 때는 UTF-8로 여세요 |
+| Windows에서 출력 글자 깨짐 | 모든 도구가 stdout을 UTF-8로 재설정합니다(`repro` 포함). 리다이렉트 파일을 열 때는 UTF-8로 여세요 |
 
 ---
 
