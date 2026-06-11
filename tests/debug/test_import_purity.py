@@ -32,6 +32,7 @@ _DEBUG_MODULES = [
     "session",
     "status",
     "repro",
+    "__main__",  # launcher: import must not run the menu, mutate env, or touch streams
 ]
 
 _PROBE = (
