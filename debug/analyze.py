@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 
 from .langfuse_client import fetch_observations, fetch_traces
 from ._query import fetch_observations_by_name, fetch_traces_window, require_env
@@ -255,7 +256,6 @@ def main(argv: list[str] | None = None) -> int:
     # stats / errors / node history don't mix in pre-window observations.
     # --since supplies fromTimestamp directly; otherwise mirror the days window
     # the same way fetch_traces_window computes its `since`.
-    from datetime import datetime, timedelta
     obs_since = extra_filters.get("fromTimestamp") or (
         (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
         + "+00:00"
