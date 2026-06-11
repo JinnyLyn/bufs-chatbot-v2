@@ -1,26 +1,26 @@
 # Module: qa_logger
 
-> **Timezone note:** `qa.jsonl` timestamps are **UTC** (same as Langfuse).
-> `app.log` timestamps are **KST (+09:00)**.
+> **Timezone note:** `qa.jsonl` timestamps are **KST (local time, `datetime.now()`)** —
+> same as `app.log`. Only Langfuse uses UTC.
 
 ## Overview
 
-`qa_logger` is a local file-write component — it appends one JSON record to `qa_*.jsonl`
-after each completed request. There is **no Langfuse span** for this module; it runs
-entirely on the production box after the HTTP response is sent.
+`qa_logger` is a local file-write component — it appends one JSON record to
+`logs/qa/qa_YYYY-MM-DD.jsonl` after each completed request. There is **no Langfuse
+span** for this module; it runs entirely on the production box after the HTTP
+response is sent.
 
 A write failure is silent in Langfuse. The only signals are:
 1. Missing `qa.jsonl` record for a trace where `app.log` shows `[chat-OUT]`
-2. A `[QA-write-failure]` line in `app.log` (0 real occurrences in production history —
-   only observed in synthetic tests)
+2. A `Q&A log write failed:` ERROR line in `app.log` (`qa_logger.py:78`;
+   0 real occurrences in production history)
 
 ---
 
 ## Symptoms
 
 - `debug.logs <tid>` shows `(no QA record found)` but `app.log` has both chat-IN and chat-OUT
-- `qa.jsonl` file is absent or empty
-- QA record exists but `"answer"` field is truncated (> 8192 chars)
+- `logs/qa/qa_*.jsonl` file is absent or empty
 - Disk full condition on the production server
 
 ---
@@ -72,44 +72,52 @@ Example — missing QA record (orphan or write failure):
 
 ### 2. Check for QA write failure lines in app.log
 
-```bash
-grep "QA-write-failure" logs/backend/app.log
-```
-
-This line has **never appeared in real production logs** (0 occurrences). If you see
-it, the app is logging the exception but continuing — the request completed normally.
-
-### 3. Check for truncated answers
-
-Long answers (> 8192 chars) may be truncated in `qa.jsonl`. Verify with:
+Two distinct failure messages exist (verify both):
 
 ```bash
-python3 -c "
-import json, sys
-for line in open('qa_records.jsonl'):
-    r = json.loads(line)
-    if len(r.get('answer','')) > 8000:
-        print(r['trace_id'], len(r['answer']), 'chars')
-"
+# realistic path: QALogger.log() swallows the write error internally and
+# logs at ERROR (qa_logger.py:78)
+grep "Q&A log write failed" logs/backend/app.log*
+
+# wrapper path: only if log() itself raised before writing (chat.py:57, WARNING)
+grep "Q&A log failed" logs/backend/app.log*
 ```
 
-### 4. Verify qa.jsonl files exist
+Neither line has appeared in real production logs so far (0 occurrences).
+If you see one, the app logged the exception and continued — the request
+itself completed normally.
+
+> Known gap: `debug.logs <tid>` currently parses only INFO/WARNING lines, so the
+> ERROR-level "Q&A log write failed" line would not appear in its output — use
+> the `grep` above directly. Tracked in the debug-toolkit code-bug issue.
+
+### 3. Verify qa.jsonl files exist
 
 ```bash
-ls -lh qa_*.jsonl 2>/dev/null || echo "no qa files found"
+ls -lh logs/qa/qa_*.jsonl 2>/dev/null || echo "no qa files found"
 ```
 
-If absent, QA logging may be disabled or the output directory is wrong. Check
-`BUFS_QA_LOG_DIR` env var and the startup log (`[chat-IN]` should confirm the log path).
+If absent, QA logging may be disabled (`CHAT_LOG_DISABLED` env, or per-request
+`X-Test-Mode` header) or `config.LOG_DIR` points elsewhere. The directory is
+`<config.LOG_DIR>/qa/` (`qa_logger.py:19`).
 
-### 5. Cross-reference chat-OUT count vs QA record count
+### 4. Cross-reference chat-OUT count vs QA record count
 
 ```bash
-grep -c '\[chat-OUT\]' logs/backend/app.log
-wc -l qa_*.jsonl
+grep -h '\[chat-OUT\]' logs/backend/app.log* | wc -l   # only the retained rotated days (LOG_BACKUP_DAYS, default 30)
+cat logs/qa/qa_*.jsonl | wc -l                          # qa files are never pruned — span ALL days
 ```
 
-These counts should match. A gap means some requests completed without a QA write.
+These counts only line up while the server is younger than the app.log
+retention window (`LOG_BACKUP_DAYS`, default 30 — `log_setup.py:38`); qa files
+are never rotated away, so on an older deployment qa will exceed chat-OUT and
+you should compare per-day instead (e.g. `app.log.2026-06-08` vs
+`qa_2026-06-08.jsonl`). Test-mode requests skip the QA record but still log
+chat-IN/chat-OUT — the `test=True` marker is on the **[chat-IN]** line
+(chat-OUT has no test field), so exclude them by matching tids from
+`grep 'chat-IN.*test=True'`. After accounting for both, chat-OUT entries
+exceeding same-window QA records mean some requests completed without a QA
+write.
 
 ---
 
@@ -128,10 +136,13 @@ the request completed, then check `qa.jsonl` locally.
 
 | Failure | Signal | Action |
 |---------|--------|--------|
-| **Missing QA record** | `(no QA record found)` in `debug.logs`, but chat-OUT exists | Check disk space; check `BUFS_QA_LOG_DIR`; look for `[QA-write-failure]` in app.log |
-| **Disk full** | `[QA-write-failure]` with `OSError: No space left on device` | Clear old rotated logs; expand disk |
-| **Truncated answer** | `"answer"` ends mid-sentence at ~8192 chars | Known: `a687e093` answer is 21511 chars, QA record truncates at config limit |
-| **Write race** | Two concurrent requests write to same qa file | Not a known issue; qa_logger uses append mode which is atomic on Linux |
+| **Missing QA record** | `(no QA record found)` in `debug.logs`, but chat-OUT exists | Check disk space; check `CHAT_LOG_DISABLED` / `X-Test-Mode`; grep for `Q&A log write failed` in app.log |
+| **Disk full** | `Q&A log write failed: ... No space left on device` (ERROR) | Clear old rotated logs; expand disk |
+| **Write race** | Two concurrent requests write to same qa file | Not observed so far. Append mode is atomic per write() syscall, but very long answers (>~8 KB buffered) can flush as multiple syscalls and interleave; a corrupted line is silently skipped by `_parse` — would surface as a missing QA record with chat-OUT present |
 
-> Note: `[QA-write-failure]` is a **synthetic-only** test scenario. It has never appeared
-> in real production logs as of 2026-06-10.
+Notes:
+- Answers are stored **in full** — there is no truncation (the 21,511-char
+  `a687e093` answer is stored whole). A record that ends mid-sentence indicates
+  the generation itself stopped, not a qa_logger limit.
+- QA write failure has never appeared in real production logs as of 2026-06-10;
+  coverage exists only via synthetic test fixtures.

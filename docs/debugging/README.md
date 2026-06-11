@@ -49,7 +49,7 @@ Expected output when the server is up and healthy:
 BUFS Server Status Check
 ============================================================
 
-[✓] /health   ok — model=qwen3.5:9b  langfuse_enabled=True  kb_docs=68
+[✓] /health   HTTP 200  config_keys=['status', 'model', 'ollama_base_url', 'num_ctx', 'reasoning', 'embedding_model', 'embedding_device', 'langfuse_enabled', 'kb_docs', 'uptime_s']
 
 Fetching Langfuse data (recent 7d + prior 7d) …
     Pulled: 200 recent traces, 200 prior, 1200 obs
@@ -60,10 +60,13 @@ Fetching Langfuse data (recent 7d + prior 7d) …
 
 [✓] node liveness:
     LangGraph                      n=109
+    agent                          n=57
     aggregate_answers              n=50
+    collect_answer                 n=61
     compress_context               (expected absent — path inactive in production)
     fallback_response              (expected absent — path inactive in production)
     orchestrator                   n=119
+    retrieve_parent_chunks         ⚠ UNEXPECTED (was 0 in 200 production traces)
     rewrite_query                  n=52
     search_child_chunks            n=61
     summarize_history              n=51
@@ -73,8 +76,12 @@ Fetching Langfuse data (recent 7d + prior 7d) …
     no orphans in last 5 log lines
 
 ============================================================
-STATUS: OK
+STATUS: OK — no anomalies detected
 ```
+
+(The `⚠ UNEXPECTED` row is informational — only an ABSENT expected node trips
+exit 1. The liveness table always lists all known nodes, including `agent`,
+`collect_answer`, `retrieve_parent_chunks`.)
 
 Exit 0 = healthy. Exit 1 = anomaly. Exit 2 = config error (check `project/.env`).
 
@@ -142,13 +149,25 @@ or pass `--db <live path>` (server stopped) to debug against the real index.
 | Format | Length | Example | Use |
 |--------|--------|---------|-----|
 | 8-hex app tid | 8 | `a687e093` | In `app.log`, `qa.jsonl`, user reports |
-| Langfuse trace ID | 32 | `51c47a5061f70aa291ce68a70f9407e3` | In Langfuse UI URL |
+| Langfuse trace ID | 12–40 hex (16 observed in production; UI may show 32) | `51c47a5061f70aa2` | In Langfuse UI URL |
 
-All `debug/` tools accept both formats — the 8-hex tid is resolved via `metadata.trace_id`.
+`debug.pipeline` accepts both formats (8-hex resolved via `metadata.trace_id`;
+Langfuse IDs of 12–40 hex taken as-is).
+`debug.logs` accepts **8-hex only** (it greps local files; exit 2 otherwise).
+`debug.session` accepts a full session UUID, an 8-hex app tid, or a 32-hex
+Langfuse trace ID — but **not** a 16-hex trace ID or a session-UUID *prefix*:
+a 16-hex ID (or any non-8-hex prefix) silently returns 0 traces, while an
+8-hex prefix is parsed as an app tid and fails loudly with a resolution error
+(exit 1). Known gap, tracked in the debug-toolkit code-bug issue.
 
 ### Quick command cheat-sheet
 
+> 한국어 도구 사용 설명서(메뉴 방식 포함): [`debug/README.md`](../../debug/README.md)
+
 ```bash
+# Interactive menu over all six tools (easiest entry point)
+.venv/bin/python -m debug
+
 # Fleet health + latency baseline
 .venv/bin/python -m debug.status
 
@@ -188,7 +207,7 @@ All `debug/` tools accept both formats — the 8-hex tid is resolved via `metada
 ```
 logs/backend/app.log              # active log (KST timestamps)
 logs/backend/app.log.YYYY-MM-DD   # rotated logs
-qa_*.jsonl                        # QA records (one per question)
+logs/qa/qa_YYYY-MM-DD.jsonl       # QA records (one per question, KST timestamps)
 ```
 
 Override with `BUFS_LOG_DIR` environment variable:

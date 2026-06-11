@@ -167,9 +167,13 @@ The model issued 8 search calls (the loop limit). This happens on complex multi-
 questions where the model repeatedly retrieves and discards results.
 
 ```bash
-# Reproduce the exact agent loop:
-.venv/bin/python -m debug.repro pipeline 7f37cac8
+# Inspect the exact agent loop, span by span:
+.venv/bin/python -m debug.pipeline 7f37cac8
+
+# Re-run the full graph on the same question (non-deterministic, prod box only):
+.venv/bin/python -m debug.repro answer "<the question from the trace>"
 ```
 
-Mitigation: reduce `max_tool_calls` in orchestrator config, or improve the rewrite
-prompt to generate simpler, single-intent queries.
+Mitigation: lower the `MAX_TOOL_CALLS` env var (`project/config.py:75`, read from
+`project/.env`), or improve the rewrite prompt to generate simpler,
+single-intent queries.

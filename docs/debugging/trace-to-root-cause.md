@@ -40,11 +40,12 @@ The user report gives you a session ID, a time window, or a quoted answer fragme
 python -m debug.session <session_id_or_8hex_tid>
 ```
 
-`debug.session` lists every Q&A turn with verdict flags:
-- `REFUSE` — fast-refuse path fired (rewrite returned `is_clear=False`)
-- `NO_RESULTS` — `num_results=0`, search found nothing
-- `SENTINEL+RESULTS` — answer says "not found" but `num_results>0` (generation failure)
-- `RUNAWAY` — `answer_chars` or `duration_ms` above threshold
+`debug.session` lists every Q&A turn with verdict flags (`session.py:65-81`):
+- `REFUSE` — refuse path: no `search_child_chunks` span ran AND `tool_calls=0`
+- `NO-RESULTS` — `metadata.num_results=0` (a REFUSE turn carries both flags,
+  since nothing was searched — read them together)
+- `SENTINEL` — answer says "찾지 못했습니다" despite retrieval running (generation failure)
+- `RUNAWAY(Ns)` / `RUNAWAY-ANSWER(Nch)` — duration >60 s / answer >5000 chars
 - `ORPHAN` — `chat-IN` with no matching `chat-OUT` (crash/abort)
 
 Identify the **bad turn** and note its `tid` (8-hex trace ID).
@@ -247,6 +248,12 @@ $ python -m debug.repro search "오늘 교내 학생식당 점심 메뉴"
        '...학기 교과목 안내...'…
   ...
 ```
+
+> ⚠ Caution on the `k` line above: production's `k` is the LLM-supplied `limit`
+> tool argument (typically 5–7, see `rag_agent/tools.py:12-20`), NOT
+> `config.MAX_TOOL_CALLS` as the repro output claims — so the PASS set can differ
+> from what production actually retrieved. Tracked in the debug-toolkit code-bug
+> issue; until fixed, read the real `limit` from the trace's `tools` span.
 
 The 4 chunks that passed are from the academic handbook — not a cafeteria menu source.
 The chunks are semantically adjacent to "학교 시설" but contain no actual menu data.
