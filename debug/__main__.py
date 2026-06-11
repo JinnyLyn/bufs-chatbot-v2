@@ -248,7 +248,7 @@ def _run(tool: str, args: list[str], *, verbose: bool = True) -> int:
             print(f"\n[debug.{tool}] 종료코드 {code}{label}")
     elif code < 0 and os.name == "posix":
         _die_by_signal(-code)  # passthrough: child died by signal N → so do we
-        return 128 - code  # fallback if the signal was caught/ignored
+        return 128 - code  # fallback if the signal didn't terminate us (e.g. mocked in tests)
     return code
 
 

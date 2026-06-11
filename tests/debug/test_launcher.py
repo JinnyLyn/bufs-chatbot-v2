@@ -105,6 +105,7 @@ def test_status_default_and_custom_url(monkeypatch: pytest.MonkeyPatch) -> None:
     [
         (("1",), []),
         (("2", "rewrite_query"), ["--node", "rewrite_query"]),
+        (("2", ""), None),  # empty node name backs out
         (("3",), ["--list-nodes"]),
         (("4",), ["--errors"]),
         (("5", "50"), ["--last", "50"]),
@@ -218,6 +219,7 @@ def test_ctrl_c_returns_to_menu(monkeypatch: pytest.MonkeyPatch) -> None:
     assert rec.calls == [("logs", ["a687e093"])]
 
 
+@pytest.mark.skipif(os.name != "posix", reason="echo uses POSIX shlex quoting; cmd.exe differs")
 def test_run_quotes_spaced_args(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -293,6 +295,22 @@ def test_menu_text_matches_dispatch_table() -> None:
     rows = re.findall(r"^\s*(\d)\..*\(debug\.(\w+)\)", launcher._MENU_TEXT, re.M)
     assert dict(rows) == {num: tool for num, (tool, _) in launcher._MENU.items()}
     assert launcher._TOOLS == tuple(tool for tool, _ in launcher._MENU.values())
+
+
+@pytest.mark.parametrize("length", [11, 12, 16, 32, 40, 41])
+def test_langfuse_id_bounds_match_resolver(length: int) -> None:
+    """Tripwire: _HEX_LANGFUSE (duplicated for import purity) must accept
+    exactly the Langfuse-ID lengths _query.resolve_tid() accepts. Offline:
+    only the 8-hex path of resolve_tid touches the network, and 8 is excluded."""
+    from debug._query import resolve_tid
+
+    candidate = "a" * length
+    menu_ok = bool(launcher._HEX_LANGFUSE.match(candidate))
+    try:
+        resolver_ok = resolve_tid(candidate) == candidate
+    except ValueError:
+        resolver_ok = False
+    assert menu_ok == resolver_ok
 
 
 # ── end-to-end smoke (real subprocess, offline) ──────────────────────────────
