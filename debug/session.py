@@ -4,9 +4,12 @@ Usage
 -----
     python -m debug.session <session_id|tid>
 
-Where:
-  • <session_id>  is a Langfuse session UUID (full or 8-hex prefix)
-  • <tid>         is an 8-hex app trace id, resolved to its session
+Accepts (auto-detected by format):
+  • a full Langfuse session UUID            → fetched directly
+  • an 8-hex app trace id                   → resolved to its session
+  • a 12–40-hex Langfuse trace ID           → fetched, then its session
+    (the production format is 16-hex; pure-hex 12–40 is always read as a
+    Langfuse trace ID, so partial-UUID-prefix lookup is not supported)
 
 Verdict flags per Q&A
 ---------------------
@@ -208,8 +211,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "session_or_tid",
         help=(
-            "Langfuse session UUID (full or 8-hex prefix), "
-            "or 8-hex app tid (resolved to its session)"
+            "full Langfuse session UUID, 8-hex app tid, or 12-40-hex "
+            "Langfuse trace ID (each resolved to its session). Pure-hex "
+            "12-40 is read as a Langfuse trace ID; UUID-prefix lookup is "
+            "unsupported."
         ),
     )
     args = parser.parse_args(argv)
@@ -218,12 +223,14 @@ def main(argv: list[str] | None = None) -> int:
 
     raw = args.session_or_tid.strip()
 
-    # Determine if this is a tid (8-hex) or a session id
+    # Determine input format: session UUID, 8-hex app tid, or Langfuse trace ID.
+    # _hex_lf covers the production 16-hex format AND web-UI 32-hex; keep the
+    # 12-40 bound in parity with _query.resolve_tid() / launcher._HEX_LANGFUSE.
     _hex8 = re.compile(r"^[0-9a-fA-F]{8}$")
     _uuid = re.compile(
         r"^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$", re.I
     )
-    _hex32 = re.compile(r"^[0-9a-fA-F]{32}$")
+    _hex_lf = re.compile(r"^[0-9a-fA-F]{12,40}$")
 
     # All Langfuse calls below can raise (network / auth / malformed response).
     # Catch and exit 1 with a readable message (mirrors pipeline.py main()).
@@ -233,15 +240,10 @@ def main(argv: list[str] | None = None) -> int:
             session_id = raw
             print(f"Fetching session {session_id[:8]}… …", file=sys.stderr)
             traces = fetch_session_traces(session_id)
-        elif _hex32.match(raw):
-            # 32-hex Langfuse trace id — fetch trace to get session
-            print(f"Resolving Langfuse trace {raw[:16]}… …", file=sys.stderr)
-            detail = get_trace_detail(raw)
-            session_id = str(detail.get("sessionId") or "")
-            print(f"  → session {session_id[:8]}", file=sys.stderr)
-            traces = fetch_session_traces(session_id)
         elif _hex8.match(raw):
-            # 8-hex app tid — resolve to Langfuse id, then get session
+            # 8-hex app tid — resolve to Langfuse id, then get session.
+            # Checked before _hex_lf: 8 is outside [12,40] so no overlap, but
+            # explicit ordering keeps the app-tid path unambiguous.
             print(f"Resolving tid={raw!r} …", file=sys.stderr)
             try:
                 lf_id = resolve_tid(raw.lower())
@@ -250,6 +252,16 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             print(f"  → {lf_id}", file=sys.stderr)
             detail = get_trace_detail(lf_id)
+            session_id = str(detail.get("sessionId") or "")
+            print(f"  → session {session_id[:8]}", file=sys.stderr)
+            traces = fetch_session_traces(session_id)
+        elif _hex_lf.match(raw):
+            # 12-40-hex Langfuse trace ID (prod is 16-hex) — fetch the trace to
+            # get its sessionId, then fetch the session's traces. Routing the
+            # RESOLVED sessionId (not the raw trace id) into fetch_session_traces
+            # is the fix for bug #5.
+            print(f"Resolving Langfuse trace {raw[:16]}… …", file=sys.stderr)
+            detail = get_trace_detail(raw)
             session_id = str(detail.get("sessionId") or "")
             print(f"  → session {session_id[:8]}", file=sys.stderr)
             traces = fetch_session_traces(session_id)
