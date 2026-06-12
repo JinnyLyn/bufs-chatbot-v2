@@ -16,5 +16,5 @@ python-dotenv==1.2.2
 sentence-transformers==5.5.0
 tiktoken==0.13.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
-requests>=2.31          # debug/status.py, debug/langfuse_client.py
+requests>=2.34.2          # debug/status.py, debug/langfuse_client.py
 qdrant-client>=1.18     # debug/repro.py (requires 1.18.0+)
