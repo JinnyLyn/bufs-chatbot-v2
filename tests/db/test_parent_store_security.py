@@ -71,3 +71,28 @@ class TestPathTraversalContainment:
         mgr = _make_manager(tmp_path)
         with pytest.raises(ValueError):
             mgr.save("/etc/passwd", "x", {})
+
+    def test_load_rejects_null_byte(self, tmp_path):
+        # An embedded NUL truncates the path at the OS layer (a classic
+        # poison-null-byte bypass). Python's resolve() raises ValueError
+        # ("embedded null byte") before any read. Pin the invariant so a future
+        # path-handling rewrite that swallows NUL fails here loudly.
+        mgr = _make_manager(tmp_path)
+        with pytest.raises((ValueError, OSError)):
+            mgr.load("valid\x00../escape")
+
+    def test_save_rejects_null_byte(self, tmp_path):
+        mgr = _make_manager(tmp_path)
+        with pytest.raises((ValueError, OSError)):
+            mgr.save("valid\x00../escape", "x", {})
+
+    def test_rejects_empty_or_blank_id(self, tmp_path):
+        # An empty/whitespace id would otherwise resolve to a stem-less
+        # ".json" file inside the store (containment passes, but it is a
+        # semantic junk write/read). Reject it up front.
+        mgr = _make_manager(tmp_path)
+        for bad in ("", "   "):
+            with pytest.raises(ValueError):
+                mgr.load(bad)
+            with pytest.raises(ValueError):
+                mgr.save(bad, "x", {})

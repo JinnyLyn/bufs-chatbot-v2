@@ -13,6 +13,8 @@ class ParentStoreManager:
         self.__store_path.mkdir(parents=True, exist_ok=True)
 
     def _resolve_within_store(self, parent_id: str) -> Path:
+        if not parent_id or not parent_id.strip():
+            raise ValueError(f"parent_id must be a non-empty string: {parent_id!r}")
         name = parent_id if parent_id.lower().endswith(".json") else f"{parent_id}.json"
         candidate = (self.__store_path / name).resolve()
         store_root = self.__store_path.resolve()

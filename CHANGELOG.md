@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend CI workflow (`.github/workflows/frontend.yml`): TypeScript type-check, ESLint, and Next.js build triggered on pull requests touching `frontend/**`.
 - Manual Docker build-check workflow (`.github/workflows/docker-build.yml`): compile-tests the legacy Gradio container image on demand without blocking per-PR CI.
 - Weekly scheduled unit-test canary (cron) to catch silent breakage between pull requests.
-- Fixed the previously-dead integration test job trigger so it actually fires on pull requests.
+- Fixed the previously-dead integration test job by adding a `workflow_dispatch` trigger so it can now be dispatched manually; it still does not run on pull requests (it needs a self-hosted runner with Ollama/Qdrant).
 
 ### Security
 
