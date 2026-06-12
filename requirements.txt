@@ -1,6 +1,6 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
-sse-starlette>=2.1
+sse-starlette>=3.4.4
 fastembed==0.8.0
 gradio==6.14.0
 ipykernel==7.2.0
@@ -9,12 +9,12 @@ langchain-huggingface==1.2.2
 langchain-ollama==1.1.0
 langchain-qdrant==1.1.0
 langchain-text-splitters==1.1.2
-langfuse==4.6.1
+langfuse==4.7.1
 langgraph==1.2.0
 docling==2.101.0
 python-dotenv==1.2.2
-sentence-transformers==5.5.0
+sentence-transformers==5.5.1
 tiktoken==0.13.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
-requests>=2.31          # debug/status.py, debug/langfuse_client.py
+requests>=2.34.2          # debug/status.py, debug/langfuse_client.py
 qdrant-client>=1.18     # debug/repro.py (requires 1.18.0+)
