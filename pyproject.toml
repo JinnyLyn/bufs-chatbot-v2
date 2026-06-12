@@ -1,3 +1,17 @@
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# Conservative: syntax errors + pyflakes (real bugs, minimal noise).
+# W/I rules produced 160 style-only violations on existing code so narrowed.
+# Advisory only — see .github/workflows/quality.yml.
+select = ["E9", "F"]
+
+[tool.mypy]
+python_version = "3.14"
+ignore_missing_imports = true
+files = ["project"]
+
 [tool.pytest.ini_options]
 # pythonpath MANDATORY: app modules use top-level imports (import config, from db...)
 # entrypoints do sys.path.insert(0, "project/") — mirror that here.

@@ -1,4 +1,6 @@
-FROM python:3.13
+FROM python:3.14
+# NOTE: This image builds the LEGACY Gradio demo (project/app.py, port 7860).
+#       It is NOT the production FastAPI + Next.js stack.
 
 ENV PYTHONUNBUFFERED=1
 ENV OLLAMA_HOST=0.0.0.0:11434
@@ -36,7 +38,7 @@ until curl -s http://localhost:11434 >/dev/null; do
   sleep 1
 done
 
-ollama pull qwen3:4b-instruct-2507-q4_K_M || true
+ollama pull qwen3:4b-instruct-2507-q4_K_M || echo "WARNING: model pull failed; pull manually inside the container"
 
 cd project
 python app.py
