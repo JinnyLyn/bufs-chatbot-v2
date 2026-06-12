@@ -1,8 +1,9 @@
 """Unit tests for project/utils.py — estimate_context_tokens and clear_directory_contents.
 
-Note: utils.py also imports pymupdf/pymupdf4llm for pdf_to_markdown, but those
-functions are NOT exercised here (they require real PDF files and are out of
-scope for offline unit tests). We test only the two offline-safe functions.
+Note: utils.py also defines pdf_to_markdown, which lazily imports docling inside
+_get_converter(); that function is NOT exercised here (it requires real PDF files
+and the heavy docling/torch deps, out of scope for offline unit tests). We test
+only the two offline-safe functions.
 """
 import sys
 from pathlib import Path
