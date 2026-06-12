@@ -7,7 +7,7 @@ only the two offline-safe functions.
 """
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -114,3 +114,23 @@ class TestClearDirectoryContents:
         (tmp_path / "f.txt").write_text("data")
         utils.clear_directory_contents(str(tmp_path))
         assert not any(tmp_path.iterdir())
+
+
+class TestGetConverter:
+    """The Docling converter is a lazily-built, process-wide singleton. These tests
+    mock the docling import so they run offline (no docling/torch needed)."""
+
+    def test_singleton_returns_same_instance_and_builds_once(self):
+        utils = _import_utils()
+        mock_cls = MagicMock()
+        fake_module = MagicMock(DocumentConverter=mock_cls)
+        saved = utils._converter
+        try:
+            utils._converter = None  # reset before exercising the lazy init
+            with patch.dict("sys.modules", {"docling.document_converter": fake_module}):
+                c1 = utils._get_converter()
+                c2 = utils._get_converter()
+            assert c1 is c2  # same cached instance
+            mock_cls.assert_called_once()  # constructor invoked exactly once
+        finally:
+            utils._converter = saved  # don't leak the mock into other tests

@@ -1,5 +1,6 @@
 import os
 import shutil
+import threading
 import config
 from pathlib import Path
 import glob
@@ -21,17 +22,23 @@ def clear_directory_contents(directory: Path) -> None:
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # Docling loads layout + TableFormer models on first use (expensive). Build the
-# converter once per process and reuse it across every PDF.
+# converter once per process and reuse it across every PDF. The lock makes the
+# lazy init safe if pdf_to_markdown is ever called from concurrent threads.
 _converter = None
+_converter_lock = threading.Lock()
+
 
 def _get_converter():
     global _converter
     if _converter is None:
-        # Lazy import so merely importing utils (e.g. in unit tests) does not require
-        # docling / torch to be installed.
-        from docling.document_converter import DocumentConverter
-        _converter = DocumentConverter()
+        with _converter_lock:
+            if _converter is None:
+                # Lazy import so merely importing utils (e.g. in unit tests) does not
+                # require docling / torch to be installed.
+                from docling.document_converter import DocumentConverter
+                _converter = DocumentConverter()
     return _converter
+
 
 def pdf_to_markdown(pdf_path, output_dir):
     # Docling reconstructs table cell structure (TableFormer) and reading order far
@@ -43,7 +50,7 @@ def pdf_to_markdown(pdf_path, output_dir):
     # Build the output name as stem + ".md" (string), NOT Path.with_suffix(): real
     # notice filenames often contain dots ("1. 공고", "매뉴얼24.5.23.") and with_suffix
     # would treat the text after the first dot as an extension and truncate it.
-    output_path = Path(output_dir) / (Path(str(pdf_path)).stem + ".md")
+    output_path = Path(output_dir) / (Path(pdf_path).stem + ".md")
     output_path.write_bytes(md_cleaned.encode('utf-8'))
 
 def pdfs_to_markdowns(path_pattern, overwrite: bool = False):
