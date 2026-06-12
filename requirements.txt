@@ -13,7 +13,7 @@ langfuse==4.6.1
 langgraph==1.2.0
 pymupdf4llm==1.27.2.3
 python-dotenv==1.2.2
-sentence-transformers==5.5.0
+sentence-transformers==5.5.1
 tiktoken==0.13.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
 requests>=2.31          # debug/status.py, debug/langfuse_client.py
