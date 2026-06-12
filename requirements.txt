@@ -11,7 +11,7 @@ langchain-qdrant==1.1.0
 langchain-text-splitters==1.1.2
 langfuse==4.6.1
 langgraph==1.2.0
-pymupdf4llm==1.27.2.3
+docling==2.101.0
 python-dotenv==1.2.2
 sentence-transformers==5.5.0
 tiktoken==0.13.0

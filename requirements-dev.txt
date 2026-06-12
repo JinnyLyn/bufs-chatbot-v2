@@ -6,7 +6,6 @@ pydantic
 langgraph==1.2.0
 langchain-text-splitters==1.1.2
 tiktoken==0.13.0
-pymupdf4llm==1.27.2.3
 
 # debug/ toolkit import-time deps (needed to collect tests/debug/*; the heavier
 # deps — langfuse, qdrant-client, torch — are imported lazily and stay optional)
