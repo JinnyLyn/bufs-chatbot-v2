@@ -9,7 +9,7 @@ langchain-huggingface==1.2.2
 langchain-ollama==1.1.0
 langchain-qdrant==1.1.0
 langchain-text-splitters==1.1.2
-langfuse==4.6.1
+langfuse==4.7.1
 langgraph==1.2.0
 pymupdf4llm==1.27.2.3
 python-dotenv==1.2.2
