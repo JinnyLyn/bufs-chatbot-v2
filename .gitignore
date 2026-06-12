@@ -24,3 +24,11 @@ node_modules/
 qdrant_db/.lock
 # Word/Office temp lock files
 ~$*
+
+# test / lint / type-check tooling artifacts (CI-generated, never committed)
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

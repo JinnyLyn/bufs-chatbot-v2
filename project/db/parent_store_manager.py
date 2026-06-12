@@ -9,11 +9,19 @@ class ParentStoreManager:
     __store_path: Path
 
     def __init__(self, store_path=config.PARENT_STORE_PATH):
-        self.__store_path = Path(store_path) 
+        self.__store_path = Path(store_path)
         self.__store_path.mkdir(parents=True, exist_ok=True)
 
+    def _resolve_within_store(self, parent_id: str) -> Path:
+        name = parent_id if parent_id.lower().endswith(".json") else f"{parent_id}.json"
+        candidate = (self.__store_path / name).resolve()
+        store_root = self.__store_path.resolve()
+        if not candidate.is_relative_to(store_root):
+            raise ValueError(f"parent_id escapes store directory: {parent_id!r}")
+        return candidate
+
     def save(self, parent_id: str, content: str, metadata: Dict) -> None:
-        file_path = self.__store_path / f"{parent_id}.json"
+        file_path = self._resolve_within_store(parent_id)
         file_path.write_text(
             json.dumps({"page_content": content,"metadata": metadata}, ensure_ascii=False, indent=2),
             encoding="utf-8"
@@ -24,9 +32,7 @@ class ParentStoreManager:
             self.save(parent_id, doc.page_content, doc.metadata)
 
     def load(self, parent_id: str) -> Dict:
-        file_path = self.__store_path / (
-            parent_id if parent_id.lower().endswith(".json") else f"{parent_id}.json"
-        )
+        file_path = self._resolve_within_store(parent_id)
         return json.loads(file_path.read_text(encoding="utf-8"))
     
     def load_content(self, parent_id: str) -> Dict:

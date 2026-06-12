@@ -1,0 +1,17 @@
+# Manual compile-test of the legacy container image.
+# The image installs ~4 GB torch + Ollama — far too heavy for per-PR CI.
+# Trigger manually via GitHub Actions → "Docker build-check (manual)" → Run workflow.
+name: Docker build-check (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Build legacy Docker image (no push)
+        run: docker build -f project/Dockerfile -t bufs-legacy:ci .
