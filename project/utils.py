@@ -40,12 +40,51 @@ def _get_converter():
     return _converter
 
 
+def _docling_covered_pages(dl_doc) -> set:
+    """Page numbers (1-based) Docling actually produced content for, read from item
+    provenance. Pages it std::bad_alloc'd on render have NO items → absent from this set."""
+    covered = set()
+    for attr in ("texts", "tables", "pictures", "groups"):
+        for item in getattr(dl_doc, attr, None) or []:
+            for prov in getattr(item, "prov", None) or []:
+                pno = getattr(prov, "page_no", None)
+                if pno:
+                    covered.add(pno)
+    return covered
+
+
+def _supplement_dropped_pages(md: str, pdf_path, dl_doc) -> str:
+    """Docling can std::bad_alloc while rendering large/complex pages and SILENTLY DROP them
+    (observed on 학사안내 pp.86-96, which include the 학부 전화번호 directory — neither do_ocr=
+    False nor a lower images_scale avoids it). Use Docling's own page provenance to find pages
+    it produced NOTHING for, and append those pages' text from pymupdf's text layer — recovering
+    lost content without duplicating pages Docling converted fine."""
+    try:
+        import pymupdf
+    except Exception:
+        return md
+    covered = _docling_covered_pages(dl_doc)
+    extra = []
+    try:
+        with pymupdf.open(str(pdf_path)) as doc:
+            for page in doc:
+                if (page.number + 1) in covered:
+                    continue
+                txt = page.get_text().strip()
+                if len(txt) >= 40:
+                    extra.append(f"\n\n## 원문 보충 (p.{page.number + 1})\n\n{txt}")
+    except Exception:
+        return md
+    return md + "".join(extra)
+
+
 def pdf_to_markdown(pdf_path, output_dir):
     # Docling reconstructs table cell structure (TableFormer) and reading order far
     # better than a flat text dump, so merged-cell / multi-column / page-spanning
     # tables survive into the markdown the chunker consumes.
     result = _get_converter().convert(str(pdf_path))
     md = result.document.export_to_markdown()
+    md = _supplement_dropped_pages(md, pdf_path, result.document)   # recover pages Docling dropped
     md_cleaned = md.encode('utf-8', errors='surrogatepass').decode('utf-8', errors='ignore')
     # Build the output name as stem + ".md" (string), NOT Path.with_suffix(): real
     # notice filenames often contain dots ("1. 공고", "매뉴얼24.5.23.") and with_suffix

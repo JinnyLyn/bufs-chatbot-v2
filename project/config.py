@@ -60,6 +60,12 @@ LLM_NUM_CTX = int(os.environ.get("LLM_NUM_CTX", "8192"))
 # "function_calling"; qwen3:4b-instruct only via "json_schema"/default. "auto" tries them
 # in order and uses the first that returns a valid object. Pin one to skip the fallback.
 STRUCTURED_OUTPUT_METHOD = os.environ.get("STRUCTURED_OUTPUT_METHOD", "auto")
+# Query rewriting (rewrite_query node). Issue #15: with bge-m3 + Korean academic terms, LLM
+# rewriting can hurt retrieval (term drift / morphology / BM25 surface-form mismatch) and the
+# clarify-on-short-query path turns answerable questions into clarification requests. Set
+# REWRITE_ENABLED=false to bypass rewriting — the original question is passed straight to the
+# agent as the single search query. Used for A/B eval of rewrite ON vs OFF.
+REWRITE_ENABLED = os.environ.get("REWRITE_ENABLED", "true").lower() in ("1", "true", "yes", "on")
 
 # --- Retrieval Configuration ---
 # Score cutoff for child-chunk search. NOTE: with hybrid (dense+sparse) retrieval,

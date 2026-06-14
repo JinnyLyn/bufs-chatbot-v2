@@ -56,6 +56,14 @@ def rewrite_query(state: State, llm):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
 
+    # Issue #15 A/B switch: when rewriting is disabled, pass the original question straight to
+    # the agent as the single search query (no LLM rewrite, no clarify detour). bge-m3 already
+    # handles Korean well, so the raw surface form often retrieves better than a rewrite.
+    if not config.REWRITE_ENABLED:
+        delete_all = [RemoveMessage(id=m.id) for m in state["messages"] if not isinstance(m, SystemMessage)]
+        return {"questionIsClear": True, "messages": delete_all,
+                "originalQuery": last_message.content, "rewrittenQuestions": [last_message.content]}
+
     context_section = (f"대화 요약:\n{conversation_summary}\n" if conversation_summary.strip() else "") + f"사용자 질문:\n{last_message.content}\n"
 
     response = _invoke_structured_rewrite(
