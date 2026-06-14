@@ -11,6 +11,11 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 # cohort's graduation requirements never get merged onto the previous cohort's tail.
 _COHORT_HEADER_RE = re.compile(r"^#{1,6}\s*\d{4}\s*(?:~\s*\d{4})?\s*학번")
 
+# Tag prefixed to each denormalized 학사일정 event line. __expand_calendar_rows emits it and
+# __create_child_chunks detects it to split those lines into isolated child chunks — kept as a
+# single constant so the two sites never drift.
+_CAL_EVENT_TAG = "[일정]"
+
 
 class DocumentChuncker:
     def __init__(self):
@@ -41,6 +46,7 @@ class DocumentChuncker:
         
         with open(doc_path, "r", encoding="utf-8") as f:
             raw = self.__forward_fill_month_tables(f.read())
+        raw = self.__expand_calendar_rows(raw)
         parent_chunks = self.__parent_splitter.split_text(raw)
         
         merged_parents = self.__merge_small_parents(parent_chunks)
@@ -174,6 +180,56 @@ class DocumentChuncker:
         return "\n".join(out)
 
     @staticmethod
+    def __expand_calendar_rows(text: str) -> str:
+        """Denormalize 학사일정 table rows into per-event sentences (tagged "[일정] ") appended
+        after the table. A row like "| 6 | 8(월) ~ 12(월) | 기말고사기간 |" splits the date across
+        the 월/일 columns, so neither dense retrieval ("기말고사 기간" vs bare numbers) nor the LLM
+        (reconstructing "6월 8일" from cells "6"/"8") handles it. We emit
+        "[일정] 2026학년도 1학기 기말고사기간: 6월 8일(월) ~ 12일(월)" — the academic year/semester
+        (from the section header) + event + a contiguous "M월 D일" date. __create_child_chunks
+        then splits each "[일정]" line into its OWN child chunk so the specific date ranks first
+        instead of being diluted in a multi-event blob. Scoped to |월|일|…| tables.
+        """
+        out, in_cal, rows, sem = [], False, [], ""
+
+        def flush():
+            if rows:
+                out.append("")
+                out.extend(rows)
+                rows.clear()
+
+        for ln in text.split("\n"):
+            s = ln.strip()
+            if s.startswith("#"):
+                m = re.search(r"\d{4}\s*학년도\s*\d\s*학기", s)
+                if m:
+                    sem = re.sub(r"\s+", " ", m.group()).strip()
+            if s.startswith("|"):
+                cells = [c.strip() for c in s.strip("|").split("|")]
+                if len(cells) >= 2 and cells[0] == "월" and cells[1].startswith("일"):
+                    in_cal = True
+                    out.append(ln)
+                    continue
+                if in_cal:
+                    if cells and set("".join(cells)) <= set("-: "):
+                        out.append(ln)
+                        continue
+                    if len(cells) >= 3 and re.fullmatch(r"\d{1,2}", cells[0]) and cells[2]:
+                        month, day, event = cells[0], cells[1], cells[2]
+                        day_il = re.sub(r"(\d+)\(", r"\1일(", day)   # 8(월) -> 8일(월)
+                        prefix = f"{sem} " if sem else ""
+                        rows.append(f"{_CAL_EVENT_TAG} {prefix}{event}: {month}월 {day_il}")
+                    out.append(ln)
+                    continue
+            if in_cal:
+                flush()
+                in_cal = False
+            out.append(ln)
+        if in_cal:
+            flush()
+        return "\n".join(out)
+
+    @staticmethod
     def __is_table_line(line: str) -> bool:
         return line.lstrip().startswith("|")
 
@@ -273,4 +329,19 @@ class DocumentChuncker:
             p_chunk.metadata.update({"source": str(doc_path.stem)+".pdf", "parent_id": parent_id})
 
             all_parent_pairs.append((parent_id, p_chunk))
-            all_child_chunks.extend(self.__child_splitter.split_documents([p_chunk]))
+
+            # Calendar "[일정] …" lines become their OWN isolated child chunks so the specific
+            # date ranks #1 instead of being diluted in a packed multi-event chunk. The lines
+            # stay in the stored parent (above) so retrieve_parent still gives full context; we
+            # remove them from the body that gets the normal recursive split to avoid crowding.
+            body_lines, event_children = [], []
+            for ln in p_chunk.page_content.split("\n"):
+                if ln.strip().startswith(_CAL_EVENT_TAG):
+                    sentence = ln.strip()[len(_CAL_EVENT_TAG):].strip()
+                    if sentence:
+                        event_children.append(Document(page_content=sentence, metadata=dict(p_chunk.metadata)))
+                else:
+                    body_lines.append(ln)
+            body = Document(page_content="\n".join(body_lines), metadata=dict(p_chunk.metadata))
+            all_child_chunks.extend(self.__child_splitter.split_documents([body]))
+            all_child_chunks.extend(event_children)
