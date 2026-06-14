@@ -13,9 +13,10 @@ for every wrong answer decides WHICH stage broke:
   GENERATION_ERR    fact WAS in the retrieved context but not in the answer. If the answer
                     also refused → FALSE_REFUSAL.
 
-Run from the MAIN repo (needs project/.env for Langfuse + markdown_docs/ corpus):
-  cd C:\\Users\\suhwa\\Desktop\\agentic-rag-for-dummies-main
-  python ..\\<worktree>\\eval_tools\\_stage_attribution.py
+Run from the repo root that hosts the live KB (needs project/.env for Langfuse +
+markdown_docs/ corpus):
+  cd <repo_root>
+  python eval_tools/_stage_attribution.py
 """
 import os, re, sys, json, glob, time
 from collections import Counter, defaultdict
