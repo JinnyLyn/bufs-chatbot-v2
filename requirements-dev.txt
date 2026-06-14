@@ -1,5 +1,5 @@
 # Unit-test runtime (fully self-sufficient — no torch/sentence-transformers needed)
-pytest>=8.3
+pytest>=9.0.3
 pytest-asyncio>=0.24
 pytest-cov>=7.1.0
 pydantic
