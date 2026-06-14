@@ -11,6 +11,11 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 # cohort's graduation requirements never get merged onto the previous cohort's tail.
 _COHORT_HEADER_RE = re.compile(r"^#{1,6}\s*\d{4}\s*(?:~\s*\d{4})?\s*학번")
 
+# Tag prefixed to each denormalized 학사일정 event line. __expand_calendar_rows emits it and
+# __create_child_chunks detects it to split those lines into isolated child chunks — kept as a
+# single constant so the two sites never drift.
+_CAL_EVENT_TAG = "[일정]"
+
 
 class DocumentChuncker:
     def __init__(self):
@@ -213,7 +218,7 @@ class DocumentChuncker:
                         month, day, event = cells[0], cells[1], cells[2]
                         day_il = re.sub(r"(\d+)\(", r"\1일(", day)   # 8(월) -> 8일(월)
                         prefix = f"{sem} " if sem else ""
-                        rows.append(f"[일정] {prefix}{event}: {month}월 {day_il}")
+                        rows.append(f"{_CAL_EVENT_TAG} {prefix}{event}: {month}월 {day_il}")
                     out.append(ln)
                     continue
             if in_cal:
@@ -331,8 +336,8 @@ class DocumentChuncker:
             # remove them from the body that gets the normal recursive split to avoid crowding.
             body_lines, event_children = [], []
             for ln in p_chunk.page_content.split("\n"):
-                if ln.strip().startswith("[일정]"):
-                    sentence = ln.strip()[len("[일정]"):].strip()
+                if ln.strip().startswith(_CAL_EVENT_TAG):
+                    sentence = ln.strip()[len(_CAL_EVENT_TAG):].strip()
                     if sentence:
                         event_children.append(Document(page_content=sentence, metadata=dict(p_chunk.metadata)))
                 else:
