@@ -16,6 +16,37 @@ _COHORT_HEADER_RE = re.compile(r"^#{1,6}\s*\d{4}\s*(?:~\s*\d{4})?\s*학번")
 # single constant so the two sites never drift.
 _CAL_EVENT_TAG = "[일정]"
 
+# Docling's export_to_markdown leaves two boilerplate artifacts in every converted page that
+# carry no retrievable information but flow into chunks as noise (they polluted ~52% of child
+# chunks on the BUFS corpus, diluting BM25/dense signal):
+#   • image placeholders: "**==> picture [720 x 252] intentionally omitted <==**"
+#   • page-break markers : "--- end of page.page_number=5 ---"
+# _PICTURE_PLACEHOLDER_RE matches the placeholder span on a single line (optional ** bolding);
+# _PAGE_MARKER_RE matches a whole page-marker line. Stripping the page marker BEFORE the
+# calendar passes also removes a latent bug: a marker landing inside a 학사일정 table would
+# otherwise be a non-pipe line that ends __forward_fill_month_tables / __expand_calendar_rows'
+# in_cal scan early, dropping post-break rows from month forward-fill and [일정] expansion.
+_PICTURE_PLACEHOLDER_RE = re.compile(r"[ \t]*\*{0,2}==>.*?<==\*{0,2}")
+# Consume the marker's own trailing newline so that a marker sitting *between two table rows*
+# collapses them back to adjacent rows (no blank line left behind) — keeping the 학사일정 table
+# contiguous for the forward-fill / [일정] passes.
+_PAGE_MARKER_RE = re.compile(r"(?m)^[ \t]*-{2,}[ \t]*end of page\.page_number=\d+[ \t]*-{2,}[ \t]*\r?\n?")
+
+
+def strip_conversion_artifacts(text: str) -> str:
+    """Remove Docling image-placeholder and page-break markers from converted markdown.
+
+    Applied at chunk time (and in utils.pdf_to_markdown for freshly converted files) so the
+    artifacts never reach the vector/BM25 index. Pure text in/out — no external deps — so it
+    stays importable from both the chunker and utils without pulling docling/langchain.
+    """
+    text = _PICTURE_PLACEHOLDER_RE.sub("", text)
+    text = _PAGE_MARKER_RE.sub("", text)
+    # A removed marker that occupied its own line leaves a blank; collapse the runs it creates
+    # so spacing stays normal and MarkdownHeaderTextSplitter sees clean section breaks.
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text
+
 
 class DocumentChuncker:
     def __init__(self):
@@ -45,7 +76,8 @@ class DocumentChuncker:
         doc_path = Path(md_path)
         
         with open(doc_path, "r", encoding="utf-8") as f:
-            raw = self.__forward_fill_month_tables(f.read())
+            raw = strip_conversion_artifacts(f.read())
+        raw = self.__forward_fill_month_tables(raw)
         raw = self.__expand_calendar_rows(raw)
         parent_chunks = self.__parent_splitter.split_text(raw)
         

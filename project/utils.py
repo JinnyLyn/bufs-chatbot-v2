@@ -85,6 +85,12 @@ def pdf_to_markdown(pdf_path, output_dir):
     result = _get_converter().convert(str(pdf_path))
     md = result.document.export_to_markdown()
     md = _supplement_dropped_pages(md, pdf_path, result.document)   # recover pages Docling dropped
+    # Strip Docling's image-placeholder / page-break boilerplate so it never reaches the stored
+    # markdown or the index. Imported lazily (like docling above) to keep utils' module-load
+    # surface light. The chunker also strips at chunk time, so already-ingested markdown is
+    # covered too — this just keeps freshly converted files clean at the source.
+    from document_chunker import strip_conversion_artifacts
+    md = strip_conversion_artifacts(md)
     md_cleaned = md.encode('utf-8', errors='surrogatepass').decode('utf-8', errors='ignore')
     # Build the output name as stem + ".md" (string), NOT Path.with_suffix(): real
     # notice filenames often contain dots ("1. 공고", "매뉴얼24.5.23.") and with_suffix

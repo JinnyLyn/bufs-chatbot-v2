@@ -260,3 +260,70 @@ class TestCreateChunksDirectory:
         parents, children = chunker.create_chunks(path_dir=str(tmp_path))
         assert parents == []
         assert children == []
+
+
+# ---------------------------------------------------------------------------
+# Docling conversion-artifact stripping
+# ---------------------------------------------------------------------------
+
+class TestConversionArtifactStripping:
+    def test_strip_function_removes_picture_placeholder(self):
+        from document_chunker import strip_conversion_artifacts
+        out = strip_conversion_artifacts(
+            "본문 시작\n**==> picture [720 x 252] intentionally omitted <==**\n본문 끝"
+        )
+        assert "intentionally omitted" not in out
+        assert "==>" not in out
+        assert "본문 시작" in out and "본문 끝" in out
+
+    def test_strip_function_removes_page_marker(self):
+        from document_chunker import strip_conversion_artifacts
+        out = strip_conversion_artifacts(
+            "수강신청 기본 학점: 19학점\n--- end of page.page_number=5 ---\n다음 내용"
+        )
+        assert "end of page" not in out
+        assert "page_number" not in out
+        assert "수강신청 기본 학점: 19학점" in out and "다음 내용" in out
+
+    def test_artifacts_absent_from_generated_chunks(self, tmp_path):
+        chunker = _make_chunker()
+        md = _write_md(tmp_path, "manual.md", """\
+            # 안내
+
+            **==> picture [158 x 47] intentionally omitted <==**
+            실제 안내 내용입니다. 충분한 길이로 작성합니다.
+            --- end of page.page_number=1 ---
+            두 번째 페이지 내용입니다.
+            내용을 더 채웁니다.
+            마지막 줄입니다.
+        """)
+        parents, children = chunker.create_chunks_single(md)
+        blob = "\n".join(p.page_content for _, p in parents) + "\n".join(c.page_content for c in children)
+        assert "intentionally omitted" not in blob
+        assert "end of page" not in blob
+        # Real content survives the stripping.
+        assert "실제 안내 내용입니다" in blob
+        assert "두 번째 페이지 내용입니다" in blob
+
+    def test_page_marker_between_calendar_rows_keeps_forward_fill(self, tmp_path):
+        """A page-break marker landing *inside* a 학사일정 table must not break month
+        forward-fill: stripping the marker (and its newline) re-joins the rows, so the
+        month-empty row after the break still inherits the previous month.
+        """
+        chunker = _make_chunker()
+        # No blank lines between rows — only the page marker separates them, exactly how a
+        # mid-table page break appears in Docling output.
+        md = _write_md(tmp_path, "cal.md", (
+            "# 학사일정\n\n"
+            "| 월 | 일 | 일정 |\n"
+            "|---|---|---|\n"
+            "| 6 | 1(월) | 중간고사 |\n"
+            "--- end of page.page_number=2 ---\n"
+            "|  | 8(월)~12(금) | 기말고사 |\n\n"
+            "이후 일정은 추후 공지됩니다. 충분한 길이의 본문을 둡니다.\n"
+        ))
+        parents, _ = chunker.create_chunks_single(md)
+        blob = "\n".join(p.page_content for _, p in parents)
+        # The post-break row's empty month cell is forward-filled to 6 (would stay empty if
+        # the marker had ended the calendar scan early).
+        assert "| 6 | 8(월)~12(금)" in blob or "6 | 8(월)~12(금)" in blob
