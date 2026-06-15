@@ -26,7 +26,10 @@ _CAL_EVENT_TAG = "[일정]"
 # calendar passes also removes a latent bug: a marker landing inside a 학사일정 table would
 # otherwise be a non-pipe line that ends __forward_fill_month_tables / __expand_calendar_rows'
 # in_cal scan early, dropping post-break rows from month forward-fill and [일정] expansion.
-_PICTURE_PLACEHOLDER_RE = re.compile(r"[ \t]*\*{0,2}==>.*?<==\*{0,2}")
+# The placeholder match REQUIRES Docling's literal "intentionally omitted" between the arrows
+# so it only ever strips Docling omission markers (picture/table) — never legitimate prose that
+# happens to use "==> … <==" arrow notation (e.g. a manual's "신청 ==> 승인 ==> 완료" flow).
+_PICTURE_PLACEHOLDER_RE = re.compile(r"[ \t]*\*{0,2}==>[^\n]*?intentionally omitted[^\n]*?<==\*{0,2}")
 # Consume the marker's own trailing newline so that a marker sitting *between two table rows*
 # collapses them back to adjacent rows (no blank line left behind) — keeping the 학사일정 table
 # contiguous for the forward-fill / [일정] passes.

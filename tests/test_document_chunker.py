@@ -276,6 +276,17 @@ class TestConversionArtifactStripping:
         assert "==>" not in out
         assert "본문 시작" in out and "본문 끝" in out
 
+    def test_strip_preserves_legit_arrow_prose(self):
+        """PROD safety: only Docling's "intentionally omitted" markers are stripped, never
+        real content that uses ==> / <== arrow notation (e.g. a manual's process flow)."""
+        from document_chunker import strip_conversion_artifacts
+        text = "신청 ==> 승인 ==> 완료 순서로 진행됩니다."
+        assert strip_conversion_artifacts(text) == text  # unchanged
+        # …but a real Docling placeholder on the same shape is still removed:
+        out = strip_conversion_artifacts("앞 ==> table [10 x 2] intentionally omitted <== 뒤")
+        assert "intentionally omitted" not in out
+        assert "앞" in out and "뒤" in out
+
     def test_strip_function_removes_page_marker(self):
         from document_chunker import strip_conversion_artifacts
         out = strip_conversion_artifacts(
