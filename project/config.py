@@ -56,6 +56,28 @@ LLM_REASONING = os.environ.get("LLM_REASONING", "false").lower() in ("1", "true"
 # the KV cache balloons (~18 GB) and spills off a 12 GB GPU onto the CPU. Cap it so the
 # model fits in VRAM and runs on the GPU. Raise only if you have spare VRAM.
 LLM_NUM_CTX = int(os.environ.get("LLM_NUM_CTX", "8192"))
+# Generation safety caps (Tier-0 latency / runaway fixes).
+# num_predict: hard ceiling on output tokens. Ollama's default is unbounded (-1), which let a
+# single out-of-scope question generate 21,511 chars over 284 s (greedy temp=0 repetition loop,
+# qa 2026-06-08). Real answers top out at ~718 output tokens, so 2048 passes all legit traffic
+# and only truncates runaways. NOTE: in langchain-ollama 1.1.0 sampling options are read ONLY
+# from the ChatOllama constructor (self.*) — .with_config()/.bind(num_predict=…) do NOT apply
+# (they land outside the request `options` dict), so these must be set at construction.
+LLM_NUM_PREDICT = int(os.environ.get("LLM_NUM_PREDICT", "2048"))
+# repeat_penalty > 1 suppresses the greedy repetition that drives runaway generation.
+LLM_REPEAT_PENALTY = float(os.environ.get("LLM_REPEAT_PENALTY", "1.1"))
+# keep_alive: how long Ollama keeps the model resident in VRAM after a request. The default
+# (~5 min) means the next request after idle pays a cold model reload — the 11.5 s rewrite_query
+# and 43 s trace outliers were cold-starts, not runaways. -1 keeps it resident (no reload).
+_keep_alive_raw = os.environ.get("LLM_KEEP_ALIVE", "-1")
+try:
+    LLM_KEEP_ALIVE = int(_keep_alive_raw)  # seconds; -1 = keep resident forever
+except ValueError:
+    LLM_KEEP_ALIVE = _keep_alive_raw       # duration string, e.g. "10m"
+# Warm the model into VRAM at startup (a synchronous invoke in RAGSystem.initialize). Default on
+# so the first real request is fast. Disable for CI/tests, or when OLLAMA_BASE_URL may point at a
+# blackhole host where the warmup would block on a connect timeout instead of failing fast.
+LLM_WARMUP = os.environ.get("LLM_WARMUP", "true").lower() in ("1", "true", "yes", "on")
 # Structured-output method for rewrite_query. Models differ: qwen3.5:9b only works via
 # "function_calling"; qwen3:4b-instruct only via "json_schema"/default. "auto" tries them
 # in order and uses the first that returns a valid object. Pin one to skip the fallback.
