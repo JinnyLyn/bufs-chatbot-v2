@@ -16,7 +16,10 @@ def _invoke_structured_rewrite(llm, messages):
     function_calling; qwen3:4b-instruct → json_schema/default), so fall back across
     them rather than hard-coding one.
     """
-    base = llm.with_config(temperature=0.1)
+    # NOTE: .with_config(temperature=…) is a no-op in langchain-ollama 1.1.0 (sampling options
+    # are read only from the ChatOllama constructor), so it was dropped — the global temperature
+    # from RAGSystem applies. Pin a per-call temperature via the constructor if ever needed.
+    base = llm
     cfg = getattr(config, "STRUCTURED_OUTPUT_METHOD", "auto")
     methods = [cfg] if cfg and cfg != "auto" else ["function_calling", "json_schema", None]
     last_exc = None
@@ -49,7 +52,7 @@ def summarize_history(state: State, llm):
         role = "사용자" if isinstance(msg, HumanMessage) else "어시스턴트"
         conversation += f"{role}: {msg.content}\n"
 
-    summary_response = llm.with_config(temperature=0.2).invoke([SystemMessage(content=get_conversation_summary_prompt()), HumanMessage(content=conversation)])
+    summary_response = llm.invoke([SystemMessage(content=get_conversation_summary_prompt()), HumanMessage(content=conversation)])  # temperature override removed: .with_config no-op (see _invoke_structured_rewrite)
     return {"conversation_summary": summary_response.content, "agent_answers": [{"__reset__": True}]}
 
 def rewrite_query(state: State, llm):
