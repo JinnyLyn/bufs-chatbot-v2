@@ -14,3 +14,7 @@ requests
 
 # Integration-test extras (install separately — not required for offline unit suite)
 # pip install langchain-ollama==1.1.0  qdrant-client  langfuse==4.6.1
+
+# Korean sparse-tokenizer A/B (db/korean_sparse.py). kiwipiepy (SPARSE_MODEL=kiwi, the
+# default) is a runtime dep in requirements.txt. The optional OKT strategy needs a JVM:
+# pip install konlpy jpype1        # SPARSE_MODEL=okt  (requires a JDK + JAVA_HOME, e.g. Temurin 17)

@@ -24,7 +24,10 @@ LOG_BACKUP_DAYS = int(os.environ.get("LOG_BACKUP_DAYS", "30"))
 CHAT_LOG_DISABLED = os.environ.get("CHAT_LOG_DISABLED", "").strip().lower() in {"1", "true", "yes", "on"}
 
 # --- Qdrant Configuration ---
-CHILD_COLLECTION = "document_child_chunks"
+# CHILD_COLLECTION is env-overridable so sparse-tokenizer A/B variants can each
+# live in their own collection (e.g. document_child_chunks__kiwi_idf) without
+# clobbering the baseline index.
+CHILD_COLLECTION = os.environ.get("CHILD_COLLECTION", "document_child_chunks")
 SPARSE_VECTOR_NAME = "sparse"
 
 # --- Model Configuration ---
@@ -33,7 +36,20 @@ SPARSE_VECTOR_NAME = "sparse"
 # NOTE: changing this changes the vector dimension — re-ingest (ingest.py --clear)
 # after switching, since an existing Qdrant collection keeps its original size.
 DENSE_MODEL = os.environ.get("DENSE_MODEL", "BAAI/bge-m3")
-SPARSE_MODEL = "Qdrant/bm25"
+# Sparse (BM25) model for the hybrid retriever's lexical leg. FastEmbed's "Qdrant/bm25"
+# tokenizes Korean on whitespace only, so particles glue to nouns (졸업요건은 != 졸업요건)
+# and compounds aren't split — the Korean weak link in the sparse leg. Default is "kiwi":
+# BM25 over Kiwi morphemes (see db/korean_sparse.py), which beat bm25/okt/bm42 on the
+# combined88 A/B (sparse recall@10 0.537→0.687, e2e strict 69.1%→71.6%) and needs no JVM.
+# Other values: "okt" (konlpy/Okt — needs a JDK), "whitespace" (JVM-free control),
+# "bm42_kiwi" (BM42 fed Kiwi-presegmented text), or any FastEmbed model id (e.g.
+# "Qdrant/bm25", "Qdrant/bm42-all-minilm-l6-v2-attentions") passed to FastEmbedSparse.
+SPARSE_MODEL = os.environ.get("SPARSE_MODEL", "kiwi")
+# Enable Qdrant's server-side IDF on the sparse vector (modifier="idf"). The BM25 sparse
+# vectors are TF-only and need IDF for a proper BM25 score. On by default (the kiwi index
+# is built with it). NOTE: only applied at create_collection time — switching it requires
+# rebuilding the collection (reindex.py).
+SPARSE_IDF = os.environ.get("SPARSE_IDF", "true").lower() in ("1", "true", "yes", "on")
 # Run the embedding model on CPU by default so the GPU's VRAM stays free for the LLM
 # (query embedding is a single short forward pass — fast enough on CPU). Set
 # EMBEDDING_DEVICE=cuda to use the GPU instead.

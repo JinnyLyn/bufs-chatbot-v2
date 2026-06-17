@@ -5,15 +5,19 @@ Scoring: auto-extract key facts (numbers/dates/times/grades) from each ground_tr
 check presence in the new answer with DIGIT-BOUNDARY matching (so "6" doesn't match "16").
 Unanswerable items (answerable=False) are scored on correct refusal.
 """
-import json, re, sys, time, urllib.parse
+import json, os, re, sys, time, urllib.parse
 import requests
 try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception: pass
 
 BASE = "http://localhost:8000"
 SRC = r"C:\Users\suhwa\Desktop\bufs-chatbot\reports\retrieval_eval\combined88_results_fix_20260429.json"
-OUT = r"C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\combined88_new_result.json"
-JSONL = r"C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\combined88_new.jsonl"
+# Write into THIS repo's logs/ (worktree-correct). The old hardcoded absolute MAIN path
+# meant a worktree run wrote to the main repo's logs, so per-variant A/B snapshots taken
+# from the worktree all read a stale file. Derive from the script location instead.
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(_REPO, "logs", "combined88_new_result.json")
+JSONL = os.path.join(_REPO, "logs", "combined88_new.jsonl")
 
 REFUSAL = ["없습니다", "없음", "불가", "확인할 수 없", "찾을 수 없", "포함되어 있지 않",
            "직접 확인", "명시되어 있지 않", "알 수 없", "제공되지 않", "찾지 못"]
