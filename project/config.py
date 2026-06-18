@@ -100,10 +100,13 @@ LLM_WARMUP = os.environ.get("LLM_WARMUP", "true").lower() in ("1", "true", "yes"
 STRUCTURED_OUTPUT_METHOD = os.environ.get("STRUCTURED_OUTPUT_METHOD", "auto")
 # Query rewriting (rewrite_query node). Issue #15: with bge-m3 + Korean academic terms, LLM
 # rewriting can hurt retrieval (term drift / morphology / BM25 surface-form mismatch) and the
-# clarify-on-short-query path turns answerable questions into clarification requests. Set
-# REWRITE_ENABLED=false to bypass rewriting — the original question is passed straight to the
-# agent as the single search query. Used for A/B eval of rewrite ON vs OFF.
-REWRITE_ENABLED = os.environ.get("REWRITE_ENABLED", "true").lower() in ("1", "true", "yes", "on")
+# clarify-on-short-query path turns answerable questions into clarification requests.
+# DEFAULT OFF (issue #51): on combined88 (kiwi+IDF index) rewrite OFF beat ON on every axis —
+# contains 81.5%→85.2%, strict 71.6%→72.8%, ~25% faster. OFF recovered 5 questions (4 lost to
+# rewrite term-drift, 1 to a false clarification) and lost only 2. The single-turn benchmark
+# doesn't exercise rewrite's design value (follow-up pronoun resolution, multi-question split),
+# so the toggle stays — set REWRITE_ENABLED=true to re-enable for multi-turn use.
+REWRITE_ENABLED = os.environ.get("REWRITE_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 
 # --- Retrieval Configuration ---
 # Score cutoff for child-chunk search. NOTE: with hybrid (dense+sparse) retrieval,
