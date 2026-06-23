@@ -4,7 +4,7 @@ sse-starlette>=3.4.4
 fastembed==0.8.0
 kiwipiepy==0.23.2         # Korean morphological tokenizer for the BM25 sparse leg (SPARSE_MODEL=kiwi)
 gradio==6.19.0
-ipykernel==7.2.0
+ipykernel==7.3.0
 langchain>=1,<2
 langchain-huggingface==1.2.2
 langchain-ollama==1.1.0
