@@ -67,7 +67,15 @@ def _expand_prediction_paths(spec: str) -> list[Path]:
 
 
 def _load_dump_records(path: Path) -> list[dict]:
-    """Load one prediction dump's raw records (``{"results": [...]}`` or a bare list).
+    """Load one prediction dump's raw records.
+
+    Accepts every shape a dump can take, including the one a live ``run`` writes:
+      * ``{"results": [...]}``           — legacy / hand-authored fixture
+      * ``{"records": [...]}``           — single normalized dump
+      * ``[<record>, ...]``              — bare list of records
+      * ``[{"source": ..., "records": [...]}, ...]`` — what ``cli`` persists to
+        ``predictions.json`` (a list of per-source wrappers). The records are
+        flattened across wrappers so a real run's own output round-trips.
 
     Returns RAW records (not normalized): the rulebased runner normalizes
     internally, and the latency runner needs the raw ``duration_ms`` / ``timing``
@@ -75,15 +83,24 @@ def _load_dump_records(path: Path) -> list[dict]:
     """
     data = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(data, dict):
-        items = data.get("results")
-        if items is None:
-            raise ValueError(f"prediction dump has no 'results' key: {path}")
-        if not isinstance(items, list):
-            raise ValueError(f"prediction dump 'results' is not a list: {path}")
-        return items
+        for key in ("records", "results"):
+            items = data.get(key)
+            if isinstance(items, list):
+                return items
+        raise ValueError(f"prediction dump dict has no 'records'/'results' list: {path}")
     if isinstance(data, list):
+        # Distinguish a bare record list from a list of {source, records} wrappers:
+        # a wrapper has a 'records' list and is NOT itself a scorable record.
+        if data and all(
+            isinstance(el, dict) and isinstance(el.get("records"), list) and "answer" not in el
+            for el in data
+        ):
+            out: list[dict] = []
+            for wrapper in data:
+                out.extend(wrapper["records"])
+            return out
         return data
-    raise ValueError(f"prediction dump must be a dict (with 'results') or a list: {path}")
+    raise ValueError(f"prediction dump must be a dict (with 'records'/'results') or a list: {path}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
