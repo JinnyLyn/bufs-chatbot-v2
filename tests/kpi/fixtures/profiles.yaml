@@ -1,0 +1,52 @@
+# Pinned profiles fixture for the CLI integration test (hermetic).
+#
+# A frozen snapshot of the h100-fast advisory operating point so the checked-in
+# golden never drifts when the real eval_tools/kpi_profiles.yaml floors get
+# measured/flipped. Adds a `test-blocking` twin to exercise the exit-1 path.
+profiles:
+  h100-fast:
+    # GATE OF RECORD snapshot. ADVISORY-ONLY until FLAG floors measured.
+    gating: advisory
+    backend_url: ${BUFS_BACKEND_URL}
+    gen_ollama_url: ${BUFS_GEN_OLLAMA_URL}
+    judge:
+      model: ${RAGAS_JUDGE_MODEL}
+      url: ${RAGAS_JUDGE_URL}
+    config:
+      fast_refuse: true
+      compress_threshold: null
+      num_ctx: 8192
+    thresholds:
+      target_contains: 0.90
+      contains_floor: 0.83          # FLAG (unmeasured): re-measure from H100 N=3 dump
+      strict_floor: 0.68            # FLAG (unmeasured): measure via baseline-update --set-floors
+                                    # NB: corrected scorer on pinned snapshot = 66.7% < 0.68
+                                    #     → advisory mode absorbs this until measured
+      refusal_floor: 1.0
+      flaky_tolerance: 0.13
+      latency_p95_max_s: 22
+      latency_max_s: 30
+      regression_delta_pp: 3.0
+    fail_policy:
+      retrieval: skip
+      ragas: skip
+
+  test-blocking:
+    # Same thresholds as h100-fast but BLOCKING — proves exit 1 wiring.
+    gating: blocking
+    config:
+      fast_refuse: true
+      compress_threshold: null
+      num_ctx: 8192
+    thresholds:
+      target_contains: 0.90
+      contains_floor: 0.83
+      strict_floor: 0.68
+      refusal_floor: 1.0
+      flaky_tolerance: 0.13
+      latency_p95_max_s: 22
+      latency_max_s: 30
+      regression_delta_pp: 3.0
+    fail_policy:
+      retrieval: skip
+      ragas: skip

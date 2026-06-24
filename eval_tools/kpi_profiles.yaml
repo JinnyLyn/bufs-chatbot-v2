@@ -1,0 +1,82 @@
+# kpi_profiles.yaml — per-profile KPI thresholds, endpoint defaults, config knobs.
+#
+# All ${VAR} placeholders are expanded via os.environ at profile-load time.
+# Missing vars resolve to "" (no error); set the env vars in .env or CI secrets.
+# NO hardcoded credentials — URLs that require authentication use ${ENV} placeholders.
+#
+# FLAG thresholds: values marked "# FLAG" are PROVISIONAL until measured from a
+# real H100 N=3 dump via `baseline-update --profile h100-fast --set-floors`.
+# While any FLAG floor is unmeasured, h100-fast runs in ADVISORY mode (never exits 1).
+#
+# Profiles:
+#   h100-fast  — deployed config, gate of record (suhwan's H100).
+#   4090-local — jin's dev pre-check (never the release gate).
+#   local-cpu  — placeholder; OUT OF SCOPE for Phase 1 (no seeded floors).
+
+profiles:
+  h100-fast:
+    # H100 + nocompress + fastrefuse, REPORT profile B (~85.2% contains).
+    # GATE OF RECORD. ADVISORY-ONLY until FLAG floors measured; flip gating→blocking
+    # after first H100 N=3 capture runs `baseline-update --profile h100-fast --set-floors`.
+    gating: advisory
+    backend_url: ${BUFS_BACKEND_URL}
+    gen_ollama_url: ${BUFS_GEN_OLLAMA_URL}         # suhwan-only; flag-injected
+    judge:
+      model: ${RAGAS_JUDGE_MODEL}
+      url: ${RAGAS_JUDGE_URL}
+    config:
+      fast_refuse: true
+      compress_threshold: null                      # nocompress (H100 fast-path)
+      num_ctx: 8192
+    thresholds:
+      target_contains: 0.90         # aspirational; gap-tracked in report, NEVER blocks
+      contains_floor: 0.83          # FLAG (unmeasured): re-measure from H100 N=3 dump
+      strict_floor: 0.68            # FLAG (unmeasured): measure via baseline-update --set-floors
+                                    # NB: corrected scorer on pinned snapshot = 66.7% < 0.68
+                                    #     → advisory mode absorbs this until measured
+      refusal_floor: 1.0            # routed through flaky_tolerance (only 8 unanswerable Qs)
+      flaky_tolerance: 0.13         # ~1/8: one unanswerable flip → reported, not auto-NO-GO
+      latency_p95_max_s: 22
+      latency_max_s: 30
+      regression_delta_pp: 3.0      # NOT applied to refusal family (sub-granular at N=8)
+    fail_policy:
+      retrieval: skip               # live-only; excluded from predictions-path gate
+      ragas: skip                   # opt-in; skipped when judge unconfigured
+
+  4090-local:
+    # jin's 4090 at 100.91.6.58:11434 — REPORT profile A (~91.4% contains).
+    # DEV / PRE-CHECK profile. Always advisory — not the release gate.
+    gating: advisory
+    gen_ollama_url: http://100.91.6.58:11434
+    judge:
+      model: ${RAGAS_JUDGE_MODEL}
+      url: ${RAGAS_JUDGE_URL}
+    config:
+      fast_refuse: false
+      compress_threshold: 2000
+      num_ctx: 8192
+    thresholds:
+      target_contains: 0.92
+      contains_floor: 0.88
+      strict_floor: 0.72
+      refusal_floor: 1.0            # routed through flaky_tolerance (same N=8 brittleness)
+      flaky_tolerance: 0.13         # ~1/8: one unanswerable flip → reported, not auto-NO-GO
+      latency_p95_max_s: 25
+      latency_max_s: 35
+      regression_delta_pp: 3.0
+    fail_policy:
+      retrieval: skip
+      ragas: skip
+
+  local-cpu:
+    # jin's local CPU/GPU fallback (no remote endpoint). OUT OF SCOPE for Phase 1.
+    # Usable for ad-hoc `run` (report-only) but NOT a gate until floors seeded.
+    # Seed floors via: `baseline-update --profile local-cpu --set-floors` after
+    # an N=3 capture on this machine.
+    gating: advisory
+    gen_ollama_url: http://localhost:11435          # local GPU fallback (or CPU Ollama)
+    config:
+      fast_refuse: false
+      compress_threshold: 2000
+      num_ctx: 8192
+    thresholds: {}                  # intentionally empty in Phase 1 — no seeded floors

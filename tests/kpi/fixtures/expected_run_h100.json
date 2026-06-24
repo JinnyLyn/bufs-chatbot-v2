@@ -1,0 +1,14 @@
+{
+  "_note": "Expected stable subset of report.json for `run --profile h100-fast --from-predictions <combined88_new_result.json>` against fixtures/profiles.yaml. Non-deterministic stamp fields (git_sha/machine/timestamp) are intentionally excluded.",
+  "verdict": "NO-GO",
+  "exit_code": 0,
+  "advisory": true,
+  "gating": "advisory",
+  "family_status": {
+    "accuracy": "NO-GO",
+    "refusal": "GO",
+    "latency": "GO",
+    "ragas": "SKIPPED",
+    "retrieval": "SKIPPED"
+  }
+}
