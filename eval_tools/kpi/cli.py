@@ -89,17 +89,20 @@ def _load_dump_records(path: Path) -> list[dict]:
                 return items
         raise ValueError(f"prediction dump dict has no 'records'/'results' list: {path}")
     if isinstance(data, list):
-        # Distinguish a bare record list from a list of {source, records} wrappers:
-        # a wrapper has a 'records' list and is NOT itself a scorable record.
+        # Distinguish a bare record list from a list of {source, records} wrappers.
+        # Scorable records always carry a 'question'; a wrapper carries
+        # source/records and no 'question' (I1 — more reliable than "answer").
         if data and all(
-            isinstance(el, dict) and isinstance(el.get("records"), list) and "answer" not in el
+            isinstance(el, dict) and isinstance(el.get("records"), list) and "question" not in el
             for el in data
         ):
             out: list[dict] = []
             for wrapper in data:
-                out.extend(wrapper["records"])
+                out.extend(r for r in wrapper["records"] if isinstance(r, dict))
             return out
-        return data
+        # Bare record list: drop any non-dict element so a malformed entry
+        # shows up as a smaller count, not an AttributeError in the scorer (E2).
+        return [r for r in data if isinstance(r, dict)]
     raise ValueError(f"prediction dump must be a dict (with 'records'/'results') or a list: {path}")
 
 

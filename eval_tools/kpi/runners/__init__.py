@@ -101,6 +101,13 @@ def build_run_metrics(
             "k": retrieval.k,
         }
 
+    # Zero answerable records → accuracy rates default to 0.0, which would trip
+    # any floor and read as a (false) NO-GO. That is a *measurement* failure, not
+    # a product failure: surface it as an error so the gate returns ERROR (exit 2)
+    # with a clear reason, not "contains 0.0 < floor" (E3).
+    if measurement_error is None and score is not None and score.answerable_total == 0:
+        measurement_error = "no answerable records in run (cannot measure accuracy)"
+
     return {
         "contains_rate": score.contains_rate if score is not None else 0.0,
         "strict_rate": score.strict_rate if score is not None else 0.0,

@@ -82,20 +82,22 @@ def bucket_intent(question: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def _coerce_text(value: Any, keys: tuple[str, ...]) -> Optional[str]:
+def _coerce_text(value: Any, keys: tuple[str, ...], _depth: int = 0) -> Optional[str]:
     """Pull a text field out of a str / dict / list trace input or output."""
-    if value is None:
+    if value is None or _depth > 8:
+        # Depth cap guards against a malformed/adversarial deeply-nested trace
+        # payload causing RecursionError (E5).
         return None
     if isinstance(value, str):
         return value.strip() or None
     if isinstance(value, dict):
         for key in keys:
             if key in value and value[key]:
-                return _coerce_text(value[key], keys)
+                return _coerce_text(value[key], keys, _depth + 1)
         return None
     if isinstance(value, list) and value:
         # Common chat shape: take the last user/human-ish message content.
-        return _coerce_text(value[-1], keys)
+        return _coerce_text(value[-1], keys, _depth + 1)
     return None
 
 

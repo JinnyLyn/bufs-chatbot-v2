@@ -107,8 +107,12 @@ class RealUsageFamily:
         }
 
     def exceeds_gap_floor(self, max_gap_pp: float = MAX_GAP_PP_ADVISORY) -> bool:
-        """Whether the benchmark↔real gap exceeds the (advisory) floor."""
-        return self.benchmark_real_gap_pp > max_gap_pp
+        """Whether the benchmark↔real gap meets-or-exceeds the (advisory) floor.
+
+        Boundary is intentionally inclusive (``>=``, E6): a gap exactly at the
+        limit flags, so ``max_gap_pp`` reads as "the largest still-acceptable gap".
+        """
+        return self.benchmark_real_gap_pp >= max_gap_pp
 
 
 def from_scores(clean: ScoreResult, real: ScoreResult, *,

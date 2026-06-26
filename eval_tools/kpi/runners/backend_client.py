@@ -172,22 +172,35 @@ def stream_question(
 
     with requests.get(url, stream=True, timeout=timeout) as resp:
         resp.raise_for_status()
+        # Per the SSE spec a single event's data can span multiple consecutive
+        # ``data:`` lines (concatenated with "\n"); accumulate them and decode
+        # at the blank-line event delimiter, not per line (E1).
+        data_buf: list[str] = []
         for raw_line in resp.iter_lines(decode_unicode=True):
             if raw_line is None:
                 continue
             if raw_line.startswith("event:"):
                 current_event = raw_line[6:].strip()
             elif raw_line.startswith("data:"):
-                data_str = raw_line[5:].strip()
-                if current_event == "done":
-                    try:
-                        done_payload = json.loads(data_str)
-                    except json.JSONDecodeError:
-                        pass
-                elif current_event == "error":
-                    raise BackendError(data_str)
+                data_buf.append(raw_line[5:].lstrip())
             elif raw_line == "":
+                if data_buf:
+                    payload_str = "\n".join(data_buf)
+                    if current_event == "done":
+                        try:
+                            done_payload = json.loads(payload_str)
+                        except json.JSONDecodeError:
+                            pass
+                    elif current_event == "error":
+                        raise BackendError(payload_str)
+                data_buf = []
                 current_event = None
+        # Flush a trailing event that arrived without a final blank-line delimiter.
+        if done_payload is None and current_event == "done" and data_buf:
+            try:
+                done_payload = json.loads("\n".join(data_buf))
+            except json.JSONDecodeError:
+                pass
 
     if done_payload is None:
         raise BackendError("SSE stream closed without a 'done' event")

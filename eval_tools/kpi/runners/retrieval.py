@@ -38,9 +38,13 @@ Tests that exercise the live path must be marked ``@pytest.mark.integration``.
 """
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Iterable
+
+# Gold-fact extraction / matching is the SAME corrected lineage as the scorer.
+# Import it (scorer is pure / dependency-free) rather than keep a
+# divergence-prone copy (I2). Aliased to the private names callers already use.
+from eval_tools.kpi.scorer import extract_facts as _extract_facts, matched as _matched
 
 
 # ---------------------------------------------------------------------------
@@ -75,57 +79,6 @@ class RetrievalResult:
     mrr: float       # mean reciprocal rank of first all-facts chunk
     coverage: float  # mean best single-chunk fact coverage
     n_questions: int
-
-
-# ---------------------------------------------------------------------------
-# Gold-fact helpers (corrected lineage — single-letter grades, 24h/12h)
-# ---------------------------------------------------------------------------
-
-def _extract_facts(gt: str) -> set[str]:
-    """Extract numeric / date / grade facts for retrieval gold check.
-
-    Mirrors ``eval_tools.kpi.scorer.extract_facts`` but is inlined here so
-    the retrieval runner stays independent of scorer internals at runtime.
-    The corrected patterns match single-letter grades (D1) and use the same
-    24h normalisation as ``matched`` (D2).
-    """
-    facts: set[str] = set()
-    s = gt
-    for pat in (r"\d{1,2}월\s?\d{1,2}일", r"\d{1,2}:\d{2}"):
-        for m in re.findall(pat, s):
-            facts.add(m.replace(" ", ""))
-        s = re.sub(pat, " ", s)
-    for m in re.findall(r"\d{1,2}\.\d{1,2}", s):
-        mo, da = m.split(".")
-        facts.add(f"{int(mo)}월{int(da)}일")
-    s = re.sub(r"\d{1,2}\.\d{1,2}", " ", s)
-    # D1 correction: single-letter grades (not just [A-F]\+)
-    for m in re.findall(r"(?<![A-Za-z])[A-F][+-]?(?![A-Za-z])", s):
-        facts.add(m)
-    for m in re.findall(r"\d[\d,]*", s):
-        n = m.replace(",", "")
-        if re.fullmatch(r"(19|20)\d\d", n):
-            continue
-        facts.add(n)
-    return facts
-
-
-def _matched(fact: str, text: str) -> bool:
-    """Whether ``fact`` is present in ``text`` under corrected match rules."""
-    if re.fullmatch(r"\d+", fact):
-        n = int(fact)
-        if re.search(r"(?<!\d)" + fact + r"(?!\d)", text.replace(",", "")):
-            return True
-        # D2: 24h/12h equivalence
-        if 13 <= n <= 23 and (f"오후 {n - 12}시" in text or f"오후{n - 12}시" in text):
-            return True
-        return False
-    if re.fullmatch(r"\d{1,2}:\d{2}", fact):
-        h, mi = fact.split(":")
-        return any(v in text for v in (fact, f"{int(h):02d}:{mi}", f"{h}시 {int(mi)}분", f"{h}시{int(mi)}분"))
-    if re.fullmatch(r"\d{1,2}월\d{1,2}일", fact):
-        return fact in text.replace(" ", "")
-    return fact in text
 
 
 # ---------------------------------------------------------------------------

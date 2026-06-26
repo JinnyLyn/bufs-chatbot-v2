@@ -143,12 +143,13 @@ class TestLoadProfile:
         assert p.backend_url == ""
         assert p.gen_ollama_url == ""
 
-    def test_4090_local_gen_url_is_literal(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """4090-local gen_ollama_url is a literal (no ${} placeholder)."""
-        # Even if the env var were set, the YAML literal wins for this profile.
-        monkeypatch.delenv("BUFS_GEN_OLLAMA_URL", raising=False)
+    def test_4090_local_gen_url_from_env_not_hardcoded(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """4090-local gen_ollama_url resolves from $BUFS_GEN_OLLAMA_URL_4090 — no host committed (S2)."""
+        monkeypatch.setenv("BUFS_GEN_OLLAMA_URL_4090", "http://10.0.0.9:11434")
         p = load_profile("4090-local")
-        assert p.gen_ollama_url == "http://100.91.6.58:11434"
+        assert p.gen_ollama_url == "http://10.0.0.9:11434"
+        # the previously-hardcoded private IP must not be baked into the repo
+        assert "100.91.6.58" not in p.gen_ollama_url
 
     # ── CLI overrides ──
 

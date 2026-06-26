@@ -44,10 +44,10 @@ profiles:
       ragas: skip                   # opt-in; skipped when judge unconfigured
 
   4090-local:
-    # jin's 4090 at 100.91.6.58:11434 — REPORT profile A (~91.4% contains).
+    # jin's local 4090 box — REPORT profile A (~91.4% contains).
     # DEV / PRE-CHECK profile. Always advisory — not the release gate.
     gating: advisory
-    gen_ollama_url: http://100.91.6.58:11434
+    gen_ollama_url: ${BUFS_GEN_OLLAMA_URL_4090}   # set locally (no host in repo)
     judge:
       model: ${RAGAS_JUDGE_MODEL}
       url: ${RAGAS_JUDGE_URL}

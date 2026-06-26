@@ -183,9 +183,11 @@ def _gemini_judge(
     """Call Gemini REST judge with retry on 429."""
     import requests  # lazy — only in live path
 
+    # Key goes in the x-goog-api-key header, NOT the URL query string — a URL
+    # key leaks into access/proxy logs and request traces (S1).
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent?key={api_key}"
+        f"{model}:generateContent"
     )
     payload = {
         "system_instruction": {"parts": [{"text": system}]},
@@ -196,7 +198,11 @@ def _gemini_judge(
             "thinkingConfig": {"thinkingBudget": 0},
         },
     }
-    kwargs: dict = {"json": payload, "timeout": 60}
+    kwargs: dict = {
+        "json": payload,
+        "timeout": 60,
+        "headers": {"x-goog-api-key": api_key},
+    }
     if ca_bundle:
         kwargs["verify"] = ca_bundle
 
@@ -212,7 +218,14 @@ def _gemini_judge(
             except (KeyError, IndexError):
                 return ""
         if resp.status_code == 429 and attempt < 4:
-            time.sleep(min(15 * (2 ** attempt), 90))
+            backoff = min(15 * (2 ** attempt), 90)
+            # Honor the server's Retry-After when present (E4): it knows the
+            # quota window better than a fixed exponential backoff.
+            try:
+                backoff = int(resp.headers.get("Retry-After", backoff))
+            except (TypeError, ValueError):
+                pass
+            time.sleep(backoff)
             continue
         raise RuntimeError(f"Gemini {resp.status_code}: {resp.text[:160]}")
     return ""  # unreachable
