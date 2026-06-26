@@ -11,9 +11,12 @@ class ToolFactory:
     
     def _search_child_chunks(self, query: str, limit: int) -> str:
         """Search for the top K most relevant child chunks.
-        
+
         Args:
-            query: Search query string
+            query: Search query string. Use the user's ORIGINAL wording and key
+                terms verbatim — do not paraphrase, translate, or expand into
+                synonyms. The lexical retriever matches on Korean morpheme surface
+                forms, so a reworded query drifts away from the terms in the docs.
             limit: Maximum number of results to return
         """
         try:
