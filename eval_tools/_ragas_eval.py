@@ -13,13 +13,15 @@ Run:
 """
 import argparse, json, os, re, sys, time, urllib.parse
 import requests
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import qa_scorer  # in-repo golden dataset loader (eval_tools/datasets/qa_dataset.json)
 try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception: pass
 
 NEW_BASE = "http://localhost:8000"
 OLLAMA = "http://localhost:11435"
-SRC = r"C:\Users\suhwa\Desktop\bufs-chatbot\reports\retrieval_eval\combined88_results_fix_20260429.json"
-CA = r"C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\win-ca-bundle.pem"
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CA = r"C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\win-ca-bundle.pem"  # gemini-only TLS bundle (gitignored)
 
 # ── bufs's 5 RAGAS judge prompts (verbatim) ─────────────────────────────────
 FAITHFULNESS_SYSTEM = """당신은 RAG 시스템 평가 전문가입니다.
@@ -113,10 +115,11 @@ def main():
     ap.add_argument("--model", default="gemini-2.5-flash")
     ap.add_argument("--n", type=int, default=25)
     ap.add_argument("--delay", type=float, default=4.0, help="sec between judge calls (API rate limit)")
+    ap.add_argument("--dataset", default=None, help="override dataset path (default: in-repo qa_dataset.json)")
     args = ap.parse_args()
     judge = (lambda s, p: gemini_judge(s, p, args.model)) if args.judge == "gemini" else (lambda s, p: ollama_judge(s, p, args.model))
 
-    data = [r for r in json.load(open(SRC, encoding="utf-8"))["results"] if r.get("answerable")][:args.n]
+    data = qa_scorer.load_dataset(args.dataset)[:args.n]
     print(f"RAGAS eval | judge={args.judge}:{args.model} | n={len(data)} | gen=new chatbot(qwen3.5:9b)", flush=True)
 
     # Phase 1: generate ALL first (qwen3.5:9b stays loaded — no per-question model swap)
@@ -134,8 +137,8 @@ def main():
     print(f"\nPhase 2 — judge ({args.judge}:{args.model})", flush=True)
     results = []
     for i, g in enumerate(gen, 1):
-        q, ref, ans, ctx = g["question"], g.get("ground_truth", ""), g["_ans"], g["_ctx"]
-        row = {"id": g["id"], "intent": g.get("intent"), "question": q, "reference": ref,
+        q, ref, ans, ctx = g["question"], g.get("expected_answer", ""), g["_ans"], g["_ctx"]
+        row = {"id": g["id"], "intent": g.get("gold_intent"), "question": q, "reference": ref,
                "answer": ans[:600], "context_preview": ctx[:300]}
         for j, m in enumerate(METRICS):
             sysp, tmpl, _ = METRIC_CONFIG[m]
@@ -167,7 +170,8 @@ def main():
         print(f"  {METRIC_CONFIG[m][2]:<26} {bar} {s}")
     print(f"  {'AVG':<26} {summary['avg']}")
     ts = time.strftime("%Y%m%d_%H%M%S")
-    out = rf"C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\logs\ragas_new_{args.judge}_{ts}.json"
+    out = os.path.join(_REPO, "logs", f"ragas_new_{args.judge}_{ts}.json")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
     json.dump({"judge": f"{args.judge}:{args.model}", "n": len(data), "summary": summary, "results": results},
               open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     print("report ->", out)

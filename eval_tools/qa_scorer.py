@@ -1,0 +1,185 @@
+"""Canonical QA-dataset loader + rule-based scorer for the BUFS chatbot eval.
+
+The golden dataset lives **in-repo** at ``eval_tools/datasets/qa_dataset.json`` so eval
+runs are reproducible after a fresh clone (the old combined88 harness read an absolute
+path into a sibling ``bufs-chatbot`` repo that does not exist on other machines).
+
+Dataset schema (one object per question)::
+
+    id, question, gold_intent, gold_document, gold_chunk_id,
+    expected_answer, must_include[], must_not_include[], difficulty, category
+
+Scoring is **explicit and rule-based** on ``must_include`` / ``must_not_include`` rather
+than auto-extracted facts. This sidesteps the historical false-refusal bug where words
+like "불가"/"없습니다" in a correct answer were mis-scored as a refusal: there is no
+refusal heuristic here — a question passes iff every ``must_include`` token is present and
+no ``must_not_include`` token is present.
+
+Pure functions only — no network, no backend. Importable from the CLI runner
+(``_eval_qa100.py``) and from tests (``import qa_scorer`` via pythonpath=["eval_tools"]).
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+from collections import defaultdict
+from typing import Any
+
+# In-repo canonical dataset path, derived from this file's location (worktree-correct).
+DATASET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datasets", "qa_dataset.json")
+
+REQUIRED_FIELDS = (
+    "id", "question", "gold_intent", "gold_document", "gold_chunk_id",
+    "expected_answer", "must_include", "must_not_include", "difficulty", "category",
+)
+
+
+def load_dataset(path: str | None = None) -> list[dict[str, Any]]:
+    """Load and validate the golden dataset. Raises ValueError on schema breaks."""
+    path = path or DATASET_PATH
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, list) or not data:
+        raise ValueError(f"dataset must be a non-empty list: {path}")
+    ids = set()
+    for i, rec in enumerate(data):
+        missing = [k for k in REQUIRED_FIELDS if k not in rec]
+        if missing:
+            raise ValueError(f"record #{i} (id={rec.get('id')}) missing fields: {missing}")
+        if not isinstance(rec["must_include"], list) or not isinstance(rec["must_not_include"], list):
+            raise ValueError(f"record id={rec['id']}: must_include/must_not_include must be lists")
+        if rec["id"] in ids:
+            raise ValueError(f"duplicate id: {rec['id']}")
+        ids.add(rec["id"])
+    return data
+
+
+def _norm(s: str) -> str:
+    """Whitespace-insensitive form so '학부(과) 사무실' matches '학부(과)사무실'."""
+    return re.sub(r"\s+", "", s or "")
+
+
+def _doc_key(name: str) -> str:
+    """Normalize a doc title / source filename for fuzzy gold_document matching."""
+    base = os.path.basename(name or "")
+    base = re.sub(r"\.(md|markdown|pdf|txt|docx?)$", "", base, flags=re.I)
+    return re.sub(r"[\s_().\-]+", "", base)
+
+
+def contains(token: str, answer: str) -> bool:
+    """Whitespace-insensitive substring test."""
+    return _norm(token) in _norm(answer)
+
+
+def score_record(rec: dict[str, Any], answer: str) -> dict[str, Any]:
+    """Score one answer against one golden record (generation side).
+
+    Verdict:
+      - PASS     : every must_include present AND no must_not_include present
+      - VIOLATION: a must_not_include token leaked into the answer (hard fail)
+      - CONTAINS : some (not all) must_include present, no violation
+      - FAIL     : no must_include present, no violation
+    """
+    must_inc = rec.get("must_include") or []
+    must_not = rec.get("must_not_include") or []
+    inc_hits = [t for t in must_inc if contains(t, answer)]
+    violations = [t for t in must_not if contains(t, answer)]
+
+    all_inc = bool(must_inc) and len(inc_hits) == len(must_inc)
+    some_inc = len(inc_hits) > 0
+    if violations:
+        verdict = "VIOLATION"
+    elif all_inc:
+        verdict = "PASS"
+    elif some_inc:
+        verdict = "CONTAINS"
+    else:
+        verdict = "FAIL"
+
+    return {
+        "verdict": verdict,
+        "strict_pass": verdict == "PASS",
+        "contains": some_inc and not violations,
+        "include_hits": inc_hits,
+        "include_total": len(must_inc),
+        "violations": violations,
+    }
+
+
+def intent_match(gold_intent: str, pred_intent: str | None) -> bool:
+    """Soft intent match: normalized equality or containment either direction."""
+    if not gold_intent or not pred_intent:
+        return False
+    g, p = _norm(gold_intent), _norm(pred_intent)
+    return g == p or g in p or p in g
+
+
+def doc_recall(gold_document: str, sources: list[str] | None) -> dict[str, Any]:
+    """Heuristic retrieval recall: did any retrieved source match gold_document?
+
+    Titles vs filenames differ (spaces/underscores/extension), so match on a stripped
+    key with two-way containment. ``matched_sources`` is kept for manual audit.
+    """
+    sources = sources or []
+    gk = _doc_key(gold_document)
+    matched = [s for s in sources if gk and (gk in _doc_key(s) or _doc_key(s) in gk)]
+    return {"hit": bool(matched), "matched_sources": matched}
+
+
+def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate per-record results into KPI buckets (overall + by category/difficulty)."""
+    n = len(results)
+    if n == 0:
+        return {"n": 0}
+
+    def rate(sel) -> float:
+        return round(sum(1 for r in results if sel(r)) / n, 4)
+
+    by: dict[str, dict[str, list]] = {"category": defaultdict(list), "difficulty": defaultdict(list)}
+    for r in results:
+        by["category"][r.get("category", "?")].append(r)
+        by["difficulty"][r.get("difficulty", "?")].append(r)
+
+    def group_rates(group: dict[str, list]) -> dict[str, Any]:
+        out = {}
+        for key, rows in sorted(group.items()):
+            m = len(rows)
+            out[key] = {
+                "n": m,
+                "strict_pass_rate": round(sum(1 for r in rows if r.get("strict_pass")) / m, 4),
+                "contains_rate": round(sum(1 for r in rows if r.get("contains")) / m, 4),
+            }
+        return out
+
+    durations = [r["duration_ms"] for r in results if r.get("duration_ms")]
+    has_intent = [r for r in results if r.get("intent_evaluated")]
+    has_doc = [r for r in results if r.get("doc_recall_evaluated")]
+
+    summary = {
+        "n": n,
+        "strict_pass": sum(1 for r in results if r.get("strict_pass")),
+        "strict_pass_rate": rate(lambda r: r.get("strict_pass")),
+        "contains_rate": rate(lambda r: r.get("contains")),
+        "violation_rate": rate(lambda r: r.get("verdict") == "VIOLATION"),
+        "by_category": group_rates(by["category"]),
+        "by_difficulty": group_rates(by["difficulty"]),
+    }
+    if has_intent:
+        summary["intent_accuracy"] = round(
+            sum(1 for r in has_intent if r.get("intent_correct")) / len(has_intent), 4
+        )
+        summary["intent_evaluated"] = len(has_intent)
+    if has_doc:
+        summary["retrieval_recall"] = round(
+            sum(1 for r in has_doc if r.get("doc_hit")) / len(has_doc), 4
+        )
+        summary["retrieval_evaluated"] = len(has_doc)
+    if durations:
+        durations.sort()
+        summary["latency_ms"] = {
+            "avg": int(sum(durations) / len(durations)),
+            "p50": durations[len(durations) // 2],
+            "max": durations[-1],
+        }
+    return summary

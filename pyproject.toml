@@ -15,7 +15,8 @@ files = ["project"]
 [tool.pytest.ini_options]
 # pythonpath MANDATORY: app modules use top-level imports (import config, from db...)
 # entrypoints do sys.path.insert(0, "project/") — mirror that here.
-pythonpath = ["project"]
+# "eval_tools" exposes qa_scorer for the offline eval-scorer tests.
+pythonpath = ["project", "eval_tools"]
 testpaths  = ["tests"]
 markers = [
     "unit: pure offline unit tests (no Ollama/Qdrant/Langfuse/network)",

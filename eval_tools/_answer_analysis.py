@@ -1,18 +1,22 @@
 """Systematic correct/incorrect analysis via Langfuse logs, with retrieval-vs-generation
 attribution. For each question we pull the latest trace's final answer AND the retrieved
-contexts (search/parent tool outputs), then check ground_truth key facts against BOTH:
-  - fact in answer?   -> answer correctness
-  - fact in context?  -> was the evidence retrieved?
+contexts (search/parent tool outputs), then check the dataset's `must_include` tokens
+(explicit gold facts) against BOTH:
+  - token in answer?   -> answer correctness
+  - token in context?  -> was the evidence retrieved?
 Incorrect + evidence retrieved  => GENERATION error (LLM had it, didn't use it)
 Incorrect + evidence missing    => RETRIEVAL error (search/KB didn't surface it)
+
+Dataset: in-repo eval_tools/datasets/qa_dataset.json (via qa_scorer).
 """
-import os, re, sys, time, json, requests
+import os, sys, time, json, requests
 from collections import defaultdict, Counter
 from dotenv import load_dotenv
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import qa_scorer  # in-repo golden dataset + whitespace-insensitive `contains`
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 load_dotenv("project/.env")
 BASE = os.environ.get("LANGFUSE_BASE_URL").rstrip("/"); AUTH = (os.environ["LANGFUSE_PUBLIC_KEY"], os.environ["LANGFUSE_SECRET_KEY"]); CA = os.environ.get("REQUESTS_CA_BUNDLE")
-SRC = r"C:\Users\suhwa\Desktop\bufs-chatbot\reports\retrieval_eval\combined88_results_fix_20260429.json"
 
 
 def fetch(path, want, **params):
@@ -28,32 +32,6 @@ def fetch(path, want, **params):
         if not d: break
         out.extend(d); page += 1
     return out[:want]
-
-
-def extract_facts(gt):
-    facts, s = set(), gt
-    for pat in [r"\d{1,2}월\s?\d{1,2}일", r"\d{1,2}:\d{2}"]:
-        for m in re.findall(pat, s): facts.add(m.replace(" ", ""))
-        s = re.sub(pat, " ", s)
-    for m in re.findall(r"\d{1,2}\.\d{1,2}", s):
-        mo, da = m.split("."); facts.add(f"{int(mo)}월{int(da)}일")
-    s = re.sub(r"\d{1,2}\.\d{1,2}", " ", s)
-    for m in re.findall(r"(?<![A-Za-z])[A-F][+-]?(?![A-Za-z])", s): facts.add(m)
-    for m in re.findall(r"\d[\d,]*", s):
-        n = m.replace(",", "")
-        if re.fullmatch(r"(19|20)\d\d", n): continue
-        facts.add(n)
-    return facts
-
-
-def matched(fact, text):
-    if not text: return False
-    if re.fullmatch(r"\d+", fact):
-        n = int(fact)
-        if re.search(r"(?<!\d)" + fact + r"(?!\d)", text.replace(",", "")): return True
-        return 13 <= n <= 23 and (f"오후 {n-12}시" in text or f"오후{n-12}시" in text)
-    if re.fullmatch(r"\d{1,2}월\d{1,2}일", fact): return fact in text.replace(" ", "")
-    return fact in text
 
 
 def qtext(v):
@@ -90,7 +68,7 @@ for name in ("search_child_chunks", "retrieve_parent_chunks"):
         out = o.get("output")
         ctx_by_trace[o["traceId"]].append(out if isinstance(out, str) else json.dumps(out, ensure_ascii=False))
 
-gt_rows = [r for r in json.load(open(SRC, encoding="utf-8"))["results"] if r.get("answerable") and r.get("ground_truth")]
+gt_rows = [r for r in qa_scorer.load_dataset() if r.get("must_include")]
 
 cat = Counter(); by_intent = defaultdict(Counter); examples = defaultdict(list); matchedQ = 0
 for r in gt_rows:
@@ -99,10 +77,10 @@ for r in gt_rows:
     matchedQ += 1
     _, tid, ans = latest[q]
     ctx = "\n".join(ctx_by_trace.get(tid, []))
-    facts = extract_facts(r["ground_truth"])
+    facts = set(r["must_include"])           # explicit required tokens (gold facts)
     if not facts: continue
-    in_ans = {f for f in facts if matched(f, ans)}
-    in_ctx = {f for f in facts if matched(f, ctx)}
+    in_ans = {f for f in facts if qa_scorer.contains(f, ans)}
+    in_ctx = {f for f in facts if qa_scorer.contains(f, ctx)}
     missing = facts - in_ans
     if not missing:
         c = "CORRECT"
@@ -110,9 +88,9 @@ for r in gt_rows:
         c = "RETRIEVAL_ERR"
     else:                            # all missing facts WERE in context
         c = "GENERATION_ERR"
-    cat[c] += 1; by_intent[r.get("intent")][c] += 1
+    cat[c] += 1; by_intent[r.get("gold_intent")][c] += 1
     if c != "CORRECT" and len(examples[c]) < 6:
-        examples[c].append((r["id"], r.get("intent"), r["ground_truth"][:40], sorted(missing), sorted(missing & in_ctx)))
+        examples[c].append((r["id"], r.get("gold_intent"), r["expected_answer"][:40], sorted(missing), sorted(missing & in_ctx)))
 
 tot = sum(cat.values())
 print(f"\n{'='*72}\nANSWER ATTRIBUTION  (matched {matchedQ} Qs to Langfuse traces, {tot} with facts)")

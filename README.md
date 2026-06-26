@@ -128,11 +128,15 @@ npm run dev                   # :3000 (프로덕션: npm run build && npm start)
 
 ## 평가 재현
 
+골든 데이터셋은 레포에 포함된 `eval_tools/datasets/qa_dataset.json`(100문항)이다.
+
 ```bash
-python eval_tools/_eval_combined88.py                              # 룰기반 89문항
+python eval_tools/_eval_qa100.py                                  # ⭐ 1순위 룰기반 100문항 (in-repo 골든셋)
+python eval_tools/_eval_qa100.py --dry-run                        # 오프라인 데이터셋 검증·통계 (백엔드 불필요)
 python eval_tools/_ragas_eval.py --judge ollama --model exaone3.5:7.8b --n 25   # RAGAS
 python eval_tools/_langfuse_analyze.py                             # Langfuse 지연·에러 집계
 python eval_tools/_answer_analysis.py                             # 정답/오답 검색vs생성 귀인
+python eval_tools/_eval_combined88.py                             # (레거시) bufs 89문항, 레포 밖 경로 의존
 ```
 
 ## 기반 / 라이선스
