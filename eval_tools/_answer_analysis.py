@@ -77,10 +77,10 @@ for r in gt_rows:
     matchedQ += 1
     _, tid, ans = latest[q]
     ctx = "\n".join(ctx_by_trace.get(tid, []))
-    facts = set(r["must_include"])           # explicit required tokens (gold facts)
+    facts = set(r["must_include"])           # required keywords (diagnostic probe, not a rule score)
     if not facts: continue
-    in_ans = {f for f in facts if qa_scorer.contains(f, ans)}
-    in_ctx = {f for f in facts if qa_scorer.contains(f, ctx)}
+    in_ans = {f for f in facts if qa_scorer.tokens_present(f, ans)}
+    in_ctx = {f for f in facts if qa_scorer.tokens_present(f, ctx)}
     missing = facts - in_ans
     if not missing:
         c = "CORRECT"

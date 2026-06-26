@@ -9,11 +9,14 @@ Dataset schema (one object per question)::
     id, question, gold_intent, gold_document, gold_chunk_id,
     expected_answer, must_include[], must_not_include[], difficulty, category
 
-Scoring is **explicit and rule-based** on ``must_include`` / ``must_not_include`` rather
-than auto-extracted facts. This sidesteps the historical false-refusal bug where words
-like "불가"/"없습니다" in a correct answer were mis-scored as a refusal: there is no
-refusal heuristic here — a question passes iff every ``must_include`` token is present and
-no ``must_not_include`` token is present.
+Rule-based scoring enforces **``must_not_include`` only** (a hard "forbidden phrase"
+guard). ``must_include`` is intentionally NOT scored here: in this dataset the tokens are
+loose semantic keywords that the terse ``expected_answer`` itself often does not contain
+verbatim, so an exact-string rule would mis-fail correct answers. Answer *correctness* is
+judged against ``expected_answer`` by RAGAS / LLM-judge (``_ragas_eval.py``) instead.
+
+There is no refusal heuristic, so the historical false-refusal bug (words like
+"불가"/"없습니다" mis-scored as a refusal) cannot occur here.
 
 Pure functions only — no network, no backend. Importable from the CLI runner
 (``_eval_qa100.py``) and from tests (``import qa_scorer`` via pythonpath=["eval_tools"]).
@@ -68,41 +71,36 @@ def _doc_key(name: str) -> str:
 
 
 def contains(token: str, answer: str) -> bool:
-    """Whitespace-insensitive substring test."""
+    """Whitespace-insensitive substring test (forbidden-phrase / exact match)."""
     return _norm(token) in _norm(answer)
 
 
+def tokens_present(token: str, text: str) -> bool:
+    """Order-independent keyword match: are ALL words of `token` present in `text`?
+
+    Splits on whitespace, middot, and slash. Diagnostic-only (used by attribution
+    tooling) — NOT used by score_record, which delegates correctness to the LLM judge.
+    """
+    t = _norm(text)
+    return all(_norm(w) in t for w in re.split(r"[\s·/]+", token or "") if w)
+
+
 def score_record(rec: dict[str, Any], answer: str) -> dict[str, Any]:
-    """Score one answer against one golden record (generation side).
+    """Rule-based guard for one answer. Enforces ``must_not_include`` only.
+
+    ``must_include`` is NOT scored here (these tokens are loose keywords the terse gold
+    answer often lacks verbatim — see module docstring). Answer correctness is judged
+    against ``expected_answer`` by RAGAS / LLM-judge separately.
 
     Verdict:
-      - PASS     : every must_include present AND no must_not_include present
-      - VIOLATION: a must_not_include token leaked into the answer (hard fail)
-      - CONTAINS : some (not all) must_include present, no violation
-      - FAIL     : no must_include present, no violation
+      - VIOLATION : a must_not_include token leaked into the answer (hard fail)
+      - CLEAN     : no forbidden token present
     """
-    must_inc = rec.get("must_include") or []
     must_not = rec.get("must_not_include") or []
-    inc_hits = [t for t in must_inc if contains(t, answer)]
     violations = [t for t in must_not if contains(t, answer)]
-
-    all_inc = bool(must_inc) and len(inc_hits) == len(must_inc)
-    some_inc = len(inc_hits) > 0
-    if violations:
-        verdict = "VIOLATION"
-    elif all_inc:
-        verdict = "PASS"
-    elif some_inc:
-        verdict = "CONTAINS"
-    else:
-        verdict = "FAIL"
-
     return {
-        "verdict": verdict,
-        "strict_pass": verdict == "PASS",
-        "contains": some_inc and not violations,
-        "include_hits": inc_hits,
-        "include_total": len(must_inc),
+        "verdict": "VIOLATION" if violations else "CLEAN",
+        "clean": not violations,
         "violations": violations,
     }
 
@@ -128,7 +126,11 @@ def doc_recall(gold_document: str, sources: list[str] | None) -> dict[str, Any]:
 
 
 def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Aggregate per-record results into KPI buckets (overall + by category/difficulty)."""
+    """Aggregate per-record results into KPI buckets (overall + by category/difficulty).
+
+    Rule-layer headline is the ``must_not_include`` guard (clean_rate / violation_rate);
+    answer correctness is reported separately by the RAGAS/LLM-judge harness.
+    """
     n = len(results)
     if n == 0:
         return {"n": 0}
@@ -147,8 +149,8 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
             m = len(rows)
             out[key] = {
                 "n": m,
-                "strict_pass_rate": round(sum(1 for r in rows if r.get("strict_pass")) / m, 4),
-                "contains_rate": round(sum(1 for r in rows if r.get("contains")) / m, 4),
+                "clean_rate": round(sum(1 for r in rows if r.get("clean")) / m, 4),
+                "violation_rate": round(sum(1 for r in rows if r.get("verdict") == "VIOLATION") / m, 4),
             }
         return out
 
@@ -158,9 +160,8 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
 
     summary = {
         "n": n,
-        "strict_pass": sum(1 for r in results if r.get("strict_pass")),
-        "strict_pass_rate": rate(lambda r: r.get("strict_pass")),
-        "contains_rate": rate(lambda r: r.get("contains")),
+        "clean": sum(1 for r in results if r.get("clean")),
+        "clean_rate": rate(lambda r: r.get("clean")),
         "violation_rate": rate(lambda r: r.get("verdict") == "VIOLATION"),
         "by_category": group_rates(by["category"]),
         "by_difficulty": group_rates(by["difficulty"]),

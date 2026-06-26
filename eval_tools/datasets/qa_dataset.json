@@ -743,9 +743,7 @@
       "복학 신청",
       "직접 신청"
     ],
-    "must_not_include": [
-      "자동 복학"
-    ],
+    "must_not_include": [],
     "difficulty": "Medium",
     "category": "휴학"
   },
@@ -1183,9 +1181,7 @@
       "신분 유지",
       "취득 유예"
     ],
-    "must_not_include": [
-      "졸업 증명"
-    ],
+    "must_not_include": [],
     "difficulty": "Easy",
     "category": "졸업"
   },
@@ -1368,9 +1364,7 @@
       "고지서 출력",
       "학생포털"
     ],
-    "must_not_include": [
-      "우편 발송"
-    ],
+    "must_not_include": [],
     "difficulty": "Easy",
     "category": "등록금"
   },

@@ -2,10 +2,13 @@
 against the live agentic-rag chatbot (localhost:8000 SSE) and score each answer.
 
 KPIs (see qa_scorer for definitions):
-  - generation : strict_pass / contains / violation  (must_include / must_not_include)
+  - guard      : violation_rate / clean_rate  (must_not_include hard guard)
   - retrieval  : retrieval_recall  (gold_document present in retrieved sources, heuristic)
-  - intent     : intent_accuracy   (predicted intent vs gold_intent, soft match)
+  - intent     : intent_accuracy   (predicted vs gold_intent; dormant until backend emits intent)
   plus per-category and per-difficulty breakdowns and latency.
+
+Answer *correctness* (must_include) is NOT rule-scored here — judge `expected_answer`
+with `_ragas_eval.py`. This runner records answers + the must_not_include guard + recall.
 
 Usage::
 
@@ -74,14 +77,12 @@ def dry_run(data: list[dict]) -> None:
     print("  category   :", dict(Counter(x["category"] for x in data)))
     print("  difficulty :", dict(Counter(x["difficulty"] for x in data)))
     print("  documents  :", len(Counter(x["gold_document"] for x in data)), "distinct gold_documents")
-    no_mni = [x["id"] for x in data if not x["must_not_include"]]
-    print(f"  must_include: all non-empty={all(x['must_include'] for x in data)}; "
-          f"must_not_include empty for ids {no_mni}")
-    # self-check the scorer on a synthetic perfect answer for record 0
-    r0 = data[0]
-    perfect = " ".join(r0["must_include"])
-    sc = qa_scorer.score_record(r0, perfect)
-    print(f"  scorer self-check (id={r0['id']}): perfect-answer verdict={sc['verdict']} (expect PASS)")
+    n_mni = sum(1 for x in data if x["must_not_include"])
+    print(f"  must_not_include guard active on {n_mni}/{len(data)} records")
+    # integrity: a gold expected_answer must never trip its own must_not_include guard
+    bad = [x["id"] for x in data if not qa_scorer.score_record(x, x["expected_answer"])["clean"]]
+    print(f"  gold self-consistency: {len(data) - len(bad)}/{len(data)} CLEAN"
+          + (f"  VIOLATING ids={bad}" if bad else "  (all gold answers pass the guard)"))
 
 
 def main() -> None:
@@ -118,7 +119,9 @@ def main() -> None:
             done, ans = {}, f"(ERROR {e})"
 
         sc = qa_scorer.score_record(rec, ans)
-        pred_intent = done.get("intent")
+        # Backend currently emits intent:"" for every done event; treat empty as "no
+        # prediction" so the intent KPI stays dormant until a real intent predictor ships.
+        pred_intent = (done.get("intent") or "").strip() or None
         sources = _sources_from(done)
         dr = qa_scorer.doc_recall(rec["gold_document"], sources)
 
@@ -140,9 +143,9 @@ def main() -> None:
         jf.write(json.dumps(out_rec, ensure_ascii=False) + "\n")
         jf.flush()
         el = (time.time() - t_start) / 60
-        sp = sum(1 for r in results if r["strict_pass"])
+        viol = sum(1 for r in results if r["verdict"] == "VIOLATION")
         print(f"[{k:3}/{len(data)}] id={rec['id']:3} {sc['verdict']:9} "
-              f"strict={sp}/{len(results)} ({el:.1f}m)", flush=True)
+              f"violations={viol}/{len(results)} ({el:.1f}m)", flush=True)
 
     jf.close()
     summary = qa_scorer.summarize(results)
