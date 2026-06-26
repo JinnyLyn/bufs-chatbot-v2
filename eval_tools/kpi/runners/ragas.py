@@ -1,7 +1,7 @@
 """RAGAS-style KPI runner — LLM-as-judge eval (opt-in).
 
-Opt-in via ``--with-ragas``.  Requires a configured judge endpoint (local
-Ollama or Gemini REST).  When no judge is configured:
+Opt-in via ``--with-ragas``.  Requires a configured local Ollama judge
+endpoint.  When no judge is configured:
 
   * Returns a :class:`RagasSentinel` N/A object (never a silent pass).
   * The gate treats RAGAS as **SKIPPED** (does not block the run).
@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import json
 import re
-import time
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
@@ -120,7 +119,6 @@ class RagasResult:
 
     metrics: dict[str, float]
     judge_model: str
-    judge_type: str   # "ollama" | "gemini"
     n: int            # number of records judged
 
     @property
@@ -171,66 +169,6 @@ def _ollama_judge(system: str, prompt: str, *, url: str, model: str) -> str:
     return resp.json()["message"]["content"].strip()
 
 
-def _gemini_judge(
-    system: str,
-    prompt: str,
-    *,
-    api_key: str,
-    model: str,
-    ca_bundle: Optional[str] = None,
-    inter_call_delay: float = 4.0,
-) -> str:
-    """Call Gemini REST judge with retry on 429."""
-    import requests  # lazy — only in live path
-
-    # Key goes in the x-goog-api-key header, NOT the URL query string — a URL
-    # key leaks into access/proxy logs and request traces (S1).
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent"
-    )
-    payload = {
-        "system_instruction": {"parts": [{"text": system}]},
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0,
-            "maxOutputTokens": 256,
-            "thinkingConfig": {"thinkingBudget": 0},
-        },
-    }
-    kwargs: dict = {
-        "json": payload,
-        "timeout": 60,
-        "headers": {"x-goog-api-key": api_key},
-    }
-    if ca_bundle:
-        kwargs["verify"] = ca_bundle
-
-    for attempt in range(5):
-        resp = requests.post(url, **kwargs)
-        if resp.status_code == 200:
-            d = resp.json()
-            try:
-                return "".join(
-                    p.get("text", "")
-                    for p in d["candidates"][0]["content"]["parts"]
-                ).strip()
-            except (KeyError, IndexError):
-                return ""
-        if resp.status_code == 429 and attempt < 4:
-            backoff = min(15 * (2 ** attempt), 90)
-            # Honor the server's Retry-After when present (E4): it knows the
-            # quota window better than a fixed exponential backoff.
-            try:
-                backoff = int(resp.headers.get("Retry-After", backoff))
-            except (TypeError, ValueError):
-                pass
-            time.sleep(backoff)
-            continue
-        raise RuntimeError(f"Gemini {resp.status_code}: {resp.text[:160]}")
-    return ""  # unreachable
-
-
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
@@ -240,10 +178,6 @@ def run(
     *,
     judge_url: Optional[str] = None,
     judge_model: Optional[str] = None,
-    judge_type: str = "ollama",  # "ollama" | "gemini"
-    gemini_api_key: Optional[str] = None,
-    gemini_ca_bundle: Optional[str] = None,
-    inter_call_delay: float = 4.0,
     n: Optional[int] = None,
 ) -> Union[RagasSentinel, RagasResult]:
     """Run RAGAS eval or return a N/A sentinel if no judge is configured.
@@ -254,18 +188,9 @@ def run(
         Prediction-dump records.  Each needs ``question``, ``ground_truth``,
         ``answer``, and optionally ``results`` (for context).
     judge_url:
-        Ollama base URL (e.g. ``http://localhost:11434``) or ``None``.
-        For Gemini, pass ``None`` — authentication goes via ``gemini_api_key``.
+        Local Ollama base URL (e.g. ``http://localhost:11434``) or ``None``.
     judge_model:
         Judge model name.  ``None`` → return :class:`RagasSentinel`.
-    judge_type:
-        ``"ollama"`` (default) or ``"gemini"``.
-    gemini_api_key:
-        Google API key (Gemini only).
-    gemini_ca_bundle:
-        Path to CA bundle for Gemini HTTPS (optional, for corporate proxies).
-    inter_call_delay:
-        Seconds to sleep between Gemini judge calls to avoid 429.
     n:
         Limit number of records to judge.  ``None`` → judge all.
 
@@ -277,15 +202,11 @@ def run(
         When a judge is configured and calls succeed.
     """
     # ---- No judge configured: return N/A sentinel immediately ----
-    needs_judge = bool(judge_model) and (
-        judge_type == "gemini" and bool(gemini_api_key)
-        or judge_type == "ollama" and bool(judge_url)
-    )
-    if not needs_judge:
+    if not (bool(judge_model) and bool(judge_url)):
         reason = (
             "no judge endpoint configured"
             if not judge_model
-            else f"judge_model set but no {'API key' if judge_type == 'gemini' else 'URL'} provided"
+            else "judge_model set but no judge URL provided"
         )
         return RagasSentinel(
             reason=reason,
@@ -304,14 +225,6 @@ def run(
         return ""
 
     def _call_judge(system: str, prompt: str) -> str:
-        if judge_type == "gemini":
-            return _gemini_judge(
-                system, prompt,
-                api_key=gemini_api_key or "",
-                model=judge_model or "",
-                ca_bundle=gemini_ca_bundle,
-                inter_call_delay=inter_call_delay,
-            )
         return _ollama_judge(system, prompt, url=judge_url or "", model=judge_model or "")
 
     agg: dict[str, list[float]] = {m: [] for m in METRIC_NAMES}
@@ -322,7 +235,7 @@ def run(
         ans = r.get("answer", "")
         ctx = _context(r)
 
-        for j, metric in enumerate(METRIC_NAMES):
+        for metric in METRIC_NAMES:
             system, tmpl = _METRIC_CONFIG[metric]
             prompt = tmpl.format(
                 question=q[:500],
@@ -337,10 +250,6 @@ def run(
 
             agg[metric].append(sc)
 
-            # Rate-limit between Gemini calls (not after last metric)
-            if judge_type == "gemini" and j < len(METRIC_NAMES) - 1:
-                time.sleep(inter_call_delay)
-
     metrics_out = {
         m: round(sum(v for v in vals if v >= 0) / max(1, sum(1 for v in vals if v >= 0)), 4)
         if any(v >= 0 for v in vals) else -1.0
@@ -350,6 +259,5 @@ def run(
     return RagasResult(
         metrics=metrics_out,
         judge_model=judge_model or "",
-        judge_type=judge_type,
         n=len(answerable),
     )

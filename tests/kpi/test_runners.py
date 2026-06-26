@@ -340,21 +340,7 @@ class TestRagasOffline:
         from eval_tools.kpi.runners import ragas
 
         result = ragas.run(
-            [], judge_url=None, judge_model="exaone3.5:7.8b", judge_type="ollama"
-        )
-        assert isinstance(result, RagasSentinel)
-        assert result.is_na
-
-    def test_sentinel_with_gemini_model_but_no_api_key(self):
-        """N/A sentinel when Gemini type is set but api_key is None."""
-        from eval_tools.kpi.runners import ragas
-
-        result = ragas.run(
-            [],
-            judge_url=None,
-            judge_model="gemini-2.5-flash",
-            judge_type="gemini",
-            gemini_api_key=None,
+            [], judge_url=None, judge_model="exaone3.5:7.8b"
         )
         assert isinstance(result, RagasSentinel)
         assert result.is_na
@@ -500,7 +486,7 @@ class TestBuildRunMetrics:
             metrics={"faithfulness": 0.9, "answer_relevancy": 0.8,
                      "context_precision": 0.7, "context_recall": 0.85,
                      "answer_correctness": 0.75},
-            judge_model="exaone3.5:7.8b", judge_type="ollama", n=10,
+            judge_model="exaone3.5:7.8b", n=10,
         )
         out = build_run_metrics(
             score=self._make_score(), latency=self._make_latency(),
@@ -622,7 +608,6 @@ def test_ragas_live_smoke():
         records,
         judge_url=url,
         judge_model=model,
-        judge_type="ollama",
         n=1,
     )
     assert isinstance(result, RagasResult)
