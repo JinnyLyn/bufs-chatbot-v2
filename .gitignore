@@ -2,6 +2,8 @@
 # KB data committed by choice (2026-06-08): markdown_docs(source), parent_store + qdrant_db
 # (regenerable via `python project/reindex.py` — committed for clone-and-run convenience).
 backups/
+# raw QA live-run output (generated eval artifact; regenerate via qa/run_live.py)
+qa/live_runs.jsonl
 docs/*
 !docs/observability/
 !docs/debugging/
