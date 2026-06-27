@@ -1,7 +1,41 @@
-from typing import List
+from typing import Annotated, List
 from langchain_core.tools import tool
+from langgraph.prebuilt import InjectedState
+from qdrant_client.http import models as qmodels
 import config
 from db.parent_store_manager import ParentStoreManager
+
+
+def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_threshold: float):
+    """Split-path hybrid (issue #66): dense leg ← dense_query, sparse leg ← sparse_query.
+
+    Mirrors langchain_qdrant's RetrievalMode.HYBRID query exactly (same prefetch limit=k,
+    same RRF fusion, same score_threshold, same Document reconstruction) — the only
+    difference is the two legs are embedded from DIFFERENT texts. When dense_query ==
+    sparse_query the result is identical to vs.similarity_search(query, k, score_threshold).
+    """
+    dense_vec = vs.embeddings.embed_query(dense_query)
+    sparse_vec = vs.sparse_embeddings.embed_query(sparse_query)
+    points = vs.client.query_points(
+        collection_name=vs.collection_name,
+        prefetch=[
+            qmodels.Prefetch(using=vs.vector_name, query=dense_vec, limit=k),
+            qmodels.Prefetch(
+                using=vs.sparse_vector_name,
+                query=qmodels.SparseVector(indices=sparse_vec.indices, values=sparse_vec.values),
+                limit=k,
+            ),
+        ],
+        query=qmodels.FusionQuery(fusion=qmodels.Fusion.RRF),
+        limit=k,
+        score_threshold=score_threshold,
+        with_payload=True,
+    ).points
+    return [
+        vs._document_from_point(p, vs.collection_name, vs.content_payload_key, vs.metadata_payload_key)
+        for p in points
+    ]
+
 
 class ToolFactory:
     
@@ -9,18 +43,27 @@ class ToolFactory:
         self.collection = collection
         self.parent_store_manager = ParentStoreManager()
     
-    def _search_child_chunks(self, query: str, limit: int) -> str:
+    def _search_child_chunks(self, query: str, limit: int,
+                             state: Annotated[dict, InjectedState] = None) -> str:
         """Search for the top K most relevant child chunks.
 
         Args:
-            query: Search query string. Use the user's ORIGINAL wording and key
-                terms verbatim — do not paraphrase, translate, or expand into
-                synonyms. The lexical retriever matches on Korean morpheme surface
-                forms, so a reworded query drifts away from the terms in the docs.
+            query: Search query string
             limit: Maximum number of results to return
         """
         try:
-            results = self.collection.similarity_search(query, k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)
+            # Split-path retrieval (issue #66): route the user's ORIGINAL question to the
+            # surface-sensitive sparse leg and the agent's query to the dense leg. The agent
+            # subgraph's AgentState carries the original (pre-agent-paraphrase) question as
+            # `question` (= rewrittenQuestions[idx]; with rewrite off this is the user's
+            # message). `state` is injected via InjectedState and is hidden from the LLM schema.
+            original = (state or {}).get("question", "") or query
+            if config.SPLIT_PATH_ENABLED:
+                results = _split_hybrid_search(
+                    self.collection, dense_query=query, sparse_query=original,
+                    k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)
+            else:
+                results = self.collection.similarity_search(query, k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)
             if not results:
                 return "NO_RELEVANT_CHUNKS"
 

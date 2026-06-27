@@ -115,6 +115,16 @@ REWRITE_ENABLED = os.environ.get("REWRITE_ENABLED", "false").lower() in ("1", "t
 # 0.3 keeps roughly the top ~4 ranked hits; lower it toward 0.0 to keep more.
 SEARCH_SCORE_THRESHOLD = float(os.environ.get("SEARCH_SCORE_THRESHOLD", "0.3"))
 
+# Split-path retrieval (H2, issue #66). The hybrid retriever normally feeds ONE query
+# string to both legs. Issue #66's A/B showed a blanket "preserve original wording"
+# rule is net-negative because it forces the dense (bge-m3) leg to give up its synonym
+# strength. Split-path instead routes per-channel: the lexical/sparse (Kiwi-BM25) leg —
+# which matches on Korean morpheme surface forms — gets the user's ORIGINAL question,
+# while the dense leg gets the agent's (possibly reworded/semantic) tool-call query.
+# DEFAULT OFF — set SPLIT_PATH_ENABLED=true to enable and A/B. When ON but the original
+# and the agent query are identical, the result is byte-identical to the normal hybrid.
+SPLIT_PATH_ENABLED = os.environ.get("SPLIT_PATH_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
 # agent searches less thoroughly. env-overridable so they can be tuned / rolled back
