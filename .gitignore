@@ -25,6 +25,11 @@ qdrant_db/.lock
 # Word/Office temp lock files
 ~$*
 
+# KPI eval tool: per-run reports/dumps are ephemeral (gitignored). The carve-out
+# is deliberate — eval_tools/baselines/ and eval_tools/data/ stay TRACKED
+# (regression refs + committed test set); only runs/ is ignored.
+eval_tools/runs/
+
 # test / lint / type-check tooling artifacts (CI-generated, never committed)
 .coverage
 .coverage.*

@@ -1,0 +1,821 @@
+{
+  "meta": {
+    "source": "bufs combined88 retrieval_eval (combined88_results_fix_20260429.json)",
+    "note": "INPUTS ONLY — predictions/elapsed/retrieval/exact_match/contains_gt/token_* stripped. Outputs frozen separately as a golden fixture.",
+    "count": 89,
+    "answerable": 81,
+    "unanswerable": 8,
+    "fields": [
+      "id",
+      "question",
+      "ground_truth",
+      "intent",
+      "difficulty",
+      "answerable",
+      "gt_source"
+    ]
+  },
+  "results": [
+    {
+      "id": "s01",
+      "question": "2026학년도 1학기 개강일은 언제인가?",
+      "ground_truth": "2026년 3월 2일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "2026학년도1학기학사안내.pdf p.5"
+    },
+    {
+      "id": "s02",
+      "question": "2026학년도 1학기 기말고사 기간은 언제인가?",
+      "ground_truth": "2026년 6월 8일부터 6월 12일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학사일정표 p.5"
+    },
+    {
+      "id": "s03",
+      "question": "수업일수 1/4선은 언제인가?",
+      "ground_truth": "2026년 3월 26일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사일정표"
+    },
+    {
+      "id": "s04",
+      "question": "2025학년도 전기 학위수여식은 언제인가?",
+      "ground_truth": "2026년 2월 20일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "학사일정표"
+    },
+    {
+      "id": "r01",
+      "question": "2026학년도 1학기 수강신청 기간은 언제인가?",
+      "ground_truth": "2026년 2월 9일부터 2월 12일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학사안내 p.6"
+    },
+    {
+      "id": "r02",
+      "question": "장바구니에 담을 수 있는 최대 학점은 얼마인가?",
+      "ground_truth": "최대 30학점까지 담을 수 있다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "수강신청 FAQ"
+    },
+    {
+      "id": "r03",
+      "question": "2023학번 이후 학생의 한 학기 최대 수강신청 학점은 얼마인가?",
+      "ground_truth": "18학점이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 p.8"
+    },
+    {
+      "id": "r04",
+      "question": "직전학기 평점 4.0 이상인 2022학번 이전 학생은 최대 몇 학점까지 신청할 수 있는가?",
+      "ground_truth": "22학점까지 신청 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 p.8"
+    },
+    {
+      "id": "r05",
+      "question": "2019학번 이후 학생의 재수강 제한 기준은 무엇인가?",
+      "ground_truth": "한 학기 최대 6학점, 졸업 시까지 최대 24학점으로 제한된다.",
+      "intent": "REGISTRATION",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "학사안내 p.9"
+    },
+    {
+      "id": "c01",
+      "question": "수업시간표는 어디서 확인할 수 있는가?",
+      "ground_truth": "수강신청 사이트(http://sugang.bufs.ac.kr) 또는 학교 홈페이지에서 확인할 수 있다.",
+      "intent": "COURSE_INFO",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "수강신청 FAQ"
+    },
+    {
+      "id": "c02",
+      "question": "야간수업 14교시 종료 시간은 언제인가?",
+      "ground_truth": "22시 05분이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 p.9 야간수업 시간 체제"
+    },
+    {
+      "id": "c03",
+      "question": "OCU 교과목 개강일과 수강 가능 시간은 언제인가?",
+      "ground_truth": "2026년 3월 2일 오전 10시부터 수강 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "학사안내 p.20"
+    },
+    {
+      "id": "g01",
+      "question": "2024학번 이후 졸업에 필요한 최소 학점은 얼마인가?",
+      "ground_truth": "120학점 이상이다.",
+      "intent": "GRADUATION_REQ",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학사안내 p.25,27 (2024학년도 교육과정)"
+    },
+    {
+      "id": "g02",
+      "question": "2022학번의 졸업에 필요한 최소 학점은 얼마인가?",
+      "ground_truth": "130학점 이상이다.",
+      "intent": "GRADUATION_REQ",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 p.28"
+    },
+    {
+      "id": "g03",
+      "question": "외국인 학생의 졸업인증 요건 중 TOPIK 기준은 무엇인가?",
+      "ground_truth": "TOPIK 4급 이상이어야 한다.",
+      "intent": "GRADUATION_REQ",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 외국인 졸업요건"
+    },
+    {
+      "id": "g04",
+      "question": "2023학번 복수전공 이수학점은 주전공과 제2전공이 각각 몇 학점인가?",
+      "ground_truth": "주전공 36학점, 제2전공(복수전공) 27학점을 이수해야 한다.",
+      "intent": "MAJOR_CHANGE",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "학사안내 전공이수방법"
+    },
+    {
+      "id": "e01",
+      "question": "조기졸업이란 무엇인가?",
+      "ground_truth": "6~7학기 조기졸업 제도",
+      "intent": "EARLY_GRADUATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학사안내 조기졸업"
+    },
+    {
+      "id": "e02",
+      "question": "조기졸업 신청 자격 요건은 무엇인가?",
+      "ground_truth": "평점 3.7 이상, 이수학점 충족",
+      "intent": "EARLY_GRADUATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 조기졸업 조건"
+    },
+    {
+      "id": "m01",
+      "question": "전과(제1전공 변경)는 언제 신청할 수 있는가?",
+      "ground_truth": "매년 1월과 7월에 공지사항을 통해 신청 기간이 안내된다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학사안내 전과 신청"
+    },
+    {
+      "id": "m02",
+      "question": "2024학번 이후 학생이 전공 변경을 하려면 어떻게 해야 하는가?",
+      "ground_truth": "자유전공제로 입학한 학생은 전부(과)가 아닌 전공 변경 신청을 해야 한다.",
+      "intent": "MAJOR_CHANGE",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 전공 변경"
+    },
+    {
+      "id": "m03",
+      "question": "2022학번이 방법1(주전공+복수전공)로 졸업할 경우 주전공과 제2전공의 이수학점은 각각 얼마인가?",
+      "ground_truth": "주전공 36학점, 제2전공 30학점이다.",
+      "intent": "MAJOR_CHANGE",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "학사안내 전공이수방법 2022학번"
+    },
+    {
+      "id": "a01",
+      "question": "대체과목과 동일과목의 차이는 무엇인가?",
+      "ground_truth": "대체과목은 폐지 과목 대체, 동일과목은 내용 같은 과목",
+      "intent": "ALTERNATIVE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학사안내 대체/동일과목"
+    },
+    {
+      "id": "a02",
+      "question": "대체과목으로 인정받은 과목의 성적은 어떻게 처리되는가?",
+      "ground_truth": "대체과목의 성적이 원과목의 성적으로 인정된다.",
+      "intent": "ALTERNATIVE",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 대체과목 성적"
+    },
+    {
+      "id": "sc01",
+      "question": "국가장학금 신청은 어디서 하는가?",
+      "ground_truth": "한국장학재단 홈페이지(www.kosaf.go.kr)에서 신청한다.",
+      "intent": "SCHOLARSHIP",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "장학 안내"
+    },
+    {
+      "id": "sc02",
+      "question": "장학금 지급을 받기 위한 최소 이수 학점은 얼마인가?",
+      "ground_truth": "12학점 이상이다. 단, 4학년은 9학점 이상이다.",
+      "intent": "SCHOLARSHIP",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 장학금 기준"
+    },
+    {
+      "id": "sc03",
+      "question": "TA장학생 선발 기준은 무엇인가?",
+      "ground_truth": "이전 학기 성적과 전공 관련성 등을 종합 평가하여 선발한다.",
+      "intent": "SCHOLARSHIP",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "TA장학생 장학 지침"
+    },
+    {
+      "id": "l01",
+      "question": "휴학 신청은 어디서 하는가?",
+      "ground_truth": "학생포털시스템(https://m.bufs.ac.kr)에서 온라인으로 신청한다.",
+      "intent": "LEAVE_OF_ABSENCE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학생포털 휴복학 안내"
+    },
+    {
+      "id": "l02",
+      "question": "일반휴학은 최대 몇 학기까지 가능한가?",
+      "ground_truth": "최대 4학기",
+      "intent": "LEAVE_OF_ABSENCE",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 휴학 제한"
+    },
+    {
+      "id": "n01",
+      "question": "수강신청 사이트 주소는 무엇인가?",
+      "ground_truth": "http://sugang.bufs.ac.kr 이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학사안내 수강신청"
+    },
+    {
+      "id": "n02",
+      "question": "학생포털시스템 주소는 무엇인가?",
+      "ground_truth": "https://m.bufs.ac.kr 이다.",
+      "intent": "GENERAL",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "학생포털 안내"
+    },
+    {
+      "id": "n03",
+      "question": "영어학부 전화번호는 무엇인가?",
+      "ground_truth": "051-509-5551이다.",
+      "intent": "CONTACT",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "학사안내 p.93 학부 전화번호"
+    },
+    {
+      "id": "u01",
+      "question": "교내 학생식당의 오늘 점심 메뉴는 무엇인가?",
+      "ground_truth": "",
+      "intent": "GENERAL",
+      "difficulty": "easy",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "u02",
+      "question": "기숙사 신청 기간은 언제인가?",
+      "ground_truth": "",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "u03",
+      "question": "캠퍼스 셔틀버스 운행 시간은 언제인가?",
+      "ground_truth": "",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "u04",
+      "question": "체육관 운영 시간은 언제인가?",
+      "ground_truth": "",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "u05",
+      "question": "교원자격증 재발급은 어떻게 하는가?",
+      "ground_truth": "",
+      "intent": "GENERAL",
+      "difficulty": "medium",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "u06",
+      "question": "동아리 가입 신청은 어떻게 하는가?",
+      "ground_truth": "",
+      "intent": "GENERAL",
+      "difficulty": "medium",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "u07",
+      "question": "2027학년도 수강신청 일정은 언제인가?",
+      "ground_truth": "",
+      "intent": "SCHEDULE",
+      "difficulty": "medium",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "u08",
+      "question": "대학원 박사과정 수강신청 학점 한도는 얼마인가?",
+      "ground_truth": "",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": false,
+      "gt_source": "문서 밖"
+    },
+    {
+      "id": "q001",
+      "question": "2026학년도 1학기 개강일은 언제인가?",
+      "ground_truth": "2026년 3월 2일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q002",
+      "question": "2026학년도 1학기 수업시작일은 언제인가?",
+      "ground_truth": "2026년 3월 3일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q003",
+      "question": "수강신청 확인기간(수강정정기간)은 언제인가?",
+      "ground_truth": "2026년 3월 4일부터 3월 6일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q004",
+      "question": "2026학년도 1학기 중간고사 기간은 언제인가?",
+      "ground_truth": "2026년 4월 20일부터 4월 24일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q005",
+      "question": "2026학년도 1학기 기말고사 기간은 언제인가?",
+      "ground_truth": "2026년 6월 8일부터 6월 12일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q006",
+      "question": "2026학년도 1학기 하계방학 시작일은 언제인가?",
+      "ground_truth": "2026년 6월 15일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q007",
+      "question": "2025학년도 후기 학위수여식은 언제인가?",
+      "ground_truth": "2026년 8월 14일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q008",
+      "question": "수강신청 장바구니 신청 기간은 언제인가?",
+      "ground_truth": "2026년 1월 28일부터 2월 1일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.6"
+    },
+    {
+      "id": "q009",
+      "question": "수강신청 기간은 언제인가?",
+      "ground_truth": "2026년 2월 9일부터 2월 12일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.6"
+    },
+    {
+      "id": "q010",
+      "question": "수강신청 시작 전에 로그인 가능한 시간은 언제인가?",
+      "ground_truth": "수강신청 시작 15분 전인 9시 45분부터 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.6"
+    },
+    {
+      "id": "q011",
+      "question": "2026학년도 1학기 수강신청 취소는 언제까지 가능한가?",
+      "ground_truth": "2026년 3월 26일 17시까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q012",
+      "question": "수업일수 1/2선은 언제인가?",
+      "ground_truth": "2026년 4월 22일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q013",
+      "question": "수업일수 3/4선은 언제인가?",
+      "ground_truth": "2026년 5월 19일이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q014",
+      "question": "중간 수업평가 기간은 언제인가?",
+      "ground_truth": "2026년 4월 20일부터 5월 1일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q015",
+      "question": "기말 수업평가 기간은 언제인가?",
+      "ground_truth": "2026년 6월 8일부터 6월 19일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q016",
+      "question": "2023학번 이후 최대 수강신청 학점은 얼마인가?",
+      "ground_truth": "18학점이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q017",
+      "question": "2022학번 이전 최대 수강신청 학점은 얼마인가?",
+      "ground_truth": "19학점이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q018",
+      "question": "2023학번 이후 학생이 직전학기 평점 4.0 이상이면 최대 몇 학점까지 신청할 수 있는가?",
+      "ground_truth": "21학점까지 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q019",
+      "question": "2022학번 이전 학생이 직전학기 평점 4.0 이상이면 최대 몇 학점까지 신청할 수 있는가?",
+      "ground_truth": "22학점까지 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q020",
+      "question": "장바구니에 담을 수 있는 최대 학점은 얼마인가?",
+      "ground_truth": "30학점이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.7"
+    },
+    {
+      "id": "q021",
+      "question": "장학금 지급을 받기 위한 최소 이수 학점은 얼마인가?",
+      "ground_truth": "12학점이다. 단, 4학년은 9학점이다.",
+      "intent": "SCHOLARSHIP",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q022",
+      "question": "학점이월제는 어떤 학번에 적용되며, 이월 가능한 최대 학점은 얼마인가?",
+      "ground_truth": "2022학번 이전 학번에만 적용되며, 최대 3학점까지 이월 가능하다. 2023학번부터는 폐지되었다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q023",
+      "question": "OCU 수강 신청자에게 허용되는 초과 학점 예외는 무엇인가?",
+      "ground_truth": "최대 신청학점에서 3학점 초과 신청이 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q024",
+      "question": "사회봉사 및 서비스러닝 교과목을 수강하면 최대 신청학점보다 몇 학점 더 신청할 수 있는가?",
+      "ground_truth": "추가로 1학점까지 신청 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.8"
+    },
+    {
+      "id": "q025",
+      "question": "수강신청 사이트 주소는 무엇인가?",
+      "ground_truth": "http://sugang.bufs.ac.kr이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.7"
+    },
+    {
+      "id": "q026",
+      "question": "재수강 가능한 성적 기준은 무엇인가?",
+      "ground_truth": "C+ 이하의 과목만 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q027",
+      "question": "재수강 후 받을 수 있는 최고 성적은 무엇인가?",
+      "ground_truth": "A이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q028",
+      "question": "2019학번 이후 학생의 재수강 제한 기준은 무엇인가?",
+      "ground_truth": "한 학기 최대 6학점, 졸업까지 최대 24학점으로 제한된다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q029",
+      "question": "휴학생이 수강신청을 하기 위해 필요한 절차는 무엇인가?",
+      "ground_truth": "사전 복학이 필요하다. 휴학생은 수강신청이 불가하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q030",
+      "question": "2026학년도 1학기 온라인 휴복학 신청 기간은 언제인가?",
+      "ground_truth": "2026년 7월 6일부터 8월 30일까지이다.",
+      "intent": "LEAVE_OF_ABSENCE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q031",
+      "question": "2024~2025학번의 제1·2전공 신청 및 변경(전과) 기간은 언제인가?",
+      "ground_truth": "2026년 5월 18일부터 5월 29일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.5"
+    },
+    {
+      "id": "q032",
+      "question": "수강신청 정정기간 이후 수업일수 1/4선 이내에 복학한 복학생의 수강신청은 어떻게 처리되는가?",
+      "ground_truth": "학사지원팀에서 수강신청을 대신 처리해준다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q033",
+      "question": "OCU 교과목 개강일과 수강 가능 시간은 언제인가?",
+      "ground_truth": "2026년 3월 2일 오전 10시부터 수강 가능하다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.20"
+    },
+    {
+      "id": "q034",
+      "question": "OCU 수강신청 기간은 언제인가?",
+      "ground_truth": "2026년 2월 9일부터 2월 12일까지이다. 본교 수강신청 기간과 동일하다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.20"
+    },
+    {
+      "id": "q035",
+      "question": "OCU 정규학기에 수강할 수 있는 최대 학점은 얼마인가?",
+      "ground_truth": "최대 6학점(2과목)이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.20"
+    },
+    {
+      "id": "q036",
+      "question": "OCU를 졸업까지 인정받을 수 있는 최대 학점은 얼마인가?",
+      "ground_truth": "최대 24학점(8과목)이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.20"
+    },
+    {
+      "id": "q037",
+      "question": "OCU 시스템 사용료는 과목당 얼마인가?",
+      "ground_truth": "24,000원이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.20"
+    },
+    {
+      "id": "q038",
+      "question": "OCU 시스템 사용료 납부기간은 언제인가?",
+      "ground_truth": "2026년 2월 23일부터 3월 19일까지이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.20"
+    },
+    {
+      "id": "q039",
+      "question": "OCU 교과목 수강 시 ID는 어떻게 생성되는가?",
+      "ground_truth": "bufs(소문자)와 학번을 조합하여 생성된다.",
+      "intent": "REGISTRATION",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.21"
+    },
+    {
+      "id": "q040",
+      "question": "OCU 최대 수강학점을 초과하여 1과목(3학점) 신청 시 초과수강료는 얼마인가?",
+      "ground_truth": "120,000원이다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.20"
+    },
+    {
+      "id": "q041",
+      "question": "2024학번 이후 졸업에 필요한 최소 학점은 얼마인가?",
+      "ground_truth": "120학점 이상이다.",
+      "intent": "GRADUATION_REQ",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.25"
+    },
+    {
+      "id": "q042",
+      "question": "2022학번의 졸업에 필요한 최소 학점은 얼마인가?",
+      "ground_truth": "130학점 이상이다.",
+      "intent": "GRADUATION_REQ",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.28"
+    },
+    {
+      "id": "q043",
+      "question": "2024학번 이후 교양과정 총 이수학점은 얼마인가?",
+      "ground_truth": "30학점이다.",
+      "intent": "GRADUATION_REQ",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.25"
+    },
+    {
+      "id": "q044",
+      "question": "2023학번이 방법1(주전공+복수전공)로 졸업할 경우 각각 몇 학점을 이수해야 하는가?",
+      "ground_truth": "주전공 36학점, 복수전공 27학점이다.",
+      "intent": "MAJOR_CHANGE",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "p.27"
+    },
+    {
+      "id": "q045",
+      "question": "2022학번이 방법1(주전공+복수전공)로 졸업할 경우 각각 몇 학점을 이수해야 하는가?",
+      "ground_truth": "주전공 36학점, 복수전공 30학점이다.",
+      "intent": "MAJOR_CHANGE",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "p.28"
+    },
+    {
+      "id": "q046",
+      "question": "외국인 학생의 졸업인증 요건 중 TOPIK 기준은 무엇인가?",
+      "ground_truth": "TOPIK 4급 이상이다.",
+      "intent": "GRADUATION_REQ",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.32"
+    },
+    {
+      "id": "q047",
+      "question": "야간수업 10교시 시작 시간은 언제인가?",
+      "ground_truth": "18시이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q048",
+      "question": "야간수업 14교시 종료 시간은 언제인가?",
+      "ground_truth": "22시 05분이다.",
+      "intent": "SCHEDULE",
+      "difficulty": "easy",
+      "answerable": true,
+      "gt_source": "p.9"
+    },
+    {
+      "id": "q049",
+      "question": "OCU 성적이 부여되기 위한 출석 요건은 무엇인가?",
+      "ground_truth": "전체 출석일수의 12/15 이상을 충족해야 한다.",
+      "intent": "REGISTRATION",
+      "difficulty": "medium",
+      "answerable": true,
+      "gt_source": "p.22"
+    },
+    {
+      "id": "q050",
+      "question": "2024학번 이후, 2023학번, 2022학번, 2021학번의 복수전공 이수학점은 각각 얼마인가?",
+      "ground_truth": "2024학번 이후는 30학점, 2023학번은 27학점, 2022학번은 30학점, 2021학번은 33학점이다.",
+      "intent": "MAJOR_CHANGE",
+      "difficulty": "hard",
+      "answerable": true,
+      "gt_source": "p.65"
+    }
+  ]
+}

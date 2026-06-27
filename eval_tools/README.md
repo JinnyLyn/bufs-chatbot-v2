@@ -3,6 +3,34 @@
 세션 중 만든 일회성·재사용 평가 스크립트 모음. 백엔드(`localhost:8000`)와 Langfuse(`project/.env`의 키)를 사용.
 대부분 절대경로를 쓰므로 어디서 실행해도 동작하지만, repo 루트에서 `python eval_tools/<script>.py` 권장.
 
+## kpi/ — 자동 KPI 게이트
+`eval_tools/kpi/`는 룰기반 정답률·거부율·지연을 **프로파일 임계값**과 비교해 GO/NO-GO/ERROR
+판정과 **프로세스 종료코드**(0=GO, 1=NO-GO, 2=ERROR)를 내는 자동 게이트다. 순수·오프라인
+경로(`--from-predictions`)는 네트워크/Ollama/Qdrant 의존이 없다.
+
+```bash
+# 저장된 예측 덤프(N개)를 채점→게이트→리포트 (한 줄 실행)
+python -m eval_tools.kpi run --profile h100-fast --from-predictions logs/
+
+# 기존 덤프/메트릭 재평가만 (리포트 미작성)
+python -m eval_tools.kpi gate --profile h100-fast --from-predictions logs/
+
+# N=3 캡처로 베이스라인 갱신 + 측정된 바닥값을 yaml에 기록하고 advisory→blocking 전환
+python -m eval_tools.kpi baseline-update --profile h100-fast --from-predictions logs/ --set-floors
+```
+
+- **프로파일**(`eval_tools/kpi_profiles.yaml`): `h100-fast`(배포 구성, **게이트 기준**),
+  `4090-local`(jin 개발 사전점검, 항상 advisory), `local-cpu`(Phase 1 범위 외).
+- **advisory-until-measured**: FLAG(미측정) 바닥값이 남아 있는 동안 `h100-fast`는 **advisory**라
+  NO-GO를 계산·보고하되 **종료코드 1로 막지 않는다**. H100 N=3 덤프로
+  `baseline-update --set-floors`를 돌려 바닥값을 측정하면 자동으로 `gating: blocking`으로 바뀐다.
+- **리포트**: `eval_tools/runs/<ts>-<profile>-<shortsha>/`에 `report.md`/`report.json`/
+  `predictions.json` 출력(이 폴더는 `.gitignore` 처리, 커밋 안 함). 리포트에는 실행 컨텍스트
+  STAMP가 그대로 박히고, 가족별 판정·사유와 목표대비 격차(target_contains − current)가 표시된다.
+- **real-usage suite**: 깨끗한 combined88과 실사용(perturb/langfuse/qa) 예측을 함께 채점하면
+  헤드라인 **benchmark↔real gap(pp)** 이 리포트에 나온다
+  (`run --from-predictions <clean> --real-from-predictions <real>`).
+
 ## 재사용 (정기 회귀/평가)
 - **`_eval_combined88.py`** — bufs combined88(89문항) 룰기반 평가. contains/strict/refusal + duration_ms. `logs/combined88_new_result.json` 출력.
 - **`_ragas_eval.py`** — RAGAS 5지표(LLM-judge). `--judge gemini|ollama --model … --n N`. 생성=백엔드, judge=Gemini(REST) 또는 로컬 Ollama.
