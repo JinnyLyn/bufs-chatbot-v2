@@ -21,7 +21,9 @@ except Exception: pass
 NEW_BASE = "http://localhost:8000"
 OLLAMA = "http://localhost:11435"
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CA = r"C:\Users\suhwa\Desktop\agentic-rag-for-dummies-main\win-ca-bundle.pem"  # gemini-only TLS bundle (gitignored)
+# Gemini-only TLS bundle for networks behind a corporate/Norton MITM proxy: point
+# REQUESTS_CA_BUNDLE at a PEM file there. Unset (Linux CI / normal nets) → verify via certifi.
+CA = os.environ.get("REQUESTS_CA_BUNDLE") or None
 
 # ── bufs's 5 RAGAS judge prompts (verbatim) ─────────────────────────────────
 FAITHFULNESS_SYSTEM = """당신은 RAG 시스템 평가 전문가입니다.

@@ -4,7 +4,7 @@
 주력 스크립트(`_eval_qa100`/`_ragas_eval`/`_answer_analysis`)는 **레포 내 골든셋**(`datasets/qa_dataset.json`)을 쓰므로 클론 후 재현 가능. repo 루트에서 `python eval_tools/<script>.py` 실행.
 
 ## 골든 데이터셋
-- **`datasets/qa_dataset.json`** — 레포 내 정규 평가셋(100문항). 스키마: `id/question/gold_intent/gold_document/gold_chunk_id/expected_answer/must_include/must_not_include/difficulty/category`. 클론 후 바로 재현 가능(레포 밖 절대경로 의존 없음).
+- **`datasets/qa_dataset.json`** — 레포 내 정규 평가셋(100문항). 스키마: `id/question/gold_intent/gold_document/expected_answer/must_include/must_not_include/difficulty/category` (+ 선택/예약 필드 `gold_chunk_id` — 청크 레벨 검색 recall용, 현재 전 레코드 빈 값이라 로더가 필수로 요구하지 않음). 클론 후 바로 재현 가능(레포 밖 절대경로 의존 없음).
 - **`qa_scorer.py`** — 임포트 가능한 순수 모듈(네트워크 X). 데이터셋 로더·검증 + `must_not_include` 가드 채점 + intent/문서 recall 헬퍼. **`must_include`는 룰 채점하지 않음**(데이터셋 토큰이 느슨한 키워드라 짧은 `expected_answer`도 통과 못 함 → 정확도는 RAGAS가 `expected_answer` 기준으로 판정). `tests/eval/`에서 단위 테스트로 보호. `pythonpath=["eval_tools"]`로 `import qa_scorer`.
 
 ## 재사용 (정기 회귀/평가)

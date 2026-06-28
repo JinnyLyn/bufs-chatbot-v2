@@ -105,49 +105,47 @@ def main() -> None:
     out = os.path.join(_REPO, "logs", "qa100_result.json")
     jsonl = os.path.join(_REPO, "logs", "qa100.jsonl")
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    jf = open(jsonl, "w", encoding="utf-8")
-
     print(f"running {len(data)} questions vs {args.base}", flush=True)
     results = []
     t_start = time.time()
-    for k, rec in enumerate(data, 1):
-        q = rec["question"]
-        try:
-            done = ask(args.base, q, timeout=args.timeout)
-            ans = done.get("answer", "")
-        except Exception as e:
-            done, ans = {}, f"(ERROR {e})"
+    with open(jsonl, "w", encoding="utf-8") as jf:
+        for k, rec in enumerate(data, 1):
+            q = rec["question"]
+            try:
+                done = ask(args.base, q, timeout=args.timeout)
+                ans = done.get("answer", "")
+            except Exception as e:
+                done, ans = {}, f"(ERROR {e})"
 
-        sc = qa_scorer.score_record(rec, ans)
-        # Backend currently emits intent:"" for every done event; treat empty as "no
-        # prediction" so the intent KPI stays dormant until a real intent predictor ships.
-        pred_intent = (done.get("intent") or "").strip() or None
-        sources = _sources_from(done)
-        dr = qa_scorer.doc_recall(rec["gold_document"], sources)
+            sc = qa_scorer.score_record(rec, ans)
+            # Backend currently emits intent:"" for every done event; treat empty as "no
+            # prediction" so the intent KPI stays dormant until a real intent predictor ships.
+            pred_intent = (done.get("intent") or "").strip() or None
+            sources = _sources_from(done)
+            dr = qa_scorer.doc_recall(rec["gold_document"], sources)
 
-        out_rec = {
-            "id": rec["id"], "category": rec["category"], "difficulty": rec["difficulty"],
-            "question": q, "gold_intent": rec["gold_intent"], "gold_document": rec["gold_document"],
-            "expected_answer": rec["expected_answer"],
-            "must_include": rec["must_include"], "must_not_include": rec["must_not_include"],
-            "answer": ans,
-            **sc,
-            "intent_evaluated": pred_intent is not None,
-            "pred_intent": pred_intent,
-            "intent_correct": qa_scorer.intent_match(rec["gold_intent"], pred_intent),
-            "doc_recall_evaluated": bool(sources),
-            "doc_hit": dr["hit"], "matched_sources": dr["matched_sources"], "sources": sources,
-            "tool_calls": done.get("tool_calls"), "duration_ms": done.get("duration_ms"),
-        }
-        results.append(out_rec)
-        jf.write(json.dumps(out_rec, ensure_ascii=False) + "\n")
-        jf.flush()
-        el = (time.time() - t_start) / 60
-        viol = sum(1 for r in results if r["verdict"] == "VIOLATION")
-        print(f"[{k:3}/{len(data)}] id={rec['id']:3} {sc['verdict']:9} "
-              f"violations={viol}/{len(results)} ({el:.1f}m)", flush=True)
+            out_rec = {
+                "id": rec["id"], "category": rec["category"], "difficulty": rec["difficulty"],
+                "question": q, "gold_intent": rec["gold_intent"], "gold_document": rec["gold_document"],
+                "expected_answer": rec["expected_answer"],
+                "must_include": rec["must_include"], "must_not_include": rec["must_not_include"],
+                "answer": ans,
+                **sc,
+                "intent_evaluated": pred_intent is not None,
+                "pred_intent": pred_intent,
+                "intent_correct": qa_scorer.intent_match(rec["gold_intent"], pred_intent),
+                "doc_recall_evaluated": bool(sources),
+                "doc_hit": dr["hit"], "matched_sources": dr["matched_sources"], "sources": sources,
+                "tool_calls": done.get("tool_calls"), "duration_ms": done.get("duration_ms"),
+            }
+            results.append(out_rec)
+            jf.write(json.dumps(out_rec, ensure_ascii=False) + "\n")
+            jf.flush()
+            el = (time.time() - t_start) / 60
+            viol = sum(1 for r in results if r["verdict"] == "VIOLATION")
+            print(f"[{k:3}/{len(data)}] id={rec['id']:3} {sc['verdict']:9} "
+                  f"violations={viol}/{len(results)} ({el:.1f}m)", flush=True)
 
-    jf.close()
     summary = qa_scorer.summarize(results)
     json.dump({"summary": summary, "results": results}, open(out, "w", encoding="utf-8"),
               ensure_ascii=False, indent=2)

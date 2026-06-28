@@ -6,8 +6,9 @@ path into a sibling ``bufs-chatbot`` repo that does not exist on other machines)
 
 Dataset schema (one object per question)::
 
-    id, question, gold_intent, gold_document, gold_chunk_id,
-    expected_answer, must_include[], must_not_include[], difficulty, category
+    id, question, gold_intent, gold_document, expected_answer,
+    must_include[], must_not_include[], difficulty, category
+    (optional/reserved: gold_chunk_id — for future chunk-level retrieval recall)
 
 Rule-based scoring enforces **``must_not_include`` only** (a hard "forbidden phrase"
 guard). ``must_include`` is intentionally NOT scored here: in this dataset the tokens are
@@ -33,9 +34,13 @@ from typing import Any
 DATASET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datasets", "qa_dataset.json")
 
 REQUIRED_FIELDS = (
-    "id", "question", "gold_intent", "gold_document", "gold_chunk_id",
+    "id", "question", "gold_intent", "gold_document",
     "expected_answer", "must_include", "must_not_include", "difficulty", "category",
 )
+# Reserved/optional. `gold_chunk_id` is a placeholder for future chunk-level retrieval
+# recall; it is intentionally empty in every record today (no chunk-level ground truth
+# yet), so the loader does NOT require it. Populate it when chunk-recall eval lands.
+OPTIONAL_FIELDS = ("gold_chunk_id",)
 
 
 def load_dataset(path: str | None = None) -> list[dict[str, Any]]:
