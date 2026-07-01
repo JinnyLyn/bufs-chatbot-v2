@@ -30,6 +30,8 @@ _PURE_MODULES = [
     "eval_tools.kpi.schema",
     "eval_tools.kpi.baseline",
     "eval_tools.kpi.real_usage",
+    "eval_tools.kpi.error_analysis",
+    "eval_tools.kpi.metrics",
 ]
 
 # Probe: add project/ to sys.path (mirrors pyproject.toml pythonpath = ["project"]),

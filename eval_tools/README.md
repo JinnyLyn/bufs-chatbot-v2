@@ -3,8 +3,11 @@
 세션 중 만든 일회성·재사용 평가 스크립트 모음. 백엔드(`localhost:8000`)와 Langfuse(`project/.env`의 키)를 사용.
 주력 스크립트(`_eval_qa100`/`_ragas_eval`/`_answer_analysis`)는 **레포 내 골든셋**(`datasets/qa_dataset.json`)을 쓰므로 클론 후 재현 가능. repo 루트에서 `python eval_tools/<script>.py` 실행.
 
+> **QA/평가 엔지니어 3종 산출물**(질문 데이터셋 · 7분류 오답 분석 · Accuracy/Precision/Recall/F1/Faithfulness KPI)은 [`QA_EVAL_GUIDE.md`](QA_EVAL_GUIDE.md)에 한 곳으로 정리.
+
 ## 골든 데이터셋
 - **`datasets/qa_dataset.json`** — 레포 내 정규 평가셋(100문항). 스키마: `id/question/gold_intent/gold_document/expected_answer/must_include/must_not_include/difficulty/category` (+ 선택/예약 필드 `gold_chunk_id` — 청크 레벨 검색 recall용, 현재 전 레코드 빈 값이라 로더가 필수로 요구하지 않음). 클론 후 바로 재현 가능(레포 밖 절대경로 의존 없음).
+- **`datasets/qa_short_queries.json`** — **짧은/구어체 실사용 질의 38문항**(`수강신청 언제야?`·`복전 신청기간`·`군휴학`·`휴학연장` …). `qa_dataset.json`과 동일 스키마 + 추가 필드 `query_style`/`paraphrase_of`/`answerable`(범위 밖 질의는 `false`=거부해야 정답). 답변형은 검증된 원본의 gold를 재사용해 자기일관. `tests/eval/test_qa_short_queries.py`가 검증.
 - **`qa_scorer.py`** — 임포트 가능한 순수 모듈(네트워크 X). 데이터셋 로더·검증 + `must_not_include` 가드 채점 + intent/문서 recall 헬퍼. **`must_include`는 룰 채점하지 않음**(데이터셋 토큰이 느슨한 키워드라 짧은 `expected_answer`도 통과 못 함 → 정확도는 RAGAS가 `expected_answer` 기준으로 판정). `tests/eval/`에서 단위 테스트로 보호. `pythonpath=["eval_tools"]`로 `import qa_scorer`.
 
 ## kpi/ — 자동 KPI 게이트
@@ -34,6 +37,10 @@ python -m eval_tools.kpi baseline-update --profile h100-fast --from-predictions 
 - **real-usage suite**: 깨끗한 combined88과 실사용(perturb/langfuse/qa) 예측을 함께 채점하면
   헤드라인 **benchmark↔real gap(pp)** 이 리포트에 나온다
   (`run --from-predictions <clean> --real-from-predictions <real>`).
+
+### 오답 분석 · 핵심 KPI (순수 모듈, 상세는 [`QA_EVAL_GUIDE.md`](QA_EVAL_GUIDE.md))
+- **`kpi/error_analysis.py`** — 오답을 **7분류**(검색실패·문서없음·Chunk·Embedding·질문애매·Prompt·Hallucination)로 자동 triage. 예측 덤프 + 골든셋을 id로 join. `python -m eval_tools.kpi.error_analysis --dataset <ds> --predictions <preds>[ --json]`.
+- **`kpi/metrics.py`** — **Accuracy·Precision·Recall·F1·Faithfulness**(답/거부 이진분류 프레이밍, false-refusal 방지로 Accuracy는 error_analysis와 일치) + 보너스 retrieval recall/precision. `python -m eval_tools.kpi.metrics --dataset <ds> --predictions <preds>[ --json]`.
 
 ## 재사용 (정기 회귀/평가)
 - **`_eval_qa100.py`** ⭐ — **1순위** 생성 하니스 + 룰 가드. `datasets/qa_dataset.json`(100문항)을 백엔드에 돌려 **`must_not_include` 위반율(violation/clean)** + intent 정확도(백엔드가 intent 내보낼 때까지 휴면) + 검색 recall(gold_document) + 카테고리/난이도 분해. 답변 정확도(must_include)는 RAGAS로 판정. `--dry-run`(오프라인 검증·gold 자기일관성) · `--n N` · `--base`. `logs/qa100_result.json` 출력.

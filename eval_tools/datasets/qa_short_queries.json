@@ -1,0 +1,749 @@
+[
+  {
+    "id": 2001,
+    "question": "수강신청 언제야?",
+    "gold_intent": "수강신청 일정 문의",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "졸업예정자에게 별도의 수강신청 우선권은 없습니다. 학년별 신청일이 달라 1학년(2.9)→2학년(2.10)→3·4학년(2.11)→전 학년(2.12) 순으로 진행되며, 본인 학년의 지정일에 신청해야 합니다.",
+    "must_include": [
+      "학년별",
+      "순으로"
+    ],
+    "must_not_include": [
+      "복수전공"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 14,
+    "answerable": true
+  },
+  {
+    "id": 2002,
+    "question": "수강신청 며칠부터야",
+    "gold_intent": "수강신청 일정 문의",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "졸업예정자에게 별도의 수강신청 우선권은 없습니다. 학년별 신청일이 달라 1학년(2.9)→2학년(2.10)→3·4학년(2.11)→전 학년(2.12) 순으로 진행되며, 본인 학년의 지정일에 신청해야 합니다.",
+    "must_include": [
+      "학년별",
+      "신청일"
+    ],
+    "must_not_include": [
+      "복수전공"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 14,
+    "answerable": true
+  },
+  {
+    "id": 2003,
+    "question": "수강정정 언제까지",
+    "gold_intent": "수강신청 정정 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "안내된 기간 외에는 추가 신청이 불가능하므로, 3월 4일부터 6일까지 진행되는 수강신청 확인 및 정정 기간을 활용해야 합니다.",
+    "must_include": [
+      "정정 기간",
+      "추가 신청"
+    ],
+    "must_not_include": [
+      "폐강",
+      "전과"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 2,
+    "answerable": true
+  },
+  {
+    "id": 2004,
+    "question": "수강철회 놓쳤는데 취소 돼?",
+    "gold_intent": "수강취소 불가 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "수업일수 1/4선(2026년 3월 26일) 이후에는 어떠한 사유로도 수강 취소가 절대 불가능합니다.",
+    "must_include": [
+      "1/4선",
+      "취소 불가"
+    ],
+    "must_not_include": [
+      "휴학",
+      "자퇴"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 17,
+    "answerable": true
+  },
+  {
+    "id": 2005,
+    "question": "최대 몇 학점까지 들어?",
+    "gold_intent": "최대 신청 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2023학번 이후 기준으로 직전 학기 평점 4.0 이상인 경우 21학점까지 가능하며, OCU 과목은 최대 학점에서 3학점 초과 신청이 가능합니다.",
+    "must_include": [
+      "4.0 이상",
+      "21학점"
+    ],
+    "must_not_include": [
+      "학사경고"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 4,
+    "answerable": true
+  },
+  {
+    "id": 2006,
+    "question": "시간표 겹치면 어떻게 해",
+    "gold_intent": "수업 시간 중복",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "원칙적으로 수업 시간 중복 신청은 불가합니다. 모듈 강좌의 경우 시스템 필터가 작동하지 않을 수 있으나 본인이 중복되지 않게 유의해야 합니다.",
+    "must_include": [
+      "중복 불가",
+      "시간표"
+    ],
+    "must_not_include": [
+      "공인결석"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 5,
+    "answerable": true
+  },
+  {
+    "id": 2007,
+    "question": "타과 수업 들어도 돼?",
+    "gold_intent": "타과 전공 수강",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "수강신청 4일 차에 '타과전공(자유선택)'으로 검색하여 신청할 수 있으며, 이 경우 자유선택 학점으로 인정됩니다.",
+    "must_include": [
+      "타과전공",
+      "자유선택"
+    ],
+    "must_not_include": [
+      "전공필수"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 10,
+    "answerable": true
+  },
+  {
+    "id": 2008,
+    "question": "폐강되면 어떡해",
+    "gold_intent": "폐강 후속 조치",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "폐강된 경우 수강신청 확인 및 정정 기간에 다른 과목을 추가로 신청하여 부족한 학점을 보충해야 합니다.",
+    "must_include": [
+      "정정 기간",
+      "추가 신청"
+    ],
+    "must_not_include": [
+      "수강 취소"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 9,
+    "answerable": true
+  },
+  {
+    "id": 2009,
+    "question": "정원 마감돼서 신청 못했어",
+    "gold_intent": "수강신청 정원 외 신청",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "수강신청은 선착순 마감이 원칙이나, 졸업 등 부득이한 사유가 있는 경우 해당 학부(과) 사무실에 문의하여 조치를 받아야 합니다.",
+    "must_include": [
+      "졸업",
+      "학부(과) 사무실"
+    ],
+    "must_not_include": [
+      "휴학",
+      "자퇴"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 1,
+    "answerable": true
+  },
+  {
+    "id": 2010,
+    "question": "LMS에 강의가 안 떠",
+    "gold_intent": "LMS 수강 내역 연동",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "LMS(e-class)에 강의가 보이지 않는다면 수강신청 사이트의 '수강신청 내역'에서 본인이 정상적으로 신청했는지부터 확인해야 합니다.",
+    "must_include": [
+      "수강신청 내역",
+      "점검"
+    ],
+    "must_not_include": [
+      "전자출결"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 12,
+    "answerable": true
+  },
+  {
+    "id": 2011,
+    "question": "재수강하면 원래 성적 사라져?",
+    "gold_intent": "재수강 성적 처리",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "재수강 시 이전 취득 성적은 수업일수 3/4선 시점(2026년 5월 19일)에 시스템상에서 자동으로 취소되어 삭제됩니다.",
+    "must_include": [
+      "3/4선",
+      "성적 취소"
+    ],
+    "must_not_include": [
+      "부분 포기"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 7,
+    "answerable": true
+  },
+  {
+    "id": 2012,
+    "question": "과목명 바뀌었는데 재수강 돼?",
+    "gold_intent": "동일/대체 과목 재수강",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "과목명이 바뀌었더라도 교육과정상 지정된 대체/동일과목인 경우 재수강으로 인정되므로 미리 확인 후 신청해야 합니다.",
+    "must_include": [
+      "대체과목",
+      "동일과목"
+    ],
+    "must_not_include": [
+      "이수구분 변경"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 8,
+    "answerable": true
+  },
+  {
+    "id": 2013,
+    "question": "이수구분 바꿀 수 있어?",
+    "gold_intent": "이수구분 정정",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "학생포털시스템의 [성적 > 이수구분 변경 신청] 메뉴를 통해 본인의 학번에 맞는 정확한 이수구분으로 정정 신청을 해야 합니다.",
+    "must_include": [
+      "이수구분",
+      "변경 신청"
+    ],
+    "must_not_include": [
+      "수강철회"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 16,
+    "answerable": true
+  },
+  {
+    "id": 2014,
+    "question": "휴학",
+    "gold_intent": "일반 휴학 신청",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "별도의 증빙 없이 일반 휴학 신청 기간에 학생포털시스템에서 온라인으로 휴학 신청이 가능합니다.",
+    "must_include": [
+      "신청 기간",
+      "온라인"
+    ],
+    "must_not_include": [
+      "군휴학"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 42,
+    "answerable": true
+  },
+  {
+    "id": 2015,
+    "question": "휴학 어떻게 해",
+    "gold_intent": "일반 휴학 신청",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "온라인 휴학 신청 기간(2026.7.6.~8.30.)에 학생포털시스템을 통해 휴학을 신청할 수 있습니다.",
+    "must_include": [
+      "휴학 신청",
+      "온라인"
+    ],
+    "must_not_include": [
+      "복학",
+      "자퇴"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 36,
+    "answerable": true
+  },
+  {
+    "id": 2016,
+    "question": "군휴학",
+    "gold_intent": "군휴학 신청",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "입영통지서를 지참하여 군휴학을 신청해야 하며, 이는 일반 결석 처리와는 다른 학적 변동 절차입니다.",
+    "must_include": [
+      "군휴학",
+      "입영통지서"
+    ],
+    "must_not_include": [
+      "공인결석"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 38,
+    "answerable": true
+  },
+  {
+    "id": 2017,
+    "question": "군휴학 어떻게 신청해",
+    "gold_intent": "군휴학 신청",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "입영통지서를 지참하여 군휴학을 신청해야 하며, 이는 일반 결석 처리와는 다른 학적 변동 절차입니다.",
+    "must_include": [
+      "군휴학",
+      "입영통지서"
+    ],
+    "must_not_include": [
+      "공인결석"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 38,
+    "answerable": true
+  },
+  {
+    "id": 2018,
+    "question": "휴학연장",
+    "gold_intent": "휴학 기간 연장",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 휴학 신청 기간(7월~8월)에 학생포털시스템에 접속하여 다시 휴학 연장을 신청하면 됩니다.",
+    "must_include": [
+      "신청 기간",
+      "재신청"
+    ],
+    "must_not_include": [
+      "복학 신청"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 40,
+    "answerable": true
+  },
+  {
+    "id": 2019,
+    "question": "휴학 연장 되나요",
+    "gold_intent": "휴학 기간 연장",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 휴학 신청 기간(7월~8월)에 학생포털시스템에 접속하여 다시 휴학 연장을 신청하면 됩니다.",
+    "must_include": [
+      "신청 기간",
+      "재신청"
+    ],
+    "must_not_include": [
+      "복학 신청"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 40,
+    "answerable": true
+  },
+  {
+    "id": 2020,
+    "question": "휴학 몇 년까지 돼?",
+    "gold_intent": "휴학 가능 기간",
+    "gold_document": "재학생 및 복학생 등록 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "휴학은 재학 중 총 3년(6학기)까지 가능하며, 이를 초과할 경우의 학적 처리는 학사지원팀에 개별 문의하십시오.",
+    "must_include": [
+      "3년(6학기)",
+      "학사지원팀"
+    ],
+    "must_not_include": [
+      "자퇴"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 49,
+    "answerable": true
+  },
+  {
+    "id": 2021,
+    "question": "휴학하면 등록금 돌려줘?",
+    "gold_intent": "휴학 시 등록금 이월",
+    "gold_document": "재학생 및 복학생 등록 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "납부한 등록금은 반환되지 않으며, 추후 복학하는 학기로 등록 인정(이월) 처리가 됩니다.",
+    "must_include": [
+      "등록금 반환 불가",
+      "이월"
+    ],
+    "must_not_include": [
+      "장학금 반환"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 37,
+    "answerable": true
+  },
+  {
+    "id": 2022,
+    "question": "질병휴학 어떻게",
+    "gold_intent": "질병 휴학 절차",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "학생포털에서 일반 휴학 신청을 진행하며, 필요시 병원 진단서 등 증빙서류를 지참하여 학부 사무실 상담을 받아야 할 수 있습니다.",
+    "must_include": [
+      "학생포털",
+      "일반 휴학"
+    ],
+    "must_not_include": [
+      "자퇴 절차"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 39,
+    "answerable": true
+  },
+  {
+    "id": 2023,
+    "question": "휴학 승인됐는지 확인",
+    "gold_intent": "휴학 승인 확인",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "학생포털시스템의 '학적변동 신청' 메뉴에서 처리 상태가 '신청'에서 '승인'으로 변경되었는지 확인 가능합니다.",
+    "must_include": [
+      "처리 구분",
+      "승인 확인"
+    ],
+    "must_not_include": [
+      "메일 확인"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 43,
+    "answerable": true
+  },
+  {
+    "id": 2024,
+    "question": "복학 자동으로 돼?",
+    "gold_intent": "온라인 복학 신청 필수",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "아니요, 자동 복학되지 않습니다. 반드시 정해진 기간에 직접 온라인으로 복학 신청을 완료해야 합니다.",
+    "must_include": [
+      "복학 신청",
+      "직접 신청"
+    ],
+    "must_not_include": [],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 44,
+    "answerable": true
+  },
+  {
+    "id": 2025,
+    "question": "전과 신청",
+    "gold_intent": "전과 신청 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "전과(전부) 신청은 매 학기 말(7월 또는 1월)에 온라인으로 진행되며, 본인 학년도별 공지를 반드시 확인해야 합니다.",
+    "must_include": [
+      "학기 말",
+      "온라인"
+    ],
+    "must_not_include": [
+      "수강신청"
+    ],
+    "difficulty": "Easy",
+    "category": "전과/복전",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 86,
+    "answerable": true
+  },
+  {
+    "id": 2026,
+    "question": "전과 신청 언제야",
+    "gold_intent": "전과 신청 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "전과(전부) 신청은 매 학기 말(7월 또는 1월)에 온라인으로 진행되며, 본인 학년도별 공지를 반드시 확인해야 합니다.",
+    "must_include": [
+      "학기 말",
+      "온라인"
+    ],
+    "must_not_include": [
+      "수강신청"
+    ],
+    "difficulty": "Easy",
+    "category": "전과/복전",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 86,
+    "answerable": true
+  },
+  {
+    "id": 2027,
+    "question": "전과하면 학점 인정돼?",
+    "gold_intent": "전과 후 학점 인정",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "기존 취득 학점은 인정되지만, 새로운 전공에 맞게 이수구분 변경 신청을 통해 전공 학점으로 다시 분류받아야 합니다.",
+    "must_include": [
+      "이수구분 변경",
+      "전공 인정"
+    ],
+    "must_not_include": [
+      "학점 소멸"
+    ],
+    "difficulty": "Easy",
+    "category": "전과/복전",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 87,
+    "answerable": true
+  },
+  {
+    "id": 2028,
+    "question": "복수전공 신청기간 알려줘",
+    "gold_intent": "제2전공 신청 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 제2전공(복수/융합/부전공) 신청은 재학생뿐만 아니라 휴학생도 정해진 기간에 신청할 수 있습니다.",
+    "must_include": [
+      "제2전공",
+      "정해진 기간"
+    ],
+    "must_not_include": [
+      "복학 필수"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 50,
+    "answerable": true
+  },
+  {
+    "id": 2029,
+    "question": "복전 신청기간",
+    "gold_intent": "제2전공 신청 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 제2전공(복수/융합/부전공) 신청은 재학생뿐만 아니라 휴학생도 정해진 기간에 신청할 수 있습니다.",
+    "must_include": [
+      "제2전공",
+      "정해진 기간"
+    ],
+    "must_not_include": [
+      "복학 필수"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 50,
+    "answerable": true
+  },
+  {
+    "id": 2030,
+    "question": "복전 언제 신청",
+    "gold_intent": "제2전공 신청 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 제2전공(복수/융합/부전공) 신청은 재학생뿐만 아니라 휴학생도 정해진 기간에 신청할 수 있습니다.",
+    "must_include": [
+      "제2전공",
+      "정해진 기간"
+    ],
+    "must_not_include": [
+      "복학 필수"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 50,
+    "answerable": true
+  },
+  {
+    "id": 2031,
+    "question": "복전 취소하고 싶어",
+    "gold_intent": "제2전공 취소",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 제2전공 신청 기간에 학생포털시스템을 통해 부전공 또는 복수전공 취소 신청을 할 수 있습니다.",
+    "must_include": [
+      "제2전공 취소",
+      "신청 기간"
+    ],
+    "must_not_include": [
+      "전과 신청"
+    ],
+    "difficulty": "Easy",
+    "category": "전과/복전",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 89,
+    "answerable": true
+  },
+  {
+    "id": 2032,
+    "question": "복수전공 결과 언제 나와?",
+    "gold_intent": "제2전공 결과 확인",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "복수전공 승인 결과는 신청한 다음 학기인 4월 또는 10월 중에 학생포털시스템에서 직접 조회할 수 있습니다.",
+    "must_include": [
+      "결과 확인",
+      "4월·10월"
+    ],
+    "must_not_include": [
+      "장바구니 신청"
+    ],
+    "difficulty": "Easy",
+    "category": "전과/복전",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 88,
+    "answerable": true
+  },
+  {
+    "id": 2033,
+    "question": "계절학기 뭐 열려?",
+    "gold_intent": "계절학기 과목 확인",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "매 학기 말 홈페이지 학사공지에 게시되는 계절학기 운영 안내 및 개설 과목 목록을 통해 대체 가능 여부를 확인해야 합니다.",
+    "must_include": [
+      "학사공지",
+      "개설 목록"
+    ],
+    "must_not_include": [
+      "정규학기"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 19,
+    "answerable": true
+  },
+  {
+    "id": 2034,
+    "question": "계절학기 휴학생도 돼?",
+    "gold_intent": "휴학생 계절학기 자격",
+    "gold_document": "학사공지",
+    "gold_chunk_id": "",
+    "expected_answer": "계절학기 수강 자격은 재학생을 원칙으로 하며, 상세 요건은 해당 학기 계절학기 운영 공지를 다시 확인해야 합니다.",
+    "must_include": [
+      "재학생 원칙",
+      "공지 확인"
+    ],
+    "must_not_include": [
+      "휴학생 가능"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 48,
+    "answerable": true
+  },
+  {
+    "id": 2035,
+    "question": "분할납부하면 휴학 되나",
+    "gold_intent": "분할납부자 휴학 제한",
+    "gold_document": "등록금 분할납부 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "등록금 분할납부 신청자는 등록금을 전액 완납하기 전까지는 어떠한 사유로도 휴학이 불가능합니다.",
+    "must_include": [
+      "등록금 완납",
+      "휴학 불가"
+    ],
+    "must_not_include": [
+      "미등록 휴학"
+    ],
+    "difficulty": "Easy",
+    "category": "휴학",
+    "query_style": "short_colloquial",
+    "paraphrase_of": 47,
+    "answerable": true
+  },
+  {
+    "id": 2036,
+    "question": "오늘 학식 메뉴 뭐야?",
+    "gold_intent": "범위 외(학식)",
+    "gold_document": "",
+    "gold_chunk_id": "",
+    "expected_answer": "해당 정보는 제공된 학사 안내 문서에 포함되어 있지 않아 확인할 수 없습니다.",
+    "must_include": [],
+    "must_not_include": [],
+    "difficulty": "Easy",
+    "category": "기타",
+    "query_style": "short_colloquial",
+    "paraphrase_of": null,
+    "answerable": false
+  },
+  {
+    "id": 2037,
+    "question": "도서관 몇 시까지 해?",
+    "gold_intent": "범위 외(도서관 운영시간)",
+    "gold_document": "",
+    "gold_chunk_id": "",
+    "expected_answer": "도서관 운영시간은 제공된 문서에 명시되어 있지 않아 확인할 수 없습니다.",
+    "must_include": [],
+    "must_not_include": [],
+    "difficulty": "Easy",
+    "category": "기타",
+    "query_style": "short_colloquial",
+    "paraphrase_of": null,
+    "answerable": false
+  },
+  {
+    "id": 2038,
+    "question": "셔틀버스 시간표 알려줘",
+    "gold_intent": "범위 외(셔틀)",
+    "gold_document": "",
+    "gold_chunk_id": "",
+    "expected_answer": "셔틀버스 시간표는 제공된 학사 문서에서 찾을 수 없습니다.",
+    "must_include": [],
+    "must_not_include": [],
+    "difficulty": "Easy",
+    "category": "기타",
+    "query_style": "short_colloquial",
+    "paraphrase_of": null,
+    "answerable": false
+  }
+]
