@@ -149,24 +149,31 @@ def _extract_score(text: str) -> tuple[float, str]:
 
 
 def _ollama_judge(system: str, prompt: str, *, url: str, model: str) -> str:
-    """Call a local Ollama judge endpoint."""
+    """Call a local Ollama judge endpoint.
+
+    Thinking models (qwen3.5 등) can burn the whole ``num_predict`` budget in the
+    ``thinking`` channel and return an **empty** ``content``. First call is verbatim
+    (non-thinking judges keep the historical request shape); on empty content we
+    retry once with ``think: false``.
+    """
     import requests  # lazy — only in live path
 
-    resp = requests.post(
-        f"{url.rstrip('/')}/api/chat",
-        json={
-            "model": model,
-            "stream": False,
-            "options": {"temperature": 0, "num_predict": 256},
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": prompt},
-            ],
-        },
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()["message"]["content"].strip()
+    payload = {
+        "model": model,
+        "stream": False,
+        "options": {"temperature": 0, "num_predict": 256},
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+    }
+    for attempt in (payload, {**payload, "think": False}):
+        resp = requests.post(f"{url.rstrip('/')}/api/chat", json=attempt, timeout=120)
+        resp.raise_for_status()
+        content = resp.json()["message"]["content"].strip()
+        if content:
+            return content
+    return content
 
 
 # ---------------------------------------------------------------------------

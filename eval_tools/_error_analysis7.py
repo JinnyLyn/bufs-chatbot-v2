@@ -27,8 +27,11 @@ import os
 import sys
 import time
 from collections import Counter, defaultdict
+from dataclasses import replace
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # import qa_scorer / error_taxonomy
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)                    # import qa_scorer / error_taxonomy / kpi.*
+sys.path.insert(0, os.path.dirname(_HERE))   # kpi/runners 내부의 `eval_tools.*` 절대 임포트용
 import error_taxonomy as et
 import qa_scorer
 from error_taxonomy import KBCorpus, Signals, classify, present
@@ -90,10 +93,90 @@ def build_signals(rec: dict, answer: str, contexts: str | None, corpus: KBCorpus
         evidence_retrieved=evidence_retrieved,
         in_kb=in_kb,
         chunk_split=chunk_split,
-        ranked_out=None,               # 라이브 인덱스 필요 — 현재 미측정
+        ranked_out=None,               # --probe-embedding 후처리로 채움
         hallucinated=hallucinated,
     )
     return sig, diag
+
+
+# --------------------------------------------------------------------------- 후처리 신호 (B)
+
+def enrich_judge(rows: list[dict], url: str, model: str) -> None:
+    """②/⑤ 분리: GENERATION_UNSPLIT 행에 RAGAS faithfulness judge(Ollama)를 물려 재분류.
+
+    judge 프롬프트/파서는 :mod:`kpi.runners.ragas` 의 검증된 것을 그대로 임포트해 쓴다.
+    score < FAITH_THRESHOLD → ⑤ Hallucination, 이상 → ② Prompt 실패. 파싱 실패(-1)는
+    미분리 유지(추측 금지). in-place 갱신, 실패는 행 단위로 건너뜀.
+    """
+    from kpi.runners.ragas import _METRIC_CONFIG, _extract_score, _ollama_judge
+    system, template = _METRIC_CONFIG["faithfulness"]
+    targets = [r for r in rows if r["bucket"] == "GENERATION_UNSPLIT" and r.get("_ctx")]
+    print(f"[judge] GENERATION_UNSPLIT {len(targets)}행에 faithfulness judge({model}) 적용...")
+    for r in targets:
+        try:
+            out = _ollama_judge(system, template.format(context=r["_ctx"][:6000], answer=r["_answer"][:4000]),
+                                url=url, model=model)
+            score, reason = _extract_score(out)
+        except Exception as e:  # noqa: BLE001 — 행 단위 실패는 미분리 유지가 정직
+            print(f"  id={r['id']}: judge 호출 실패({e}) — 미분리 유지")
+            continue
+        if score < 0:
+            r["diag"]["judge"] = "unparseable — 미분리 유지"
+            continue
+        v = classify(replace(r["_sig"], hallucinated=score < FAITH_THRESHOLD))
+        r["diag"]["judge_faithfulness"] = score
+        if reason:
+            r["diag"]["judge_reason"] = reason
+        r["bucket"], r["reason"] = v.bucket, v.reason
+
+
+def enrich_embedding_probe(rows: list[dict], corpus: KBCorpus, k: int = 10) -> None:
+    """①→⑦ 분리: SEARCH_FAILURE 행의 질문을 **dense-only** top-k로 검색해 임베딩 레그를 격리.
+
+    빠진 사실이 단일 청크에 통째로 있는데(≒ SEARCH_FAILURE 전제) 그 청크가 dense top-k에
+    없으면 ranked_out=True → ⑦ Embedding 문제. top-k에 있으면 dense 레그는 무죄 —
+    ①로 남기고 사유에 '하이브리드/재작성 단계 손실'을 명시한다.
+
+    임베디드 Qdrant(단일 프로세스 락)라 **백엔드가 내려가 있어야** 한다. 락/의존성 실패 시
+    경고만 내고 전체를 건너뛴다(행은 ①로 정직하게 유지).
+    """
+    targets = [r for r in rows if r["bucket"] == "SEARCH_FAILURE"]
+    if not targets:
+        print("[probe] SEARCH_FAILURE 행 없음 — 임베딩 프로브 생략")
+        return
+    try:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        from langchain_qdrant import QdrantVectorStore, RetrievalMode
+        from qdrant_client import QdrantClient
+        sys.path.insert(0, os.path.join(et._ROOT, "project"))
+        import config as app_config
+        client = QdrantClient(path=app_config.QDRANT_DB_PATH)
+        dense = HuggingFaceEmbeddings(model_name="BAAI/bge-m3", model_kwargs={"device": "cpu"})
+        store = QdrantVectorStore(client=client, collection_name=app_config.CHILD_COLLECTION,
+                                  embedding=dense, retrieval_mode=RetrievalMode.DENSE)
+    except Exception as e:  # noqa: BLE001 — 락(백엔드 실행 중)/미설치 등
+        print(f"[probe] 임베딩 프로브 불가({type(e).__name__}: {e}) — ① 유지. "
+              f"백엔드를 내리고 다시 실행하면 ⑦ 분리 가능")
+        return
+    print(f"[probe] SEARCH_FAILURE {len(targets)}행에 dense-only top-{k} 프로브 적용...")
+    for r in targets:
+        question = r.get("_q", "")
+        if not question:
+            continue
+        docs = [d.page_content for d in store.similarity_search(question, k=k)]
+        topk = "\n".join(docs)
+        # 단일 청크에 통째로 존재하는 빠진 사실 중, dense top-k가 놓친 것
+        probed = [f for f in r["diag"].get("missing", []) if corpus.fact_in_single_chunk(f)]
+        missed = [f for f in probed if not present(f, topk)]
+        if not probed:
+            continue
+        r["diag"]["dense_topk_missed"] = missed
+        if missed:
+            v = classify(replace(r["_sig"], ranked_out=True))
+            r["bucket"], r["reason"] = v.bucket, v.reason
+        else:
+            r["reason"] = "dense top-k엔 있음 — 하이브리드 융합/질의 재작성 단계에서 손실(①)"
+    client.close()
 
 
 # --------------------------------------------------------------------------- 리포트
@@ -119,12 +202,12 @@ def report(rows: list[dict], source: str, out_path: str) -> None:
     by_cat: dict[str, Counter] = defaultdict(Counter)
     for r in rows:
         by_cat[r.get("category", "?")][r["bucket"]] += 1
-    print(f"\n{'-'*72}\n카테고리 × 주요버킷 (정답/검색실패/Prompt/문서없음/Chunk/Hallu):")
+    print(f"\n{'-'*72}\n카테고리 × 버킷 (정답/①검색/②Prompt/③문서없음/⑤Hallu/⑥Chunk/⑦Embed/미분리):")
     for cat, cc in sorted(by_cat.items(), key=lambda x: -sum(x[1].values())):
         tot = sum(cc.values())
-        print(f"  {cat:10} n={tot:2}  ok={cc['CORRECT']:2} 검색={cc['SEARCH_FAILURE']:2} "
-              f"Prompt={cc['PROMPT_FAILURE']:2} 문서없음={cc['NO_DOCUMENT']:2} "
-              f"Chunk={cc['CHUNK_PROBLEM']:2} Hallu={cc['HALLUCINATION']:2} "
+        print(f"  {cat:10} n={tot:2}  ok={cc['CORRECT']:2} ①={cc['SEARCH_FAILURE']:2} "
+              f"②={cc['PROMPT_FAILURE']:2} ③={cc['NO_DOCUMENT']:2} ④={cc['AMBIGUOUS_QUESTION']:2} "
+              f"⑤={cc['HALLUCINATION']:2} ⑥={cc['CHUNK_PROBLEM']:2} ⑦={cc['EMBEDDING_PROBLEM']:2} "
               f"미분리={cc['GENERATION_UNSPLIT']+cc['RETRIEVAL_UNSPLIT']+cc['UNCLASSIFIED']:2}")
 
     print(f"\n{'-'*72}\n버킷별 예시(최대 4):")
@@ -147,7 +230,8 @@ def report(rows: list[dict], source: str, out_path: str) -> None:
         "distribution": {k: dist[k] for k in et.ORDER if dist.get(k)},
         "by_side": dict(side),
         "by_category": {c: dict(cc) for c, cc in by_cat.items()},
-        "rows": rows,
+        # 내부 상태(_sig 등 비직렬화 값)는 리포트에서 제외
+        "rows": [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows],
     }
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
@@ -198,7 +282,9 @@ def run_from_dump(path: str, n: int | None) -> tuple[list[dict], str]:
                                   faithfulness=faith if isinstance(faith, (int, float)) else None)
         v = classify(sig)
         rows.append({"id": gold["id"], "category": gold.get("category"),
-                     "bucket": v.bucket, "reason": v.reason, "diag": diag})
+                     "bucket": v.bucket, "reason": v.reason, "diag": diag,
+                     "_sig": sig, "_answer": answer, "_ctx": ctx or "",
+                     "_q": str(obs.get("question") or gold.get("question") or "")})
         if n and len(rows) >= n:
             break
     has_ctx = bool(recs) and any(k in recs[0] for k in ("context_preview", "contexts", "context"))
@@ -273,7 +359,8 @@ def run_langfuse(n: int | None) -> tuple[list[dict], str]:
         sig, diag = build_signals(gold, answer, ctx, corpus)
         v = classify(sig)
         rows.append({"id": gold["id"], "category": gold.get("category"),
-                     "bucket": v.bucket, "reason": v.reason, "diag": diag})
+                     "bucket": v.bucket, "reason": v.reason, "diag": diag,
+                     "_sig": sig, "_answer": answer, "_ctx": ctx or "", "_q": q})
         if n and len(rows) >= n:
             break
     return rows, "langfuse"
@@ -326,6 +413,12 @@ def main() -> None:
     src.add_argument("--dry-run", action="store_true", help="합성 자기점검(오프라인)")
     ap.add_argument("--n", type=int, default=None, help="최대 문항 수")
     ap.add_argument("--out", default="logs/error_taxonomy_result.json")
+    ap.add_argument("--judge", metavar="MODEL", default=None,
+                    help="②/⑤ 분리: GENERATION_UNSPLIT에 faithfulness judge 적용 (예: qwen3.5:9b)")
+    ap.add_argument("--judge-url", default="http://127.0.0.1:11435", help="judge Ollama 엔드포인트")
+    ap.add_argument("--probe-embedding", action="store_true",
+                    help="①→⑦ 분리: dense-only top-k 프로브 (임베디드 Qdrant — 백엔드 내린 상태에서)")
+    ap.add_argument("--k", type=int, default=10, help="임베딩 프로브 top-k")
     args = ap.parse_args()
 
     if args.from_dump:
@@ -335,6 +428,12 @@ def main() -> None:
     else:  # default / --dry-run: offline self-check, no report file
         run_dry_run()
         return
+    if args.judge:
+        enrich_judge(rows, args.judge_url, args.judge)
+        source += f" +judge:{args.judge}"
+    if args.probe_embedding:
+        enrich_embedding_probe(rows, KBCorpus.from_repo(), k=args.k)
+        source += f" +probe:k{args.k}"
     report(rows, source, args.out)
 
 
