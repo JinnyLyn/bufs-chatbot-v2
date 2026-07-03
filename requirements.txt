@@ -19,4 +19,4 @@ sentence-transformers==5.5.1
 tiktoken==0.13.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
 requests>=2.34.2          # debug/status.py, debug/langfuse_client.py
-qdrant-client>=1.18     # debug/repro.py (requires 1.18.0+)
+qdrant-client>=1.18,<2  # debug/repro.py (needs 1.18.0+); <2 pins the 1.x query_points/SparseVector/FusionQuery API that tools._split_hybrid_search mirrors
