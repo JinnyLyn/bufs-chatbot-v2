@@ -5,6 +5,8 @@
 
 ## 골든 데이터셋
 - **`datasets/qa_dataset.json`** — 레포 내 정규 평가셋(100문항). 스키마: `id/question/gold_intent/gold_document/expected_answer/must_include/must_not_include/difficulty/category` (+ 선택/예약 필드 `gold_chunk_id` — 청크 레벨 검색 recall용, 현재 전 레코드 빈 값이라 로더가 필수로 요구하지 않음). 클론 후 바로 재현 가능(레포 밖 절대경로 의존 없음).
+- **`datasets/qa_dataset_factual100.json`** — 팩트형 100문항(부산외대 학사 지식). 동일 스키마. 시나리오형 `qa_dataset.json`과 성격이 다른 보완 평가셋.
+- **`datasets/qa_dataset_factual100_variants.json`** — 위 팩트셋의 **단축/구어체 질의 변형(73개)** — 실제 학생이 치는 짧은 질의("복전 신청기간", "수강신청 언제야?")로 **검색 강건성**을 테스트. 각 변형은 `base_id`로 factual100에 매핑돼 gold 답/must_include를 단일 출처로 상속(+`variant_type`: colloquial/keyword/abbrev).
 - **`qa_scorer.py`** — 임포트 가능한 순수 모듈(네트워크 X). 데이터셋 로더·검증 + `must_not_include` 가드 채점 + intent/문서 recall 헬퍼. **`must_include`는 룰 채점하지 않음**(데이터셋 토큰이 느슨한 키워드라 짧은 `expected_answer`도 통과 못 함 → 정확도는 RAGAS가 `expected_answer` 기준으로 판정). `tests/eval/`에서 단위 테스트로 보호. `pythonpath=["eval_tools"]`로 `import qa_scorer`.
 
 ## kpi/ — 자동 KPI 게이트
@@ -39,6 +41,9 @@ python -m eval_tools.kpi baseline-update --profile h100-fast --from-predictions 
 - **`_eval_qa100.py`** ⭐ — **1순위** 생성 하니스 + 룰 가드. `datasets/qa_dataset.json`(100문항)을 백엔드에 돌려 **`must_not_include` 위반율(violation/clean)** + intent 정확도(백엔드가 intent 내보낼 때까지 휴면) + 검색 recall(gold_document) + 카테고리/난이도 분해. 답변 정확도(must_include)는 RAGAS로 판정. `--dry-run`(오프라인 검증·gold 자기일관성) · `--n N` · `--base`. `logs/qa100_result.json` 출력.
 - **`_eval_combined88.py`** — (레거시) bufs combined88(89문항) 룰기반. 레포 밖 `bufs-chatbot/...` 절대경로를 읽어 클론 환경에선 재현 불가 — 비교/이력용으로만 유지. contains/strict/refusal + duration_ms. `logs/combined88_new_result.json` 출력.
 - **`_ragas_eval.py`** — RAGAS 5지표(LLM-judge). in-repo 골든셋 사용(`expected_answer`=reference). `--judge gemini|ollama --model … --n N --dataset PATH`. 생성=백엔드, judge=Gemini(REST) 또는 로컬 Ollama.
+- **`_ragas_kpi.py`** ⭐ — RAGAS 5지표 + **KPI 매핑(Accuracy/Precision/Recall/F1/Faithfulness)**을 **단일 생성 패스**로. 생성 시 sources·doc_recall·`must_not_include` 가드까지 캡처해 `_error_buckets`/`_qa_report`가 재생성 없이 소비. judge는 생성기와 **다른 Ollama 모델**(`--judge-model`, `--judge-url`); 추론(thinking)형 judge는 빈 응답을 내므로 기본 `--no-think`로 JSON 강제(`--think`로 해제). `--dataset PATH --n N --tag NAME`. `logs/ragas_kpi_<tag>_latest.json` 출력.
+- **`_error_buckets.py`** — `_ragas_kpi` 결과를 **7버킷**(검색실패/문서없음/Embedding/Chunk/LLM Hallucination/Prompt실패/질문애매함 + 정답·정답(guard오탐))으로 자동 분류. RAGAS 신호 + 검색사실(`sources`·doc_recall·guard) + `parent_store` KB 문서 매핑 기반, 문항별 **신뢰도 플래그**로 수동검토 지원. `--in <ragas_kpi json> [--parent-store DIR]`.
+- **`_qa_report.py`** — `_ragas_kpi` 결과 → **단일 마크다운 리포트**(KPI 헤드라인 + 난이도/카테고리별 KPI + 7버킷 표 + guard오탐 목록 + 오답상세 + 주의사항). `--in <ragas_kpi json> --out <md>`.
 - **`_langfuse_analyze.py`** — Langfuse 트레이스 집계(지연분포·노드별·에러·툴호출 깊이).
 - **`_answer_analysis.py`** — 정답/오답을 **검색실패 vs 생성실패**로 귀인. in-repo 골든셋의 `must_include` 토큰을 답변/컨텍스트(Langfuse) 양쪽에 대조.
 - **`_check2020.py`** — 단일 회귀 질의("2020학번 졸업요건") 빠른 확인.

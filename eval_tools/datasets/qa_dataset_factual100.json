@@ -982,7 +982,7 @@
       "2회 이상"
     ],
     "must_not_include": [
-      "1회"
+      "1회만"
     ],
     "difficulty": "Easy",
     "category": "교직"
@@ -1101,7 +1101,7 @@
       "장바구니 전"
     ],
     "must_not_include": [
-      "4학년"
+      "4학년부터"
     ],
     "difficulty": "Medium",
     "category": "학적"
@@ -1390,7 +1390,7 @@
       "장학금"
     ],
     "must_not_include": [
-      "12학점"
+      "최소 12학점"
     ],
     "difficulty": "Medium",
     "category": "장학"
