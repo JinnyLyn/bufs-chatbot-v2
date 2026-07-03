@@ -178,3 +178,21 @@ def test_corpus_fact_words_split_across_different_docs_is_not_in_kb():
     )
     assert c.fact_in_kb("재입학 3월") is False   # no single doc has both words
     assert c.fact_split("재입학 3월") is False    # not in KB -> not a chunk-boundary case
+
+
+def test_from_repo_empty_corpus_raises(tmp_path):
+    # empty/wrong root must HARD-FAIL (silent empty corpus => everything misclassified ③)
+    with pytest.raises(RuntimeError, match="비었습니다"):
+        et.KBCorpus.from_repo(root=str(tmp_path))
+
+
+def test_from_repo_corrupt_parent_json_warns_but_loads(tmp_path):
+    (tmp_path / "markdown_docs").mkdir()
+    (tmp_path / "markdown_docs" / "a.md").write_text("복학 신청 안내", encoding="utf-8")
+    ps = tmp_path / "parent_store"
+    ps.mkdir()
+    (ps / "good.json").write_text('{"page_content": "복학 신청 안내"}', encoding="utf-8")
+    (ps / "bad.json").write_text("{corrupt", encoding="utf-8")
+    with pytest.warns(UserWarning, match="적재 실패"):
+        c = et.KBCorpus.from_repo(root=str(tmp_path))
+    assert c.n_sources == 1 and c.n_chunks == 1  # corrupt file skipped, loudly

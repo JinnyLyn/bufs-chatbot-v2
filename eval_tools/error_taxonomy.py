@@ -33,6 +33,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import warnings
 from dataclasses import dataclass
 from typing import NamedTuple, Optional
 
@@ -164,22 +165,42 @@ class KBCorpus:
 
     @classmethod
     def from_repo(cls, root: str | None = None) -> "KBCorpus":
-        """레포의 ``markdown_docs/`` + ``parent_store/`` 에서 코퍼스를 적재."""
+        """레포의 ``markdown_docs/`` + ``parent_store/`` 에서 코퍼스를 적재.
+
+        빈 코퍼스는 **무음으로 반환하지 않는다** — sources/chunks가 비면 모든 사실이
+        "문서 없음"(③)으로 오분류되는 추적 불가 버그가 되므로 즉시 RuntimeError.
+        손상된 parent JSON은 건너뛰되 ``warnings``로 알리고 개수를 검증한다.
+        """
         root = root or _ROOT
         sources: list[str] = []
         for p in sorted(glob.glob(os.path.join(root, "markdown_docs", "*.md"))):
             with open(p, encoding="utf-8") as f:
                 sources.append(f.read())
         chunks: list[str] = []
+        skipped: list[str] = []
         for p in sorted(glob.glob(os.path.join(root, "parent_store", "*.json"))):
             try:
                 with open(p, encoding="utf-8") as f:
                     d = json.load(f)
-            except (OSError, json.JSONDecodeError):
+            except (OSError, json.JSONDecodeError) as e:
+                skipped.append(f"{os.path.basename(p)} ({type(e).__name__})")
                 continue
             txt = d.get("page_content") if isinstance(d, dict) else None
             if txt:
                 chunks.append(str(txt))
+        if skipped:
+            warnings.warn(
+                f"KBCorpus: parent_store JSON {len(skipped)}개 적재 실패(분류 정밀도 저하 가능): "
+                + ", ".join(skipped[:5]) + ("..." if len(skipped) > 5 else ""),
+                stacklevel=2,
+            )
+        if not sources or not chunks:
+            raise RuntimeError(
+                f"KBCorpus 코퍼스가 비었습니다 (root={root!r}: sources={len(sources)}, "
+                f"chunks={len(chunks)}) — 경로가 레포 루트가 아니거나 markdown_docs/"
+                f"parent_store가 없습니다. 빈 코퍼스로 진행하면 모든 오답이 '문서 없음'으로 "
+                f"오분류되므로 중단합니다."
+            )
         return cls(sources=sources, chunks=chunks)
 
     def fact_in_kb(self, fact: str) -> bool:

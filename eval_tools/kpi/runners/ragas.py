@@ -154,7 +154,10 @@ def _ollama_judge(system: str, prompt: str, *, url: str, model: str) -> str:
     Thinking models (qwen3.5 등) can burn the whole ``num_predict`` budget in the
     ``thinking`` channel and return an **empty** ``content``. First call is verbatim
     (non-thinking judges keep the historical request shape); on empty content we
-    retry once with ``think: false``.
+    retry once with ``think: false``. If the retry itself fails (e.g. HTTP 400 from
+    a model that rejects the ``think`` param), we fall back to the first call's
+    empty content — the caller's ``_extract_score`` then yields ``-1`` (N/A), which
+    is the pre-patch behavior; we never escalate the retry into a crash.
     """
     import requests  # lazy — only in live path
 
@@ -167,13 +170,22 @@ def _ollama_judge(system: str, prompt: str, *, url: str, model: str) -> str:
             {"role": "user", "content": prompt},
         ],
     }
-    for attempt in (payload, {**payload, "think": False}):
-        resp = requests.post(f"{url.rstrip('/')}/api/chat", json=attempt, timeout=120)
+    # 1st attempt: verbatim request (historical shape). Errors propagate — the
+    # caller handles judge failure explicitly; swallowing them here would turn an
+    # unreachable endpoint into a silent all--1 run.
+    resp = requests.post(f"{url.rstrip('/')}/api/chat", json=payload, timeout=120)
+    resp.raise_for_status()
+    content = (resp.json().get("message") or {}).get("content", "").strip()
+    if content:
+        return content
+    # Empty content — likely a thinking model. Best-effort retry with think:false;
+    # any failure here returns the empty content instead of raising.
+    try:
+        resp = requests.post(f"{url.rstrip('/')}/api/chat", json={**payload, "think": False}, timeout=120)
         resp.raise_for_status()
-        content = resp.json()["message"]["content"].strip()
-        if content:
-            return content
-    return content
+        return (resp.json().get("message") or {}).get("content", "").strip()
+    except requests.exceptions.RequestException:
+        return content
 
 
 # ---------------------------------------------------------------------------

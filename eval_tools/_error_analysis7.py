@@ -112,15 +112,19 @@ def enrich_judge(rows: list[dict], url: str, model: str) -> None:
     system, template = _METRIC_CONFIG["faithfulness"]
     targets = [r for r in rows if r["bucket"] == "GENERATION_UNSPLIT" and r.get("_ctx")]
     print(f"[judge] GENERATION_UNSPLIT {len(targets)}행에 faithfulness judge({model}) 적용...")
+    failed = unparsed = 0
     for r in targets:
         try:
             out = _ollama_judge(system, template.format(context=r["_ctx"][:6000], answer=r["_answer"][:4000]),
                                 url=url, model=model)
             score, reason = _extract_score(out)
         except Exception as e:  # noqa: BLE001 — 행 단위 실패는 미분리 유지가 정직
+            failed += 1
+            r["diag"]["judge"] = f"호출 실패: {e}"
             print(f"  id={r['id']}: judge 호출 실패({e}) — 미분리 유지")
             continue
         if score < 0:
+            unparsed += 1
             r["diag"]["judge"] = "unparseable — 미분리 유지"
             continue
         v = classify(replace(r["_sig"], hallucinated=score < FAITH_THRESHOLD))
@@ -128,6 +132,9 @@ def enrich_judge(rows: list[dict], url: str, model: str) -> None:
         if reason:
             r["diag"]["judge_reason"] = reason
         r["bucket"], r["reason"] = v.bucket, v.reason
+    if targets and (failed + unparsed) == len(targets):
+        print(f"[warn] judge 전체 실패(호출실패 {failed} + 파싱실패 {unparsed} = {len(targets)}) — "
+              f"②/⑤ 미분리 그대로. 엔드포인트({url})/모델({model})/think 지원 여부를 확인하세요.")
 
 
 def enrich_embedding_probe(rows: list[dict], corpus: KBCorpus, k: int = 10) -> None:
@@ -159,11 +166,18 @@ def enrich_embedding_probe(rows: list[dict], corpus: KBCorpus, k: int = 10) -> N
               f"백엔드를 내리고 다시 실행하면 ⑦ 분리 가능")
         return
     print(f"[probe] SEARCH_FAILURE {len(targets)}행에 dense-only top-{k} 프로브 적용...")
+    probe_failed = 0
     for r in targets:
         question = r.get("_q", "")
         if not question:
             continue
-        docs = [d.page_content for d in store.similarity_search(question, k=k)]
+        try:
+            docs = [d.page_content for d in store.similarity_search(question, k=k)]
+        except Exception as e:  # noqa: BLE001 — 행 1건 실패로 전체(비싼 fetch) 중단 방지
+            probe_failed += 1
+            r["diag"]["probe"] = f"검색 실패: {e}"
+            print(f"  id={r['id']}: 프로브 검색 실패({type(e).__name__}: {e}) — ① 유지")
+            continue
         topk = "\n".join(docs)
         # 단일 청크에 통째로 존재하는 빠진 사실 중, dense top-k가 놓친 것
         probed = [f for f in r["diag"].get("missing", []) if corpus.fact_in_single_chunk(f)]
@@ -176,6 +190,8 @@ def enrich_embedding_probe(rows: list[dict], corpus: KBCorpus, k: int = 10) -> N
             r["bucket"], r["reason"] = v.bucket, v.reason
         else:
             r["reason"] = "dense top-k엔 있음 — 하이브리드 융합/질의 재작성 단계에서 손실(①)"
+    if probe_failed:
+        print(f"[warn] 프로브 검색 실패 {probe_failed}/{len(targets)}행 — 해당 행은 ①로 유지됨")
     client.close()
 
 
@@ -233,7 +249,9 @@ def report(rows: list[dict], source: str, out_path: str) -> None:
         # 내부 상태(_sig 등 비직렬화 값)는 리포트에서 제외
         "rows": [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows],
     }
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    out_dir = os.path.dirname(out_path)
+    if out_dir:  # 순수 파일명(--out result.json)이면 makedirs('') 크래시 방지
+        os.makedirs(out_dir, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f"\n→ {out_path}")
@@ -303,6 +321,10 @@ def run_langfuse(n: int | None) -> tuple[list[dict], str]:
     from dotenv import load_dotenv
     load_dotenv("project/.env")
     base = os.environ.get("LANGFUSE_BASE_URL", "").rstrip("/")
+    missing_env = [k for k in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY") if not os.environ.get(k)]
+    if not base or missing_env:
+        sys.exit(f"[error] Langfuse 설정 누락: LANGFUSE_BASE_URL={'OK' if base else '없음'}, "
+                 f"누락 키={missing_env or '없음'} — project/.env 확인 (--langfuse 모드 필수)")
     auth = (os.environ["LANGFUSE_PUBLIC_KEY"], os.environ["LANGFUSE_SECRET_KEY"])
     ca = os.environ.get("REQUESTS_CA_BUNDLE")
 
@@ -310,15 +332,20 @@ def run_langfuse(n: int | None) -> tuple[list[dict], str]:
         out, page = [], 1
         while len(out) < want:
             data = None
+            last_err = None
             for a in range(6):
                 try:
                     r = requests.get(base + path, params={"limit": 50, "page": page, **params},
                                      auth=auth, timeout=60, verify=ca)
                     if r.status_code in (429, 500, 502, 503, 504):
-                        time.sleep(2 * (a + 1)); continue
+                        last_err = f"HTTP {r.status_code}"; time.sleep(2 * (a + 1)); continue
                     r.raise_for_status(); data = r.json()["data"]; break
-                except requests.exceptions.RequestException:
-                    time.sleep(2 * (a + 1))
+                except requests.exceptions.RequestException as e:
+                    last_err = repr(e); time.sleep(2 * (a + 1))
+            if data is None and last_err:
+                # 재시도 소진 — 무음 부분 반환 금지: 페이지 유실을 명시적으로 알린다
+                print(f"[warn] Langfuse {path} page={page} 재시도 6회 실패({last_err}) — "
+                      f"이후 페이지 생략, 결과가 부분집합일 수 있음")
             if not data:
                 break
             out.extend(data); page += 1
@@ -334,6 +361,9 @@ def run_langfuse(n: int | None) -> tuple[list[dict], str]:
 
     print("pulling traces + tool observations from Langfuse...", flush=True)
     traces = fetch("/api/public/traces", 260)
+    if not traces:
+        sys.exit("[error] Langfuse에서 트레이스 0건 — 키/URL이 잘못됐거나(위 [warn] 확인) "
+                 "새 프로젝트에 아직 실행 기록이 없음. 빈 리포트를 쓰지 않고 중단합니다.")
     latest: dict[str, tuple] = {}
     for t in traces:
         q = text(t.get("input")).strip()
