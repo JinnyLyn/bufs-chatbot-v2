@@ -108,14 +108,18 @@ def enrich_judge(rows: list[dict], url: str, model: str) -> None:
     score < FAITH_THRESHOLD → ⑤ Hallucination, 이상 → ② Prompt 실패. 파싱 실패(-1)는
     미분리 유지(추측 금지). in-place 갱신, 실패는 행 단위로 건너뜀.
     """
-    from kpi.runners.ragas import _METRIC_CONFIG, _extract_score, _ollama_judge
+    from kpi.runners.ragas import (
+        JUDGE_ANSWER_CHARS, JUDGE_CONTEXT_CHARS, _METRIC_CONFIG, _extract_score, _ollama_judge,
+    )
     system, template = _METRIC_CONFIG["faithfulness"]
     targets = [r for r in rows if r["bucket"] == "GENERATION_UNSPLIT" and r.get("_ctx")]
     print(f"[judge] GENERATION_UNSPLIT {len(targets)}행에 faithfulness judge({model}) 적용...")
     failed = unparsed = 0
     for r in targets:
         try:
-            out = _ollama_judge(system, template.format(context=r["_ctx"][:6000], answer=r["_answer"][:4000]),
+            # 트런케이션 한도는 kpi 러너와 공유 상수 — 두 경로의 점수 비교 가능성 유지
+            out = _ollama_judge(system, template.format(context=r["_ctx"][:JUDGE_CONTEXT_CHARS],
+                                                        answer=r["_answer"][:JUDGE_ANSWER_CHARS]),
                                 url=url, model=model)
             score, reason = _extract_score(out)
         except Exception as e:  # noqa: BLE001 — 행 단위 실패는 미분리 유지가 정직
@@ -157,42 +161,48 @@ def enrich_embedding_probe(rows: list[dict], corpus: KBCorpus, k: int = 10) -> N
         from qdrant_client import QdrantClient
         sys.path.insert(0, os.path.join(et._ROOT, "project"))
         import config as app_config
+    except Exception as e:  # noqa: BLE001 — 의존성 미설치 등
+        print(f"[probe] 임베딩 프로브 의존성 로드 실패({type(e).__name__}: {e}) — ① 유지")
+        return
+    client = None
+    try:
         client = QdrantClient(path=app_config.QDRANT_DB_PATH)
         dense = HuggingFaceEmbeddings(model_name="BAAI/bge-m3", model_kwargs={"device": "cpu"})
         store = QdrantVectorStore(client=client, collection_name=app_config.CHILD_COLLECTION,
                                   embedding=dense, retrieval_mode=RetrievalMode.DENSE)
-    except Exception as e:  # noqa: BLE001 — 락(백엔드 실행 중)/미설치 등
+        print(f"[probe] SEARCH_FAILURE {len(targets)}행에 dense-only top-{k} 프로브 적용...")
+        probe_failed = 0
+        for r in targets:
+            question = r.get("_q", "")
+            if not question:
+                continue
+            try:
+                docs = [d.page_content for d in store.similarity_search(question, k=k)]
+            except Exception as e:  # noqa: BLE001 — 행 1건 실패로 전체(비싼 fetch) 중단 방지
+                probe_failed += 1
+                r["diag"]["probe"] = f"검색 실패: {e}"
+                print(f"  id={r['id']}: 프로브 검색 실패({type(e).__name__}: {e}) — ① 유지")
+                continue
+            topk = "\n".join(docs)
+            # 단일 청크에 통째로 존재하는 빠진 사실 중, dense top-k가 놓친 것
+            probed = [f for f in r["diag"].get("missing", []) if corpus.fact_in_single_chunk(f)]
+            missed = [f for f in probed if not present(f, topk)]
+            if not probed:
+                continue
+            r["diag"]["dense_topk_missed"] = missed
+            if missed:
+                v = classify(replace(r["_sig"], ranked_out=True))
+                r["bucket"], r["reason"] = v.bucket, v.reason
+            else:
+                r["reason"] = "dense top-k엔 있음 — 하이브리드 융합/질의 재작성 단계에서 손실(①)"
+        if probe_failed:
+            print(f"[warn] 프로브 검색 실패 {probe_failed}/{len(targets)}행 — 해당 행은 ①로 유지됨")
+    except Exception as e:  # noqa: BLE001 — 락(백엔드 실행 중)/모델 로드 실패 등
         print(f"[probe] 임베딩 프로브 불가({type(e).__name__}: {e}) — ① 유지. "
               f"백엔드를 내리고 다시 실행하면 ⑦ 분리 가능")
-        return
-    print(f"[probe] SEARCH_FAILURE {len(targets)}행에 dense-only top-{k} 프로브 적용...")
-    probe_failed = 0
-    for r in targets:
-        question = r.get("_q", "")
-        if not question:
-            continue
-        try:
-            docs = [d.page_content for d in store.similarity_search(question, k=k)]
-        except Exception as e:  # noqa: BLE001 — 행 1건 실패로 전체(비싼 fetch) 중단 방지
-            probe_failed += 1
-            r["diag"]["probe"] = f"검색 실패: {e}"
-            print(f"  id={r['id']}: 프로브 검색 실패({type(e).__name__}: {e}) — ① 유지")
-            continue
-        topk = "\n".join(docs)
-        # 단일 청크에 통째로 존재하는 빠진 사실 중, dense top-k가 놓친 것
-        probed = [f for f in r["diag"].get("missing", []) if corpus.fact_in_single_chunk(f)]
-        missed = [f for f in probed if not present(f, topk)]
-        if not probed:
-            continue
-        r["diag"]["dense_topk_missed"] = missed
-        if missed:
-            v = classify(replace(r["_sig"], ranked_out=True))
-            r["bucket"], r["reason"] = v.bucket, v.reason
-        else:
-            r["reason"] = "dense top-k엔 있음 — 하이브리드 융합/질의 재작성 단계에서 손실(①)"
-    if probe_failed:
-        print(f"[warn] 프로브 검색 실패 {probe_failed}/{len(targets)}행 — 해당 행은 ①로 유지됨")
-    client.close()
+    finally:
+        if client is not None:
+            client.close()  # 예외 경로에서도 임베디드 Qdrant 락 해제 (락 파일 누수 방지)
 
 
 # --------------------------------------------------------------------------- 리포트
@@ -269,8 +279,15 @@ def _index_dataset() -> tuple[dict, dict]:
 
 def run_from_dump(path: str, n: int | None) -> tuple[list[dict], str]:
     """저장된 예측 덤프(answer[, context_preview][, faithfulness])로 오프라인 분류."""
-    with open(path, encoding="utf-8") as f:
-        d = json.load(f)
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+    except FileNotFoundError:
+        sys.exit(f"[error] 덤프 파일을 찾을 수 없습니다: {path}")
+    except json.JSONDecodeError as e:
+        sys.exit(f"[error] 덤프 JSON 파싱 실패 ({path}): {e}")
+    except OSError as e:
+        sys.exit(f"[error] 덤프 파일을 열 수 없습니다 ({path}): {e}")
     recs = d.get("results") if isinstance(d, dict) else d
     recs = recs if isinstance(recs, list) else []
     by_id, by_q = _index_dataset()
@@ -305,7 +322,8 @@ def run_from_dump(path: str, n: int | None) -> tuple[list[dict], str]:
                      "_q": str(obs.get("question") or gold.get("question") or "")})
         if n and len(rows) >= n:
             break
-    has_ctx = bool(recs) and any(k in recs[0] for k in ("context_preview", "contexts", "context"))
+    first_rec = recs[0] if recs else {}   # 명시적 방어 — 단락 평가 의존 제거
+    has_ctx = any(k in first_rec for k in ("context_preview", "contexts", "context"))
     if synth:
         print(f"[note] {synth}/{len(rows)} 문항이 데이터셋에 없어 reference에서 사실을 합성함 "
               f"(must_not_include 가드 없음 → Hallucination은 faithfulness로만 판정)")
@@ -339,8 +357,17 @@ def run_langfuse(n: int | None) -> tuple[list[dict], str]:
                                      auth=auth, timeout=60, verify=ca)
                     if r.status_code in (429, 500, 502, 503, 504):
                         last_err = f"HTTP {r.status_code}"; time.sleep(2 * (a + 1)); continue
-                    r.raise_for_status(); data = r.json()["data"]; break
-                except requests.exceptions.RequestException as e:
+                    r.raise_for_status()
+                    body = r.json()  # ValueError(비JSON)는 아래 except에서 재시도
+                    data = body.get("data") if isinstance(body, dict) else None
+                    if data is None:
+                        # 200인데 스키마 상이(API 변경 등) — 재시도해도 같으므로 즉시 중단+경고
+                        print(f"[warn] Langfuse {path} 응답에 'data' 키 없음"
+                              f"(keys={list(body)[:5] if isinstance(body, dict) else type(body).__name__})"
+                              f" — 수집 중단, 결과가 부분집합일 수 있음")
+                        return out[:want]
+                    break
+                except (requests.exceptions.RequestException, ValueError) as e:
                     last_err = repr(e); time.sleep(2 * (a + 1))
             if data is None and last_err:
                 # 재시도 소진 — 무음 부분 반환 금지: 페이지 유실을 명시적으로 알린다

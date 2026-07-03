@@ -76,11 +76,13 @@ class Verdict(NamedTuple):
 
     @property
     def label(self) -> str:
-        return BUCKETS[self.bucket][0]
+        # classify()만 Verdict를 만들지만, JSON 역직렬화 등 외부 경로로 미등록 버킷이
+        # 들어와도 KeyError 대신 명시적 '알수없음'으로 표기(무음 크래시 방지).
+        return BUCKETS.get(self.bucket, (f"알수없음({self.bucket})", "unknown"))[0]
 
     @property
     def side(self) -> str:
-        return BUCKETS[self.bucket][1]
+        return BUCKETS.get(self.bucket, ("", "unknown"))[1]
 
 
 @dataclass(frozen=True)
@@ -173,11 +175,15 @@ class KBCorpus:
         """
         root = root or _ROOT
         sources: list[str] = []
-        for p in sorted(glob.glob(os.path.join(root, "markdown_docs", "*.md"))):
-            with open(p, encoding="utf-8") as f:
-                sources.append(f.read())
-        chunks: list[str] = []
         skipped: list[str] = []
+        for p in sorted(glob.glob(os.path.join(root, "markdown_docs", "*.md"))):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    sources.append(f.read())
+            except (OSError, UnicodeDecodeError) as e:  # json 쪽과 동일한 스킵+경고 정책
+                skipped.append(f"{os.path.basename(p)} ({type(e).__name__})")
+                continue
+        chunks: list[str] = []
         for p in sorted(glob.glob(os.path.join(root, "parent_store", "*.json"))):
             try:
                 with open(p, encoding="utf-8") as f:
@@ -190,7 +196,7 @@ class KBCorpus:
                 chunks.append(str(txt))
         if skipped:
             warnings.warn(
-                f"KBCorpus: parent_store JSON {len(skipped)}개 적재 실패(분류 정밀도 저하 가능): "
+                f"KBCorpus: 코퍼스 파일 {len(skipped)}개 적재 실패(분류 정밀도 저하 가능): "
                 + ", ".join(skipped[:5]) + ("..." if len(skipped) > 5 else ""),
                 stacklevel=2,
             )

@@ -134,6 +134,13 @@ def test_every_bucket_has_label_and_side():
     assert set(et.ORDER) == set(et.BUCKETS)  # ORDER covers the registry exactly
 
 
+def test_verdict_unknown_bucket_no_keyerror():
+    # a Verdict rebuilt from external data (e.g. JSON) must not crash on label/side
+    v = et.Verdict("NOT_A_BUCKET", "외부 유입")
+    assert "NOT_A_BUCKET" in v.label
+    assert v.side == "unknown"
+
+
 # --------------------------------------------------------------------------- KB corpus (offline)
 
 
