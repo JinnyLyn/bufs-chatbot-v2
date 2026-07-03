@@ -5,12 +5,18 @@ guard); `must_include` correctness is delegated to RAGAS/LLM-judge against `expe
 `qa_scorer` is importable via pythonpath=["eval_tools"].
 """
 import json
+import os
 
 import pytest
 
 import qa_scorer
 
 pytestmark = pytest.mark.unit
+
+_DATASETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                             "eval_tools", "datasets")
+# Every shipped golden set must be schema-valid and gold-self-consistent, not just the default.
+_ALL_DATASETS = ["qa_dataset.json", "qa_dataset_factual100.json", "qa_dataset_factual100_variants.json"]
 
 
 # --------------------------------------------------------------------------- dataset
@@ -29,6 +35,32 @@ def test_gold_answers_pass_their_own_guard():
     data = qa_scorer.load_dataset()
     bad = [r["id"] for r in data if not qa_scorer.score_record(r, r["expected_answer"])["clean"]]
     assert bad == [], f"gold answers violating their own must_not_include: {bad}"
+
+
+@pytest.mark.parametrize("fname", _ALL_DATASETS)
+def test_all_shipped_datasets_valid_and_self_consistent(fname):
+    """Every golden set (default + factual100 + variants) must load, have unique ids, and no
+    gold expected_answer may trip its own must_not_include guard (substring false-positive)."""
+    path = os.path.join(_DATASETS_DIR, fname)
+    if not os.path.exists(path):
+        pytest.skip(f"{fname} not present")
+    data = qa_scorer.load_dataset(path)
+    assert data, f"{fname} is empty"
+    assert len(set(r["id"] for r in data)) == len(data), f"{fname} has duplicate ids"
+    bad = [r["id"] for r in data if not qa_scorer.score_record(r, r["expected_answer"])["clean"]]
+    assert bad == [], f"{fname}: gold answers violating their own must_not_include: {bad}"
+
+
+def test_variant_dataset_maps_to_factual100_bases():
+    """Each variant's base_id must exist in factual100 and inherit its gold answer (single-sourced)."""
+    vpath = os.path.join(_DATASETS_DIR, "qa_dataset_factual100_variants.json")
+    if not os.path.exists(vpath):
+        pytest.skip("variants not present")
+    base = {r["id"]: r for r in qa_scorer.load_dataset(os.path.join(_DATASETS_DIR, "qa_dataset_factual100.json"))}
+    variants = json.load(open(vpath, encoding="utf-8"))
+    for v in variants:
+        assert v["base_id"] in base, f"variant {v['id']} → unknown base_id {v['base_id']}"
+        assert v["expected_answer"] == base[v["base_id"]]["expected_answer"], f"variant {v['id']} gold drifted from base"
 
 
 def test_load_dataset_rejects_duplicate_ids(tmp_path):

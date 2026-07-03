@@ -1,0 +1,1390 @@
+[
+  {
+    "id": 1001,
+    "base_id": 70,
+    "variant_type": "colloquial",
+    "question": "개강 언제야?",
+    "gold_intent": "2026-1 개강일",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 3월 2일(월)이 개강일이며, 실제 수업 시작일은 3월 3일(화)입니다.",
+    "must_include": [
+      "3월 2일",
+      "개강"
+    ],
+    "must_not_include": [
+      "3월 10일"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1002,
+    "base_id": 70,
+    "variant_type": "keyword",
+    "question": "1학기 개강일",
+    "gold_intent": "2026-1 개강일",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 3월 2일(월)이 개강일이며, 실제 수업 시작일은 3월 3일(화)입니다.",
+    "must_include": [
+      "3월 2일",
+      "개강"
+    ],
+    "must_not_include": [
+      "3월 10일"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1003,
+    "base_id": 71,
+    "variant_type": "colloquial",
+    "question": "중간고사 언제 봐?",
+    "gold_intent": "2026 중간고사 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 4월 20일(월)부터 4월 24일(금)까지가 중간고사 기간입니다.",
+    "must_include": [
+      "4월 20일",
+      "4월 24일"
+    ],
+    "must_not_include": [
+      "5월 초"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1004,
+    "base_id": 71,
+    "variant_type": "keyword",
+    "question": "중간고사 기간",
+    "gold_intent": "2026 중간고사 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 4월 20일(월)부터 4월 24일(금)까지가 중간고사 기간입니다.",
+    "must_include": [
+      "4월 20일",
+      "4월 24일"
+    ],
+    "must_not_include": [
+      "5월 초"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1005,
+    "base_id": 74,
+    "variant_type": "colloquial",
+    "question": "여름방학 언제 시작해?",
+    "gold_intent": "2026 하계방학 시작",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 6월 15일(월)부터 하계방학이 시작됩니다.",
+    "must_include": [
+      "6월 15일",
+      "하계방학"
+    ],
+    "must_not_include": [
+      "7월 1일"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1006,
+    "base_id": 74,
+    "variant_type": "keyword",
+    "question": "하계방학 시작일",
+    "gold_intent": "2026 하계방학 시작",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 6월 15일(월)부터 하계방학이 시작됩니다.",
+    "must_include": [
+      "6월 15일",
+      "하계방학"
+    ],
+    "must_not_include": [
+      "7월 1일"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1007,
+    "base_id": 92,
+    "variant_type": "colloquial",
+    "question": "계절학기 언제야?",
+    "gold_intent": "계절학기 운영 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 6월 22일(월)부터 7월 10일(금)까지 3주간 운영될 예정입니다.",
+    "must_include": [
+      "6월 22일",
+      "7월 10일"
+    ],
+    "must_not_include": [
+      "8월까지"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1008,
+    "base_id": 92,
+    "variant_type": "keyword",
+    "question": "여름 계절학기 기간",
+    "gold_intent": "계절학기 운영 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 6월 22일(월)부터 7월 10일(금)까지 3주간 운영될 예정입니다.",
+    "must_include": [
+      "6월 22일",
+      "7월 10일"
+    ],
+    "must_not_include": [
+      "8월까지"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1009,
+    "base_id": 75,
+    "variant_type": "colloquial",
+    "question": "2학기 장바구니 언제?",
+    "gold_intent": "2학기 장바구니 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 8월 3일(월)부터 8월 7일(금)까지 진행될 예정입니다.",
+    "must_include": [
+      "8월 3일",
+      "8월 7일"
+    ],
+    "must_not_include": [
+      "7월 중"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1010,
+    "base_id": 77,
+    "variant_type": "colloquial",
+    "question": "장바구니 몇 학점까지 담아?",
+    "gold_intent": "장바구니 최대 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "본인의 수강신청 가능 학점과 관계없이 총 30학점까지 미리 담아둘 수 있습니다.",
+    "must_include": [
+      "30학점",
+      "미리 담아두기"
+    ],
+    "must_not_include": [
+      "18학점"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 1011,
+    "base_id": 79,
+    "variant_type": "colloquial",
+    "question": "장바구니 선착순이야?",
+    "gold_intent": "장바구니 선착순 여부",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "아니요, 장바구니 신청은 선착순이 아니며 제한인원과 무관하게 원하는 과목을 담을 수 있습니다.",
+    "must_include": [
+      "선착순 아님",
+      "인원 무관"
+    ],
+    "must_not_include": [
+      "마감 주의"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 1012,
+    "base_id": 78,
+    "variant_type": "colloquial",
+    "question": "장바구니 자동으로 신청돼?",
+    "gold_intent": "장바구니 자동 신청 불가",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "아니요, 장바구니는 미리 담는 기능일 뿐이며, 반드시 본 수강신청 기간에 직접 신청 버튼을 눌러야 합니다.",
+    "must_include": [
+      "신청 버튼",
+      "직접 신청"
+    ],
+    "must_not_include": [
+      "자동 처리"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 1013,
+    "base_id": 80,
+    "variant_type": "colloquial",
+    "question": "취소신청지연제 뭐야?",
+    "gold_intent": "취소신청지연제 정의",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "수강매매 방지를 위해 여석이 생겨도 즉시 신청하지 못하게 하고, 15:30~16:00 사이에만 신청할 수 있게 하는 제도입니다.",
+    "must_include": [
+      "수강매매 방지",
+      "15:30"
+    ],
+    "must_not_include": [
+      "즉시 신청 가능"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 1014,
+    "base_id": 95,
+    "variant_type": "colloquial",
+    "question": "2학기 등록 언제까지?",
+    "gold_intent": "2학기 등록 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 8월 24일(월)부터 8월 26일(수)까지가 등록 기간입니다.",
+    "must_include": [
+      "8월 24일",
+      "8월 26일"
+    ],
+    "must_not_include": [
+      "9월 초"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 1015,
+    "base_id": 65,
+    "variant_type": "keyword",
+    "question": "복수전공 신청기간 알려줘",
+    "gold_intent": "제2전공 신청 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "보통 2학년 1학기 수강 장바구니 신청 기간 이전에 [학생포털시스템]에서 직접 신청해야 합니다.",
+    "must_include": [
+      "2학년 1학기",
+      "장바구니 전"
+    ],
+    "must_not_include": [
+      "4학년부터"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 1016,
+    "base_id": 65,
+    "variant_type": "keyword",
+    "question": "복전 신청기간",
+    "gold_intent": "제2전공 신청 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "보통 2학년 1학기 수강 장바구니 신청 기간 이전에 [학생포털시스템]에서 직접 신청해야 합니다.",
+    "must_include": [
+      "2학년 1학기",
+      "장바구니 전"
+    ],
+    "must_not_include": [
+      "4학년부터"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 1017,
+    "base_id": 65,
+    "variant_type": "keyword",
+    "question": "복전 언제 신청",
+    "gold_intent": "제2전공 신청 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "보통 2학년 1학기 수강 장바구니 신청 기간 이전에 [학생포털시스템]에서 직접 신청해야 합니다.",
+    "must_include": [
+      "2학년 1학기",
+      "장바구니 전"
+    ],
+    "must_not_include": [
+      "4학년부터"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 1018,
+    "base_id": 65,
+    "variant_type": "colloquial",
+    "question": "부전공 신청 언제 해?",
+    "gold_intent": "제2전공 신청 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "보통 2학년 1학기 수강 장바구니 신청 기간 이전에 [학생포털시스템]에서 직접 신청해야 합니다.",
+    "must_include": [
+      "2학년 1학기",
+      "장바구니 전"
+    ],
+    "must_not_include": [
+      "4학년부터"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 1019,
+    "base_id": 65,
+    "variant_type": "colloquial",
+    "question": "제2전공 신청 언제부터?",
+    "gold_intent": "제2전공 신청 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "보통 2학년 1학기 수강 장바구니 신청 기간 이전에 [학생포털시스템]에서 직접 신청해야 합니다.",
+    "must_include": [
+      "2학년 1학기",
+      "장바구니 전"
+    ],
+    "must_not_include": [
+      "4학년부터"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 1020,
+    "base_id": 31,
+    "variant_type": "colloquial",
+    "question": "복전 등록금 얼마야?",
+    "gold_intent": "복전 등록금 산정",
+    "gold_document": "학부 등록금 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "자유전공 BC 계열로 적용되어 해당 학기 등록금은 3,992,000원이 고지됩니다.",
+    "must_include": [
+      "자유전공 BC",
+      "3,992,000원"
+    ],
+    "must_not_include": [
+      "4,211,000원"
+    ],
+    "difficulty": "Hard",
+    "category": "등록금"
+  },
+  {
+    "id": 1021,
+    "base_id": 31,
+    "variant_type": "keyword",
+    "question": "복수전공 등록금",
+    "gold_intent": "복전 등록금 산정",
+    "gold_document": "학부 등록금 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "자유전공 BC 계열로 적용되어 해당 학기 등록금은 3,992,000원이 고지됩니다.",
+    "must_include": [
+      "자유전공 BC",
+      "3,992,000원"
+    ],
+    "must_not_include": [
+      "4,211,000원"
+    ],
+    "difficulty": "Hard",
+    "category": "등록금"
+  },
+  {
+    "id": 1022,
+    "base_id": 63,
+    "variant_type": "colloquial",
+    "question": "복전도 졸업시험 봐야 돼?",
+    "gold_intent": "복수전공 졸업시험",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 복수전공으로 학위를 취득하려면 주전공과 마찬가지로 해당 학과의 졸업시험을 통과해야 합니다.",
+    "must_include": [
+      "졸업시험 통과",
+      "복수전공"
+    ],
+    "must_not_include": [
+      "시험 면제"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1023,
+    "base_id": 64,
+    "variant_type": "colloquial",
+    "question": "부전공 졸업시험 있어?",
+    "gold_intent": "부전공 시험 면제",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "아니요, 부전공과 마이크로전공은 별도의 졸업시험이 없습니다.",
+    "must_include": [
+      "졸업시험 없음",
+      "부전공"
+    ],
+    "must_not_include": [
+      "합격 필수"
+    ],
+    "difficulty": "Easy",
+    "category": "졸업"
+  },
+  {
+    "id": 1024,
+    "base_id": 37,
+    "variant_type": "colloquial",
+    "question": "마이크로전공 몇 학점?",
+    "gold_intent": "마이크로전공 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "마이크로전공 교육과정에 편성된 과목 중 9학점 이상을 취득하면 이수가 인정됩니다.",
+    "must_include": [
+      "9학점 이상",
+      "취득"
+    ],
+    "must_not_include": [
+      "24학점"
+    ],
+    "difficulty": "Easy",
+    "category": "졸업"
+  },
+  {
+    "id": 1025,
+    "base_id": 36,
+    "variant_type": "keyword",
+    "question": "24학번 전공 학점",
+    "gold_intent": "2024학번 전공 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "제1전공 30~42학점과 제2전공(복수/융합 30학점 또는 마이크로 9학점)을 합산하여 이수해야 합니다.",
+    "must_include": [
+      "제1전공",
+      "제2전공 합산"
+    ],
+    "must_not_include": [
+      "130학점"
+    ],
+    "difficulty": "Hard",
+    "category": "졸업"
+  },
+  {
+    "id": 1026,
+    "base_id": 27,
+    "variant_type": "colloquial",
+    "question": "휴학하면 등록금 환불돼?",
+    "gold_intent": "휴학 등록금 반환",
+    "gold_document": "재학생 및 복학생 등록 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "휴학 시 납부한 등록금은 반환되지 않으며, 복학하는 학기로 등록 인정(이월) 처리됩니다.",
+    "must_include": [
+      "반환 불가",
+      "등록 인정"
+    ],
+    "must_not_include": [
+      "통장 입금"
+    ],
+    "difficulty": "Medium",
+    "category": "등록금"
+  },
+  {
+    "id": 1027,
+    "base_id": 29,
+    "variant_type": "colloquial",
+    "question": "미등록 휴학 언제까지 신청?",
+    "gold_intent": "미등록 휴학 기간",
+    "gold_document": "재학생 및 복학생 등록 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "등록금을 납부하지 않고 휴학하는 '미등록 휴학'은 학기 개강 전(2026.2.28.)까지만 신청이 가능합니다.",
+    "must_include": [
+      "개강 전",
+      "2월 28일"
+    ],
+    "must_not_include": [
+      "정정 기간"
+    ],
+    "difficulty": "Medium",
+    "category": "휴학"
+  },
+  {
+    "id": 1028,
+    "base_id": 20,
+    "variant_type": "colloquial",
+    "question": "등록금 분납 몇 번까지 돼?",
+    "gold_intent": "분할납부 횟수",
+    "gold_document": "등록금 분할납부 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "최소 2회에서 최대 5회까지 균등 분할하여 납부할 수 있습니다.",
+    "must_include": [
+      "2 ~ 5회",
+      "균등 분할"
+    ],
+    "must_not_include": [
+      "10회"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 1029,
+    "base_id": 20,
+    "variant_type": "keyword",
+    "question": "분할납부 횟수",
+    "gold_intent": "분할납부 횟수",
+    "gold_document": "등록금 분할납부 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "최소 2회에서 최대 5회까지 균등 분할하여 납부할 수 있습니다.",
+    "must_include": [
+      "2 ~ 5회",
+      "균등 분할"
+    ],
+    "must_not_include": [
+      "10회"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 1030,
+    "base_id": 26,
+    "variant_type": "colloquial",
+    "question": "등록금 카드로 낼 수 있어?",
+    "gold_intent": "등록금 카드 결제",
+    "gold_document": "재학생 및 복학생 등록 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "우리 대학교는 신용카드 등록금 납부 제도를 시행하고 있지 않습니다. 가상계좌 이체 또는 은행 창구를 이용해야 합니다.",
+    "must_include": [
+      "카드 납부 불가",
+      "가상계좌"
+    ],
+    "must_not_include": [
+      "할부 결제"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 1031,
+    "base_id": 24,
+    "variant_type": "colloquial",
+    "question": "등록금 고지서 어디서 뽑아?",
+    "gold_intent": "등록금 고지서 출력",
+    "gold_document": "재학생 및 복학생 등록 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2015학년도부터 우편 발송이 중단되었으며, 학생포털시스템에서 온라인으로 직접 출력해야 합니다.",
+    "must_include": [
+      "우편발송 중단",
+      "학생포털시스템"
+    ],
+    "must_not_include": [
+      "자택 주소"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 1032,
+    "base_id": 19,
+    "variant_type": "colloquial",
+    "question": "분할납부 못 하는 사람 있어?",
+    "gold_intent": "분할납부 제외자",
+    "gold_document": "등록금 분할납부 안내",
+    "gold_chunk_id": "",
+    "expected_answer": "신입생, 편입생, 재입학생 및 실납부 등록금이 100만원 미만인 학생은 분할납부 신청 대상에서 제외됩니다.",
+    "must_include": [
+      "신입/편입/재입학",
+      "100만원 미만"
+    ],
+    "must_not_include": [
+      "4학년"
+    ],
+    "difficulty": "Medium",
+    "category": "등록금"
+  },
+  {
+    "id": 1033,
+    "base_id": 85,
+    "variant_type": "colloquial",
+    "question": "재수강하면 최고 몇 점?",
+    "gold_intent": "재수강 최대 등급",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "재수강 후 취득할 수 있는 성적은 최대 A까지로 제한됩니다. (A+ 불가)",
+    "must_include": [
+      "최대 A",
+      "성적 제한"
+    ],
+    "must_not_include": [
+      "A+ 가능"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 1034,
+    "base_id": 85,
+    "variant_type": "keyword",
+    "question": "재수강 최대 성적",
+    "gold_intent": "재수강 최대 등급",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "재수강 후 취득할 수 있는 성적은 최대 A까지로 제한됩니다. (A+ 불가)",
+    "must_include": [
+      "최대 A",
+      "성적 제한"
+    ],
+    "must_not_include": [
+      "A+ 가능"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 1035,
+    "base_id": 86,
+    "variant_type": "colloquial",
+    "question": "몇 점부터 재수강 돼?",
+    "gold_intent": "재수강 가능 성적",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "아니요, 재수강은 성적이 C+ 이하인 과목에 한해서만 신청할 수 있습니다.",
+    "must_include": [
+      "C+ 이하",
+      "신청"
+    ],
+    "must_not_include": [
+      "B0 이상"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 1036,
+    "base_id": 87,
+    "variant_type": "colloquial",
+    "question": "재수강 몇 학점까지?",
+    "gold_intent": "재수강 총 학점 제한",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2019학번부터 졸업 시까지 최대 24학점까지만 재수강이 가능합니다.",
+    "must_include": [
+      "최대 24학점",
+      "졸업 시까지"
+    ],
+    "must_not_include": [
+      "무제한"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 1037,
+    "base_id": 47,
+    "variant_type": "colloquial",
+    "question": "패논패 몇 학점까지?",
+    "gold_intent": "성적평가 선택 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "학기당 최대 9학점 이내, 재학 중 총 24학점 이내에서 신청할 수 있습니다.",
+    "must_include": [
+      "학기당 9학점",
+      "재학 중 24학점"
+    ],
+    "must_not_include": [
+      "무제한"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 1038,
+    "base_id": 47,
+    "variant_type": "keyword",
+    "question": "PNP 학점 제한",
+    "gold_intent": "성적평가 선택 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "학기당 최대 9학점 이내, 재학 중 총 24학점 이내에서 신청할 수 있습니다.",
+    "must_include": [
+      "학기당 9학점",
+      "재학 중 24학점"
+    ],
+    "must_not_include": [
+      "무제한"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 1039,
+    "base_id": 48,
+    "variant_type": "colloquial",
+    "question": "계절학기 패논패 돼?",
+    "gold_intent": "계절학기 P/NP 불가",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "아니요, 성적평가 선택제는 정규학기에만 신청 가능하며 계절학기는 신청할 수 없습니다.",
+    "must_include": [
+      "정규학기 전용",
+      "계절학기 불가"
+    ],
+    "must_not_include": [
+      "모든 학기"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 1040,
+    "base_id": 34,
+    "variant_type": "colloquial",
+    "question": "자기경영학습법 성적 어떻게 나와?",
+    "gold_intent": "자기경영학습법 성적",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "해당 과목은 등급제가 아닌 'P/NP' 방식으로 성적이 평가됩니다.",
+    "must_include": [
+      "P/NP",
+      "PASS"
+    ],
+    "must_not_include": [
+      "A+ ~ F"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 1041,
+    "base_id": 49,
+    "variant_type": "colloquial",
+    "question": "성적포기하면 어떻게 표시돼?",
+    "gold_intent": "성적포기 표기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "성적포기 승인 후 해당 과목은 성적증명서 상에 'W'로 표기됩니다.",
+    "must_include": [
+      "W",
+      "표기"
+    ],
+    "must_not_include": [
+      "삭제"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 1042,
+    "base_id": 100,
+    "variant_type": "colloquial",
+    "question": "성적 잘못 나왔는데 어디 문의해?",
+    "gold_intent": "사정표 오류 수정",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "학업성적사정표 내용이 사실과 다른 경우 학사지원팀(051-509-5182~3)으로 즉시 문의하여 정정을 요청해야 합니다.",
+    "must_include": [
+      "학사지원팀",
+      "문의"
+    ],
+    "must_not_include": [
+      "학부 사무실"
+    ],
+    "difficulty": "Medium",
+    "category": "기타"
+  },
+  {
+    "id": 1043,
+    "base_id": 13,
+    "variant_type": "colloquial",
+    "question": "공결 서류 어떻게 내?",
+    "gold_intent": "공인결석 서류 제출",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "학생포털시스템에서 온라인으로 신청 시 해당 사유에 맞는 증빙서류를 파일(이미지 또는 PDF)로 첨부하여 제출합니다.",
+    "must_include": [
+      "학생포털시스템",
+      "파일 첨부"
+    ],
+    "must_not_include": [
+      "우편 제출"
+    ],
+    "difficulty": "Easy",
+    "category": "공인결석"
+  },
+  {
+    "id": 1044,
+    "base_id": 13,
+    "variant_type": "keyword",
+    "question": "공인결석 증빙 제출",
+    "gold_intent": "공인결석 서류 제출",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "학생포털시스템에서 온라인으로 신청 시 해당 사유에 맞는 증빙서류를 파일(이미지 또는 PDF)로 첨부하여 제출합니다.",
+    "must_include": [
+      "학생포털시스템",
+      "파일 첨부"
+    ],
+    "must_not_include": [
+      "우편 제출"
+    ],
+    "difficulty": "Easy",
+    "category": "공인결석"
+  },
+  {
+    "id": 1045,
+    "base_id": 14,
+    "variant_type": "colloquial",
+    "question": "생리결석도 증빙 필요해?",
+    "gold_intent": "생리결석 증빙",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "생리결석은 별도의 증빙서류 없이 학생포털시스템에서 매달 1회 신청 가능합니다.",
+    "must_include": [
+      "증빙서류 불필요",
+      "월 1회"
+    ],
+    "must_not_include": [
+      "병원 진단서"
+    ],
+    "difficulty": "Easy",
+    "category": "공인결석"
+  },
+  {
+    "id": 1046,
+    "base_id": 17,
+    "variant_type": "colloquial",
+    "question": "입원하면 공결 며칠까지?",
+    "gold_intent": "입원결석 인정 기간",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "입원 치료의 경우 학기 내 최대 21일까지 공인결석으로 인정받을 수 있습니다.",
+    "must_include": [
+      "최대 21일",
+      "입원치료"
+    ],
+    "must_not_include": [
+      "학기 전체"
+    ],
+    "difficulty": "Medium",
+    "category": "공인결석"
+  },
+  {
+    "id": 1047,
+    "base_id": 18,
+    "variant_type": "colloquial",
+    "question": "외래진료 공결 돼?",
+    "gold_intent": "외래진료 결석",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 진단서 등을 첨부하여 학기 중 최대 2일까지 외래 진료에 대한 공인결석을 신청할 수 있습니다.",
+    "must_include": [
+      "최대 2일",
+      "진단서"
+    ],
+    "must_not_include": [
+      "1주일"
+    ],
+    "difficulty": "Medium",
+    "category": "공인결석"
+  },
+  {
+    "id": 1048,
+    "base_id": 89,
+    "variant_type": "colloquial",
+    "question": "공결 승인됐는지 어디서 봐?",
+    "gold_intent": "공인결석 처리 확인",
+    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_chunk_id": "",
+    "expected_answer": "학생포털시스템 '공인결석계 신청' 메뉴 하단의 '신청처리 현황 조회'에서 승인 또는 반려 여부를 확인할 수 있습니다.",
+    "must_include": [
+      "신청처리 현황 조회",
+      "승인/반려"
+    ],
+    "must_not_include": [
+      "이메일 통보"
+    ],
+    "difficulty": "Easy",
+    "category": "공인결석"
+  },
+  {
+    "id": 1049,
+    "base_id": 39,
+    "variant_type": "colloquial",
+    "question": "24학번 졸업 몇 학점?",
+    "gold_intent": "2024학번 졸업 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "최소 이수 학점을 포함하여 총 120학점 이상을 이수해야 졸업이 가능합니다.",
+    "must_include": [
+      "120학점 이상",
+      "이수"
+    ],
+    "must_not_include": [
+      "140학점"
+    ],
+    "difficulty": "Easy",
+    "category": "졸업"
+  },
+  {
+    "id": 1050,
+    "base_id": 45,
+    "variant_type": "keyword",
+    "question": "조기졸업 신청기간",
+    "gold_intent": "조기졸업 신청 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026학년도 1학기 기준, 5월 20일(수)부터 5월 26일(화)까지 신청해야 합니다.",
+    "must_include": [
+      "5월 20일",
+      "5월 26일"
+    ],
+    "must_not_include": [
+      "학기 말"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1051,
+    "base_id": 45,
+    "variant_type": "colloquial",
+    "question": "조기졸업 언제 신청해?",
+    "gold_intent": "조기졸업 신청 기간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026학년도 1학기 기준, 5월 20일(수)부터 5월 26일(화)까지 신청해야 합니다.",
+    "must_include": [
+      "5월 20일",
+      "5월 26일"
+    ],
+    "must_not_include": [
+      "학기 말"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1052,
+    "base_id": 96,
+    "variant_type": "colloquial",
+    "question": "졸업유예 신청 언제?",
+    "gold_intent": "졸업유예 신청 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 7월 6일(월)부터 7월 10일(금)까지 학생포털을 통해 신청 가능합니다.",
+    "must_include": [
+      "7월 6일",
+      "7월 10일"
+    ],
+    "must_not_include": [
+      "6월 초"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1053,
+    "base_id": 7,
+    "variant_type": "colloquial",
+    "question": "졸업하려면 비교과 몇 점?",
+    "gold_intent": "졸업인증제 점수",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "8학기 동안 비교과 역량지수(비교과지수)를 최소 40점 이상 취득해야 인증 자격이 부여됩니다.",
+    "must_include": [
+      "40점 이상",
+      "비교과 지수"
+    ],
+    "must_not_include": [
+      "100점"
+    ],
+    "difficulty": "Easy",
+    "category": "졸업"
+  },
+  {
+    "id": 1054,
+    "base_id": 8,
+    "variant_type": "colloquial",
+    "question": "비교과 지수 어디서 확인해?",
+    "gold_intent": "비교과 지수 확인",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "BUFS인재시스템(eport.bufs.ac.kr) 메인화면의 프로필 하단에서 누적 비교과 지수를 상시 확인할 수 있습니다.",
+    "must_include": [
+      "BUFS인재시스템",
+      "프로필 하단"
+    ],
+    "must_not_include": [
+      "학생포털 성적조회"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1055,
+    "base_id": 43,
+    "variant_type": "colloquial",
+    "question": "유학생도 영어 성적 필요해?",
+    "gold_intent": "외국인 유학생 졸업인증",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "TOPIK 4급 이상 또는 공인영어성적이 필수입니다. 단, 영어가 모국어인 국가의 국적자는 면제됩니다.",
+    "must_include": [
+      "TOPIK 4급",
+      "공인영어성적"
+    ],
+    "must_not_include": [
+      "한국어 연습"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1056,
+    "base_id": 43,
+    "variant_type": "colloquial",
+    "question": "외국인 유학생 토픽 몇 급?",
+    "gold_intent": "외국인 유학생 졸업인증",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "TOPIK 4급 이상 또는 공인영어성적이 필수입니다. 단, 영어가 모국어인 국가의 국적자는 면제됩니다.",
+    "must_include": [
+      "TOPIK 4급",
+      "공인영어성적"
+    ],
+    "must_not_include": [
+      "한국어 연습"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1057,
+    "base_id": 44,
+    "variant_type": "colloquial",
+    "question": "편입생도 비교과 40점 채워야 돼?",
+    "gold_intent": "편입생 졸업인증 면제",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "아니요, 편입생은 졸업인증제(비교과 지수 40점 이상 취득) 대상에서 면제됩니다.",
+    "must_include": [
+      "편입생",
+      "면제"
+    ],
+    "must_not_include": [
+      "40점 필수"
+    ],
+    "difficulty": "Easy",
+    "category": "졸업"
+  },
+  {
+    "id": 1058,
+    "base_id": 42,
+    "variant_type": "colloquial",
+    "question": "졸업시험 어디로 문의해?",
+    "gold_intent": "졸업시험 문의",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "전공졸업시험 및 논문 실시에 관한 상세 사항은 해당 학부(과) 사무실로 직접 문의해야 합니다.",
+    "must_include": [
+      "학부(과) 사무실",
+      "문의"
+    ],
+    "must_not_include": [
+      "학사지원팀"
+    ],
+    "difficulty": "Easy",
+    "category": "졸업"
+  },
+  {
+    "id": 1059,
+    "base_id": 12,
+    "variant_type": "colloquial",
+    "question": "채플 몇 학점 들어야 돼?",
+    "gold_intent": "채플 이수 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "인성체험교양 영역의 일부로 채플Ⅰ(1학점)과 채플Ⅱ(1학점)를 각각 이수해야 합니다.",
+    "must_include": [
+      "채플Ⅰ",
+      "채플Ⅱ",
+      "각 1학점"
+    ],
+    "must_not_include": [
+      "4학점"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 1060,
+    "base_id": 11,
+    "variant_type": "colloquial",
+    "question": "채플 어디서 해?",
+    "gold_intent": "채플 장소 안내",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "대그룹 특강은 만오오디토리움(G203)에서, 소그룹 수업은 각 분반별 지정 강의실에서 병행하여 진행됩니다.",
+    "must_include": [
+      "만오오디토리움",
+      "지정 강의실"
+    ],
+    "must_not_include": [
+      "체육관"
+    ],
+    "difficulty": "Medium",
+    "category": "교과과정"
+  },
+  {
+    "id": 1061,
+    "base_id": 5,
+    "variant_type": "colloquial",
+    "question": "사회봉사 몇 시간 해야 돼?",
+    "gold_intent": "사회봉사 이수 시간",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "사회봉사(일반1) 과목의 경우 학기 종강 1주 전까지 자원봉사 25시간을 완료해야 합니다.",
+    "must_include": [
+      "25시간",
+      "완료"
+    ],
+    "must_not_include": [
+      "10시간"
+    ],
+    "difficulty": "Easy",
+    "category": "비교과"
+  },
+  {
+    "id": 1062,
+    "base_id": 68,
+    "variant_type": "colloquial",
+    "question": "교육봉사 몇 시간?",
+    "gold_intent": "교육봉사 시간 요건",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "3~4학년 동안 총 60시간 이상의 교육봉사활동을 이수하고 확인서를 제출해야 합니다.",
+    "must_include": [
+      "60시간 이상",
+      "이수"
+    ],
+    "must_not_include": [
+      "25시간"
+    ],
+    "difficulty": "Medium",
+    "category": "교직"
+  },
+  {
+    "id": 1063,
+    "base_id": 57,
+    "variant_type": "colloquial",
+    "question": "교직과정 언제 선발해?",
+    "gold_intent": "교직과정 선발 시기",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "1학년 제2학기 과정을 수료한 재학생을 대상으로 2학년 소정의 기간에 선발합니다.",
+    "must_include": [
+      "2학년",
+      "선발"
+    ],
+    "must_not_include": [
+      "졸업 예정자"
+    ],
+    "difficulty": "Medium",
+    "category": "교직"
+  },
+  {
+    "id": 1064,
+    "base_id": 1,
+    "variant_type": "colloquial",
+    "question": "OCU 사용료 얼마야?",
+    "gold_intent": "OCU 사용료 안내",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "OCU 시스템 사용료는 과목당 24,000원입니다. 단, 최대 수강신청 학점을 초과하여 신청할 경우 별도의 초과 수강료가 부과됩니다.",
+    "must_include": [
+      "24,000원",
+      "과목당"
+    ],
+    "must_not_include": [
+      "등록금 전액"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 1065,
+    "base_id": 3,
+    "variant_type": "colloquial",
+    "question": "OCU 전공으로 인정돼?",
+    "gold_intent": "OCU 이수구분",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "OCU 과목은 전공이나 교양으로 인정되지 않으며, 오직 '자유선택'으로만 학점이 인정됩니다.",
+    "must_include": [
+      "자유선택",
+      "전공/교양 불가"
+    ],
+    "must_not_include": [
+      "전공 필수"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 1066,
+    "base_id": 90,
+    "variant_type": "colloquial",
+    "question": "군대에서 OCU 학점 인정돼?",
+    "gold_intent": "군복무 OCU 학점",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 군복무 중 OCU를 수강한 학생은 정해진 기간(3.9~13)에 학점인정 신청을 통해 학점을 인정받을 수 있습니다.",
+    "must_include": [
+      "군복무 중",
+      "학점인정 신청"
+    ],
+    "must_not_include": [
+      "복학 후 수강"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 1067,
+    "base_id": 91,
+    "variant_type": "colloquial",
+    "question": "어학연수 학점 인정 언제 신청?",
+    "gold_intent": "어학연수 학점 인정",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "2026년 3월 16일(월)부터 3월 20일(금)까지 국외단기 어학연수 학점인정 신청 기간입니다.",
+    "must_include": [
+      "3월 16일",
+      "학점인정 신청"
+    ],
+    "must_not_include": [
+      "수시 신청"
+    ],
+    "difficulty": "Medium",
+    "category": "학사일정"
+  },
+  {
+    "id": 1068,
+    "base_id": 60,
+    "variant_type": "keyword",
+    "question": "사회복지전공 사무실 번호",
+    "gold_intent": "학과 사무실 번호",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "사회복지전공 사무실 번호는 051-509-6318입니다.",
+    "must_include": [
+      "509-6318",
+      "사회복지전공"
+    ],
+    "must_not_include": [
+      "509-5182"
+    ],
+    "difficulty": "Easy",
+    "category": "기타"
+  },
+  {
+    "id": 1069,
+    "base_id": 60,
+    "variant_type": "colloquial",
+    "question": "사복과 전화번호 알려줘",
+    "gold_intent": "학과 사무실 번호",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "사회복지전공 사무실 번호는 051-509-6318입니다.",
+    "must_include": [
+      "509-6318",
+      "사회복지전공"
+    ],
+    "must_not_include": [
+      "509-5182"
+    ],
+    "difficulty": "Easy",
+    "category": "기타"
+  },
+  {
+    "id": 1070,
+    "base_id": 97,
+    "variant_type": "keyword",
+    "question": "타갈로그어전공 문의처",
+    "gold_intent": "특정 마이크로전공 문의",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "특수외국어사업단(051-509-5366)으로 문의하시면 됩니다.",
+    "must_include": [
+      "특수외국어사업단",
+      "509-5366"
+    ],
+    "must_not_include": [
+      "교무팀"
+    ],
+    "difficulty": "Easy",
+    "category": "학적"
+  },
+  {
+    "id": 1071,
+    "base_id": 98,
+    "variant_type": "colloquial",
+    "question": "국가근로 몇 차까지 뽑아?",
+    "gold_intent": "국가근로 모집 차수",
+    "gold_document": "장학공지",
+    "gold_chunk_id": "",
+    "expected_answer": "현재 공지된 바에 따르면 3차 모집까지 안내되어 있습니다.",
+    "must_include": [
+      "3차 모집",
+      "안내"
+    ],
+    "must_not_include": [
+      "1차로 종료"
+    ],
+    "difficulty": "Easy",
+    "category": "장학"
+  },
+  {
+    "id": 1072,
+    "base_id": 88,
+    "variant_type": "colloquial",
+    "question": "모바일 학생증으로 셔틀 타?",
+    "gold_intent": "모바일 학생증 활용",
+    "gold_document": "학사공지",
+    "gold_chunk_id": "",
+    "expected_answer": "부산외국어대학교 모바일 학생증 앱을 설치하면 셔틀버스 이용 및 도서관 출입 시 실물 카드 대신 사용할 수 있습니다.",
+    "must_include": [
+      "모바일 학생증",
+      "셔틀버스"
+    ],
+    "must_not_include": [
+      "신분증 지참"
+    ],
+    "difficulty": "Easy",
+    "category": "기타"
+  },
+  {
+    "id": 1073,
+    "base_id": 33,
+    "variant_type": "colloquial",
+    "question": "학사경고인데 자기경영학습법 들으면 학점 늘어?",
+    "gold_intent": "학사경고 수강 혜택",
+    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_chunk_id": "",
+    "expected_answer": "네, 학사경고자가 해당 과목을 수강할 경우 최대 신청 학점이 18~19학점(학번별 상이)까지 완화됩니다.",
+    "must_include": [
+      "최대 신청학점",
+      "완화"
+    ],
+    "must_not_include": [
+      "평점 상승"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  }
+]
