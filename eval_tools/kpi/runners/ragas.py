@@ -82,6 +82,15 @@ _METRIC_CONFIG: dict[str, tuple[str, str]] = {
 
 METRIC_NAMES: tuple[str, ...] = tuple(_METRIC_CONFIG)
 
+# Judge-input truncation limits — single source of truth so ad-hoc judges
+# (eval_tools/_error_analysis7.py --judge) and this runner score on the SAME
+# input sizes and stay comparable (PR #79 review). Unified 2026-07-03 to the
+# larger limits: faithfulness needs enough context to check groundedness.
+JUDGE_QUESTION_CHARS = 500
+JUDGE_CONTEXT_CHARS = 6000
+JUDGE_ANSWER_CHARS = 4000
+JUDGE_REFERENCE_CHARS = 300
+
 # Sentinel value for missing/failed scores
 _NA_STR = "N/A — no judge endpoint"
 
@@ -136,37 +145,75 @@ class RagasResult:
 # ---------------------------------------------------------------------------
 
 def _extract_score(text: str) -> tuple[float, str]:
-    """Parse a JSON ``{"score": ..., "reason": ...}`` fragment from judge output."""
+    """Parse a JSON ``{"score": ..., "reason": ...}`` fragment from judge output.
+
+    Tries, in order: whole-text ``json.loads`` -> greedy ``{...}`` block (handles
+    braces inside the reason string) -> narrow brace-free block (historical
+    behavior). Any parse failure yields ``(-1.0, "")`` — the caller treats -1 as
+    N/A, never as a score.
+    """
+    candidates = [text or ""]
+    m = re.search(r"\{.*\}", text or "", re.DOTALL)   # greedy: first { .. last }
+    if m:
+        candidates.append(m.group())
     m = re.search(r"\{[^{}]*\}", text or "", re.DOTALL)
     if m:
+        candidates.append(m.group())
+    for cand in candidates:
         try:
-            obj = json.loads(m.group())
-            score = max(0.0, min(1.0, float(obj.get("score", -1))))
-            return score, obj.get("reason", "")
-        except (ValueError, KeyError):
-            pass
+            obj = json.loads(cand)
+        except ValueError:
+            continue
+        # "score" 키가 없으면 파싱 실패로 취급 — 과거엔 기본값 -1이 0.0으로 클램프되어
+        # N/A가 "완전 불일치 0점"으로 둔갑하는 무음 오류였다.
+        if not isinstance(obj, dict) or "score" not in obj:
+            continue
+        try:
+            raw = float(obj["score"])
+        except (TypeError, ValueError):
+            continue
+        return max(0.0, min(1.0, raw)), str(obj.get("reason", ""))
     return -1.0, ""
 
 
 def _ollama_judge(system: str, prompt: str, *, url: str, model: str) -> str:
-    """Call a local Ollama judge endpoint."""
+    """Call a local Ollama judge endpoint.
+
+    Thinking models (qwen3.5 등) can burn the whole ``num_predict`` budget in the
+    ``thinking`` channel and return an **empty** ``content``. First call is verbatim
+    (non-thinking judges keep the historical request shape); on empty content we
+    retry once with ``think: false``. If the retry itself fails (e.g. HTTP 400 from
+    a model that rejects the ``think`` param), we fall back to the first call's
+    empty content — the caller's ``_extract_score`` then yields ``-1`` (N/A), which
+    is the pre-patch behavior; we never escalate the retry into a crash.
+    """
     import requests  # lazy — only in live path
 
-    resp = requests.post(
-        f"{url.rstrip('/')}/api/chat",
-        json={
-            "model": model,
-            "stream": False,
-            "options": {"temperature": 0, "num_predict": 256},
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": prompt},
-            ],
-        },
-        timeout=120,
-    )
+    payload = {
+        "model": model,
+        "stream": False,
+        "options": {"temperature": 0, "num_predict": 256},
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+    }
+    # 1st attempt: verbatim request (historical shape). Errors propagate — the
+    # caller handles judge failure explicitly; swallowing them here would turn an
+    # unreachable endpoint into a silent all--1 run.
+    resp = requests.post(f"{url.rstrip('/')}/api/chat", json=payload, timeout=120)
     resp.raise_for_status()
-    return resp.json()["message"]["content"].strip()
+    content = (resp.json().get("message") or {}).get("content", "").strip()
+    if content:
+        return content
+    # Empty content — likely a thinking model. Best-effort retry with think:false;
+    # any failure here returns the empty content instead of raising.
+    try:
+        resp = requests.post(f"{url.rstrip('/')}/api/chat", json={**payload, "think": False}, timeout=120)
+        resp.raise_for_status()
+        return (resp.json().get("message") or {}).get("content", "").strip()
+    except requests.exceptions.RequestException:
+        return content
 
 
 # ---------------------------------------------------------------------------
@@ -238,14 +285,16 @@ def run(
         for metric in METRIC_NAMES:
             system, tmpl = _METRIC_CONFIG[metric]
             prompt = tmpl.format(
-                question=q[:500],
-                context=ctx[:1200],
-                answer=ans[:500],
-                reference=ref[:300],
+                question=q[:JUDGE_QUESTION_CHARS],
+                context=ctx[:JUDGE_CONTEXT_CHARS],
+                answer=ans[:JUDGE_ANSWER_CHARS],
+                reference=ref[:JUDGE_REFERENCE_CHARS],
             )
             try:
                 sc, _ = _extract_score(_call_judge(system, prompt))
-            except Exception:
+            except Exception as e:  # noqa: BLE001 — 실패는 -1(N/A)로 집계하되 반드시 로그
+                print(f"[warn] RAGAS judge 호출 실패 (record id={r.get('id')}, metric={metric}): "
+                      f"{type(e).__name__}: {e}")
                 sc = -1.0
 
             agg[metric].append(sc)

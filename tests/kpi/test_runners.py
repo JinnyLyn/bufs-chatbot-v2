@@ -317,6 +317,46 @@ class TestRetrievalOffline:
 # ragas runner — offline assertions (no live judge required)
 # ---------------------------------------------------------------------------
 
+class TestExtractScore:
+    """_extract_score robustness (PR #79 review #12 + score-key clamp bug)."""
+
+    def test_plain_json(self):
+        from eval_tools.kpi.runners.ragas import _extract_score
+
+        assert _extract_score('{"score": 0.8, "reason": "ok"}') == (0.8, "ok")
+
+    def test_nested_braces_in_reason(self):
+        """Braces inside the reason string must not break parsing (was -1)."""
+        from eval_tools.kpi.runners.ragas import _extract_score
+
+        score, reason = _extract_score('{"score": 0.5, "reason": "형식{1}오류"}')
+        assert score == 0.5 and "형식{1}" in reason
+
+    def test_json_wrapped_in_prose(self):
+        from eval_tools.kpi.runners.ragas import _extract_score
+
+        score, _ = _extract_score('판정 결과입니다: {"score": 1.0, "reason": "근거"} 이상.')
+        assert score == 1.0
+
+    def test_missing_score_key_is_na_not_zero(self):
+        """No 'score' key -> N/A(-1), NOT clamped to 0.0 (silent-error fix)."""
+        from eval_tools.kpi.runners.ragas import _extract_score
+
+        assert _extract_score('{"reason": "no score here"}') == (-1.0, "")
+
+    def test_garbage_and_empty(self):
+        from eval_tools.kpi.runners.ragas import _extract_score
+
+        assert _extract_score("not json at all") == (-1.0, "")
+        assert _extract_score("") == (-1.0, "")
+
+    def test_out_of_range_clamped(self):
+        from eval_tools.kpi.runners.ragas import _extract_score
+
+        assert _extract_score('{"score": 7}')[0] == 1.0
+        assert _extract_score('{"score": -3}')[0] == 0.0
+
+
 class TestRagasOffline:
     def test_na_sentinel_with_no_judge_model(self):
         """N/A sentinel returned when judge_model is None."""
