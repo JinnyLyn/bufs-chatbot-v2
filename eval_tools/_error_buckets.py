@@ -124,10 +124,11 @@ def main() -> None:
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
-    rows = json.load(open(args.inp, encoding="utf-8"))["results"]
+    with open(args.inp, encoding="utf-8") as fh:
+        payload = json.load(fh)
+    rows = payload.get("results")
     if not rows:
-        print(f"[error] {args.inp} 에 결과 행이 없습니다.", flush=True)
-        return
+        raise SystemExit(f"[error] {args.inp}: 'results' 키가 없거나 비어 있습니다 — _ragas_kpi 출력 파일인지 확인.")
     kb = kb_docs(args.parent_store)
     if not kb:
         print(f"[warn] parent_store 비어있음/없음 ({args.parent_store}) — 문서없음/Embedding 판정 신뢰도 하락", flush=True)
@@ -163,8 +164,9 @@ def main() -> None:
 
     ts = time.strftime("%Y%m%d_%H%M%S")
     out = args.out or os.path.join(_REPO, "logs", f"error_buckets_{ts}.json")
-    json.dump({"n": n, "correct": n_correct, "wrong": n_wrong, "buckets": dict(cnt), "rows": out_rows},
-              open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump({"n": n, "correct": n_correct, "wrong": n_wrong, "buckets": dict(cnt), "rows": out_rows},
+                  fh, ensure_ascii=False, indent=2)
     print(f"\nreport -> {os.path.relpath(out, _REPO)}")
 
 

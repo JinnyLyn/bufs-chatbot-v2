@@ -54,8 +54,11 @@ def main() -> None:
     ap.add_argument("--parent-store", default=os.path.join(_REPO, "parent_store"))
     args = ap.parse_args()
 
-    d = json.load(open(args.inp, encoding="utf-8"))
-    rows, kpi = d["results"], d["kpi"]
+    with open(args.inp, encoding="utf-8") as fh:
+        d = json.load(fh)
+    rows, kpi = d.get("results"), d.get("kpi")
+    if not rows or not kpi:
+        raise SystemExit(f"[error] {args.inp}: results/kpi 키가 없습니다 — _ragas_kpi 출력 파일인지 확인.")
     kb = eb.kb_docs(args.parent_store)
     for r in rows:
         r["_bucket"], r["_reason"], r["_conf"] = eb.classify(r, kb)
@@ -118,7 +121,8 @@ def main() -> None:
           "- Chunk/Embedding 구분은 doc_hit(정규화 매칭) 기반 1차 추정 — 심층 확인은 Langfuse 트레이스(`_answer_analysis.py`) 병행 권장.",
           "- 판정불가 = judge 점수 파싱 실패(재실행 대상)."]
 
-    open(args.out, "w", encoding="utf-8").write("\n".join(L) + "\n")
+    with open(args.out, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(L) + "\n")
     print("report ->", os.path.relpath(args.out, _REPO))
     print("KPI:", kpi)
     print("buckets:", dict(cnt))

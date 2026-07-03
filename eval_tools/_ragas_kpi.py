@@ -89,6 +89,18 @@ def hmean(a: float, b: float) -> float:
     return round(2 * a * b / (a + b), 4) if (a and b and a + b > 0) else 0.0
 
 
+def backend_model(base: str) -> str | None:
+    """Best-effort generator model from /health, to verify judge != generator (self-bias guard)."""
+    import requests
+
+    try:
+        r = requests.get(base + "/health", timeout=10)
+        r.raise_for_status()
+        return r.json().get("model")
+    except Exception:
+        return None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:8000", help="chatbot backend (generation)")
@@ -109,6 +121,17 @@ def main() -> None:
     print(f"RAGAS+KPI | gen=backend({args.base}) | judge=ollama:{args.judge_model}@{args.judge_url} "
           f"think={args.think} | n={len(data)}", flush=True)
 
+    # Misconfiguration guard: the whole point is a judge model DIFFERENT from the generator
+    # (self-eval bias, issue #82). Verify against the backend's /health, fail loud if unverifiable.
+    gen_model = backend_model(args.base)
+    if gen_model is None:
+        print(f"[WARN] 백엔드 /health 확인 실패({args.base}) — 생성 모델 미확인이라 judge≠generator 검증 불가.", flush=True)
+    elif gen_model == args.judge_model:
+        raise SystemExit(f"[ABORT] judge 모델이 생성 모델과 동일({gen_model}) — 자기평가 편향. "
+                         f"--judge-model 을 다른 모델로 지정하라 (issue #82).")
+    else:
+        print(f"  생성 모델(/health)={gen_model}  ≠ judge={args.judge_model}  ✓", flush=True)
+
     # Phase 1 — generation (single pass captures answer + context + sources + doc_recall + guard)
     print("Phase 1 — generation", flush=True)
     gen, t0 = [], time.time()
@@ -125,6 +148,13 @@ def main() -> None:
                     "_matched": dr["matched_sources"], "_guard": guard["verdict"], "_dur": done.get("duration_ms")})
         print(f"  gen [{i:3}/{len(data)}] id={r['id']:>4} ans={len(ans)}자 ctx={len(ctx)} "
               f"doc_hit={dr['hit']} guard={guard['verdict'][:4]} ({(time.time()-t0)/60:.1f}m)", flush=True)
+
+    gen_errors = sum(1 for g in gen if str(g["_ans"]).startswith("(ERR"))
+    if gen_errors == len(gen):
+        raise SystemExit(f"[ABORT] 생성 {gen_errors}/{len(gen)}건 전량 실패 — 백엔드({args.base})/터널 확인. "
+                         f"judge 단계 진행 무의미하므로 중단.")
+    if gen_errors:
+        print(f"[WARN] 생성 실패 {gen_errors}/{len(gen)}건 — 해당 답변은 '(ERR...)' (검색/백엔드/터널 확인)", flush=True)
 
     # Phase 2 — judge (separate model)
     print(f"\nPhase 2 — judge ({args.judge_model})", flush=True)
@@ -149,11 +179,18 @@ def main() -> None:
               + " ".join(f"{m.split('_')[0][:4]}={row[m]:.2f}" for m in rag.METRICS), flush=True)
         results.append(row)
 
-    def avg(m):
-        vals = [r[m] for r in results if r.get(m, -1) >= 0]
-        return round(sum(vals) / len(vals), 4) if vals else None
+    # Per-metric stats: a failed judge call is scored -1 and MUST NOT silently shrink the mean
+    # without the operator knowing (reviewer: no silent errors). Track valid-n + failure counts.
+    def stat(m):
+        vals = [r[m] for r in results if isinstance(r.get(m), (int, float)) and r[m] >= 0]
+        return (round(sum(vals) / len(vals), 4) if vals else None), len(vals)
 
-    ragas = {m: avg(m) for m in rag.METRICS}
+    ragas, valid_n = {}, {}
+    for m in rag.METRICS:
+        ragas[m], valid_n[m] = stat(m)
+    judge_failures = {m: len(results) - valid_n[m] for m in rag.METRICS}
+    total_judge_fail = sum(judge_failures.values())
+
     prec, rec = ragas["context_precision"], ragas["context_recall"]
     kpi = {"Accuracy": ragas["answer_correctness"], "Precision": prec, "Recall": rec,
            "F1": hmean(prec or 0, rec or 0), "Faithfulness": ragas["faithfulness"],
@@ -167,14 +204,25 @@ def main() -> None:
         print(f"  {k:<16} {bar} {v}")
     print(f"\n  doc_recall(string match)={doc_recall_rate}  guard_violations={guard_viol}/{len(results)}")
 
+    # Loud warnings so a shrunken/None KPI is never mistaken for a clean run.
+    if total_judge_fail:
+        print(f"[WARN] judge 점수 파싱 실패 {total_judge_fail}건(지표별 {judge_failures}) — 해당 점수는 평균에서 "
+              f"제외돼 표본이 줄었다. judge 모델/엔드포인트({args.judge_url}) 확인 후 재실행 권장.", flush=True)
+    degraded = [m for m in rag.METRICS if valid_n[m] < len(results)]
+    if degraded:
+        print(f"[WARN] 표본 축소 지표: " + ", ".join(f"{m}({valid_n[m]}/{len(results)})" for m in degraded), flush=True)
+    if any(ragas[m] is None for m in rag.METRICS):
+        print("[WARN] 유효 점수 0건인 지표 존재 → KPI None. judge가 전혀 채점 못 함(think 설정/모델명/엔드포인트 확인).", flush=True)
+
     payload = {"judge": f"ollama:{args.judge_model}", "judge_url": args.judge_url, "generator": args.base,
-               "n": len(data), "ragas": ragas, "kpi": kpi, "doc_recall_rate": doc_recall_rate,
-               "guard_violations": guard_viol, "results": results}
+               "generator_model": gen_model, "n": len(data), "ragas": ragas, "kpi": kpi,
+               "valid_n": valid_n, "judge_failures": judge_failures, "gen_errors": gen_errors,
+               "doc_recall_rate": doc_recall_rate, "guard_violations": guard_viol, "results": results}
     ts = time.strftime("%Y%m%d_%H%M%S")
     os.makedirs(os.path.join(_REPO, "logs"), exist_ok=True)
     for name in (f"ragas_kpi_{args.tag}_{ts}.json", f"ragas_kpi_{args.tag}_latest.json"):
-        json.dump(payload, open(os.path.join(_REPO, "logs", name), "w", encoding="utf-8"),
-                  ensure_ascii=False, indent=2)
+        with open(os.path.join(_REPO, "logs", name), "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2)
     print(f"\nreport -> logs/ragas_kpi_{args.tag}_{ts}.json  (latest -> logs/ragas_kpi_{args.tag}_latest.json)")
 
 
