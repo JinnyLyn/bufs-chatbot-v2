@@ -751,7 +751,7 @@
     "id": 45,
     "question": "휴학 중인데 학생증 사용이 가능한가요?",
     "gold_intent": "휴학생 학생증 사용",
-    "gold_document": "학사공지",
+    "gold_document": "모바일 학생증 사용 안내",
     "gold_chunk_id": "",
     "expected_answer": "모바일 학생증 앱을 이용하면 휴학 중에도 도서관 출입 등 학교의 기본 시설 이용이 가능합니다.",
     "must_include": [
@@ -802,7 +802,7 @@
     "id": 48,
     "question": "휴학 중 계절학기를 들을 수 있다고 들었습니다.",
     "gold_intent": "휴학생 계절학기",
-    "gold_document": "학사공지",
+    "gold_document": "기타",
     "gold_chunk_id": "",
     "expected_answer": "계절학기 수강 자격은 재학생을 원칙으로 하며, 상세 요건은 해당 학기 계절학기 운영 공지를 다시 확인해야 합니다.",
     "must_include": [
@@ -970,7 +970,7 @@
     "id": 58,
     "question": "복학생도 장학금 신청이 가능한가요?",
     "gold_intent": "복학생 장학금 신청",
-    "gold_document": "장학공지",
+    "gold_document": "기타",
     "gold_chunk_id": "",
     "expected_answer": "네, 복학 예정자도 정해진 기간 내에 교내외 장학금을 신청할 수 있으므로 장학공지를 수시로 확인해야 합니다.",
     "must_include": [
@@ -1593,7 +1593,7 @@
     "id": 95,
     "question": "학생증을 잃어버렸습니다.",
     "gold_intent": "학생증 재발급",
-    "gold_document": "학사공지",
+    "gold_document": "모바일 학생증 사용 안내",
     "gold_chunk_id": "",
     "expected_answer": "실물 학생증 분실 시 모바일 학생증을 우선 사용하시고, 카드 재발급 절차는 관련 부서의 별도 공지를 확인하십시오.",
     "must_include": [

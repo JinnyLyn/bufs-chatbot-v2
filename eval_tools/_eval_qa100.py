@@ -134,7 +134,7 @@ def main() -> None:
                 "intent_evaluated": pred_intent is not None,
                 "pred_intent": pred_intent,
                 "intent_correct": qa_scorer.intent_match(rec["gold_intent"], pred_intent),
-                "doc_recall_evaluated": bool(sources),
+                "doc_recall_evaluated": bool(sources) and qa_scorer.is_retrievable_gold(rec["gold_document"]),
                 "doc_hit": dr["hit"], "matched_sources": dr["matched_sources"], "sources": sources,
                 "tool_calls": done.get("tool_calls"), "duration_ms": done.get("duration_ms"),
             }

@@ -195,7 +195,10 @@ def main() -> None:
     kpi = {"Accuracy": ragas["answer_correctness"], "Precision": prec, "Recall": rec,
            "F1": hmean(prec or 0, rec or 0), "Faithfulness": ragas["faithfulness"],
            "AnswerRelevancy": ragas["answer_relevancy"]}
-    doc_recall_rate = round(sum(1 for r in results if r["doc_hit"]) / len(results), 4) if results else None
+    # Only records with a concrete gold doc are scorable for retrieval recall; sentinel
+    # gold_document (e.g. "기타") has no target to retrieve and must not dilute the rate.
+    scorable = [r for r in results if qa_scorer.is_retrievable_gold(r.get("gold_document"))]
+    doc_recall_rate = round(sum(1 for r in scorable if r["doc_hit"]) / len(scorable), 4) if scorable else None
     guard_viol = sum(1 for r in results if r["guard"] == "VIOLATION")
 
     print("\n=== KPI ===")
