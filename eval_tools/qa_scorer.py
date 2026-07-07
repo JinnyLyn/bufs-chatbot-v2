@@ -118,6 +118,22 @@ def intent_match(gold_intent: str, pred_intent: str | None) -> bool:
     return g == p or g in p or p in g
 
 
+# gold_document sentinels that denote "no single KB document is the retrieval target"
+# (category-less questions whose answer defers to an external notice). These are excluded
+# from retrieval-recall scoring so they are not counted as guaranteed misses.
+NON_RETRIEVABLE_GOLD = {"기타"}
+
+
+def is_retrievable_gold(gold_document: str) -> bool:
+    """True if gold_document names a concrete KB doc we can score retrieval against.
+
+    Empty or sentinel (e.g. ``기타``) values mean there is no single target document,
+    so retrieval recall is undefined for that record and it must not dilute the metric.
+    """
+    g = (gold_document or "").strip()
+    return bool(g) and g not in NON_RETRIEVABLE_GOLD
+
+
 def doc_recall(gold_document: str, sources: list[str] | None) -> dict[str, Any]:
     """Heuristic retrieval recall: did any retrieved source match gold_document?
 
