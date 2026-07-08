@@ -16,7 +16,10 @@ return empty content and every score parses to -1.
 Run::
 
   python eval_tools/_rejudge.py --in logs/ragas_kpi_full_latest.json --judge-model gemma4:26b
-  python eval_tools/_rejudge.py --in logs/ragas_kpi_full_latest.json --n 2   # smoke
+  python eval_tools/_rejudge.py --in logs/ragas_kpi_full_latest.json --n 2 --tag smoke
+
+``--n`` truncates ``results`` in the output too — give smokes their own ``--tag`` so a
+full run's ``ragas_kpi_<tag>_latest.json`` never gets silently overwritten by a 2-record one.
 
 Outputs: logs/ragas_kpi_<tag>_<ts>.json and logs/ragas_kpi_<tag>_latest.json.
 """

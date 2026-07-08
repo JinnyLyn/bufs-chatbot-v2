@@ -10,15 +10,18 @@ HYBRID index (top ``--k``, no score threshold), then bucketed:
   else                                     -> chunking       (doc arrives, answer chunk never does)
 
 ``captured@5(sub-thr)`` flags hits that rank <=5 but score below SEARCH_SCORE_THRESHOLD —
-they pass the probe yet get filtered live. Chunk-hit criterion is **any-token** (one of
-``must_include`` inside the chunk text, whitespace-normalized) for #104 comparability, so
-rank/chunking problems are slightly UNDER-counted (loose criterion).
+they pass the probe yet get filtered live, so they count as **threshold-cut**, NOT as
+agent-side loss (production drops them even with a perfect query). Chunk-hit criterion is
+**any-token** (one of ``must_include`` inside the chunk text, whitespace-normalized) for
+#104 comparability, so rank/chunking problems are slightly UNDER-counted (loose criterion).
 
 Cross-tab (``--run``): joins a ``_ragas_kpi`` result json; live failures that the probe
-captures@5 are **agent-side losses (term-drift, #87)** — the index serves the answer for
-the original text, so the agent's reformulated query lost it. ``--legs`` then attributes
-those to the dense vs sparse leg (2026-07-07 실측: 17/19 dense-소관 → sparse-만 원문을
-주입하는 split-path 로는 회복 불가).
+captures@5 **above threshold** are **agent-side losses (term-drift, #87)** — the index
+serves the answer for the original text, so the agent's reformulated query lost it.
+Wrong/correct follows ``_error_buckets`` definitions (bucket labels when ``--buckets`` is
+given, else ``answer_correctness < _error_buckets.THRESH``) so both tools agree. ``--legs``
+then attributes drift to the dense vs sparse leg (2026-07-08 실측: 16/19 dense-소관 →
+sparse-만 원문을 주입하는 split-path 로는 회복 불가).
 
 ⚠ STOP the backend first — the embedded Qdrant is a single-process lock. 100 questions
 run in ~0.2 min (query embedding only).
@@ -43,6 +46,7 @@ from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import qa_scorer  # noqa: E402
+from _error_buckets import CORRECT_BUCKETS, THRESH as ANSWER_THRESH  # noqa: E402  (single wrong/correct cut)
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -140,21 +144,30 @@ def main() -> None:
 
     drift = []
     if run_by_id:
-        wrong = [r for r in out if isinstance(r["live_corr"], (int, float)) and 0 <= r["live_corr"] < 0.5]
-        # retrieval-side: bucket labels when provided, else low-context_recall proxy
+        # Wrong/correct must match _error_buckets: bucket labels when available (판정불가
+        # excluded — no judge score to attribute), else the same THRESH cut on correctness.
         if bucket_by_id:
-            ret = [r for r in wrong if (r["live_bucket"] or "") in RETRIEVAL_BUCKETS]
+            wrong = [r for r in out if r["live_bucket"]
+                     and r["live_bucket"] not in CORRECT_BUCKETS and r["live_bucket"] != "판정불가"]
+            ret = [r for r in wrong if r["live_bucket"] in RETRIEVAL_BUCKETS]
             how = "7-bucket 라벨"
         else:
+            wrong = [r for r in out if isinstance(r["live_corr"], (int, float))
+                     and 0 <= r["live_corr"] < ANSWER_THRESH]
             ret = [r for r in wrong if isinstance(r["live_cr"], (int, float)) and 0 <= r["live_cr"] < 0.5]
-            how = "context_recall<0.5 근사"
+            how = f"corr<{ANSWER_THRESH} + context_recall<0.5 근사"
         print(f"\n=== 교차: 라이브 오답 {len(wrong)} / 검색-side {len(ret)} ({how}) ===")
         for b, c in Counter(r["probe_bucket"] for r in ret).most_common():
             print(f"  probe={b:<20} {c}")
-        drift = [r for r in ret if r["probe_bucket"].startswith("captured@5")]
+        # sub-threshold hits are dropped by the LIVE score filter even with a perfect
+        # query — that's a threshold problem, not agent query drift (PR #106 review).
+        drift = [r for r in ret if r["probe_bucket"] == "captured@5"]
+        sub_ret = [r["id"] for r in ret if r["probe_bucket"] == "captured@5(sub-thr)"]
         print(f"\n★ agent-side loss(term-drift 등: 원문이면 top-5인데 라이브 실패): {len(drift)}건")
         for r in drift:
             print(f"   id={r['id']:>3} rank={r['ans_rank']} score={r['ans_score']} | {r['question'][:44]}")
+        if sub_ret:
+            print(f"   (별도: threshold-cut {len(sub_ret)}건 ids={sub_ret} — 원문으로도 라이브 필터에 잘림)")
 
     if args.legs and drift:
         from langchain_qdrant import QdrantVectorStore, RetrievalMode  # noqa: E402
