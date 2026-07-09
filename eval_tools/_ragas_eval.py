@@ -25,35 +25,23 @@ _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # REQUESTS_CA_BUNDLE at a PEM file there. Unset (Linux CI / normal nets) → verify via certifi.
 CA = os.environ.get("REQUESTS_CA_BUNDLE") or None
 
-# ── bufs's 5 RAGAS judge prompts (verbatim) ─────────────────────────────────
-FAITHFULNESS_SYSTEM = """당신은 RAG 시스템 평가 전문가입니다.
-생성된 답변이 오직 검색된 컨텍스트 내의 정보에만 근거하는지 평가합니다.
-점수 기준: 1.0 모든 주장이 컨텍스트에 근거 / 0.8~0.9 대부분 근거(사소한 형식변환) / 0.5~0.7 일부 근거없음 / 0.0~0.3 핵심을 지어냄.
-중요: "컨텍스트에 정보가 없어 문의 바랍니다"는 환각이 아닙니다(실제 없으면 1.0).
-반드시 JSON만: {"score": 0.0, "reason": "한 줄"}"""
-ANSWER_RELEVANCY_SYSTEM = """당신은 RAG 시스템 평가 전문가입니다.
-답변이 질문 의도에 부합하는지 평가합니다. 핵심 정보(날짜/숫자/조건)를 정확히 포함하면 0.8 이상.
-0.9~1.0 핵심 정확+한정어 반영 / 0.8 핵심 정확 / 0.6~0.7 부분 / 0.4~0.5 "문의하세요"만 / 0.0~0.3 무관.
-반드시 JSON만: {"score": 0.0, "reason": "한 줄"}"""
-CONTEXT_PRECISION_SYSTEM = """당신은 RAG 시스템 평가 전문가입니다.
-검색된 컨텍스트 중 질문에 답하는 데 유용한 정보의 비율을 평가합니다.
-1.0 전부 관련 / 0.7~0.9 핵심+일부노이즈 / 0.4~0.6 반반 / 0.1~0.3 대부분 무관 / 0.0 전혀 무관.
-반드시 JSON만: {"score": 0.0, "reason": "한 줄"}"""
-CONTEXT_RECALL_SYSTEM = """당신은 RAG 시스템 평가 전문가입니다.
-정답(reference)을 도출할 근거가 컨텍스트에 포함되어 있는지 평가합니다. 표현이 달라도 같은 사실이면 포함.
-0.9~1.0 모든 핵심 있음 / 0.8 핵심있음+세부누락 / 0.5~0.7 일부 / 0.2~0.4 부족 / 0.0 없음.
-반드시 JSON만: {"score": 0.0, "reason": "한 줄"}"""
-ANSWER_CORRECTNESS_SYSTEM = """당신은 RAG 시스템 평가 전문가입니다.
-생성된 답변이 정답(reference)과 얼마나 일치하는지 평가합니다.
-1.0 핵심(날짜/숫자/조건) 모두 일치 / 0.7~0.9 핵심맞고 세부누락 / 0.4~0.6 일부 / 0.1~0.3 대부분 불일치 / 0.0 완전 불일치.
-반드시 JSON만: {"score": 0.0, "reason": "한 줄"}"""
+# ── RAGAS judge prompts — single source: eval_tools/kpi/runners/ragas.py ────
+# (previously duplicated verbatim here; PR #79 review flagged the two-copy drift
+# risk, so this script now imports the canonical prompts and only adds the
+# human-readable display names used in its console report.)
+from kpi.runners.ragas import _METRIC_CONFIG as _KPI_METRIC_CONFIG  # noqa: E402
 
+_DISPLAY_NAMES = {
+ "faithfulness": "Faithfulness 성실성",
+ "answer_relevancy": "Answer Relevancy 관련성",
+ "context_precision": "Context Precision 정밀도",
+ "context_recall": "Context Recall 재현율",
+ "answer_correctness": "Answer Correctness 정확도",
+}
+# {metric: (system_prompt, user_template, display_name)} — same 3-tuple shape as
+# before (consumed by _ragas_kpi.py / _rejudge.py via `rag.METRIC_CONFIG`).
 METRIC_CONFIG = {
- "faithfulness": (FAITHFULNESS_SYSTEM, "[검색된 컨텍스트]\n{context}\n\n[생성된 답변]\n{answer}\n\n답변이 컨텍스트에만 근거하는지 평가해 JSON으로.", "Faithfulness 성실성"),
- "answer_relevancy": (ANSWER_RELEVANCY_SYSTEM, "[질문]\n{question}\n\n[생성된 답변]\n{answer}\n\n답변이 질문 의도에 부합하는지 평가해 JSON으로.", "Answer Relevancy 관련성"),
- "context_precision": (CONTEXT_PRECISION_SYSTEM, "[질문]\n{question}\n\n[정답]\n{reference}\n\n[검색된 컨텍스트]\n{context}\n\n컨텍스트가 유용한지 평가해 JSON으로.", "Context Precision 정밀도"),
- "context_recall": (CONTEXT_RECALL_SYSTEM, "[정답]\n{reference}\n\n[검색된 컨텍스트]\n{context}\n\n정답 근거가 컨텍스트에 있는지 평가해 JSON으로.", "Context Recall 재현율"),
- "answer_correctness": (ANSWER_CORRECTNESS_SYSTEM, "[질문]\n{question}\n\n[정답]\n{reference}\n\n[생성된 답변]\n{answer}\n\n답변이 정답과 일치하는지 평가해 JSON으로.", "Answer Correctness 정확도"),
+ m: (sysp, tmpl, _DISPLAY_NAMES[m]) for m, (sysp, tmpl) in _KPI_METRIC_CONFIG.items()
 }
 METRICS = list(METRIC_CONFIG.keys())
 
