@@ -9,17 +9,13 @@ from db.parent_store_manager import ParentStoreManager
 logger = logging.getLogger(__name__)
 
 
-def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_threshold: float):
-    """Split-path hybrid (issue #66): dense leg ← dense_query, sparse leg ← sparse_query.
+def _split_hybrid_search_raw(vs, dense_query: str, sparse_query: str, k: int, score_threshold: float):
+    """Split-path hybrid core: returns raw Qdrant points (with .score) for blending support.
 
-    Mirrors langchain_qdrant's RetrievalMode.HYBRID query exactly (same prefetch limit=k,
-    same RRF fusion, same score_threshold, same Document reconstruction) — the only
-    difference is the two legs are embedded from DIFFERENT texts. When dense_query ==
-    sparse_query the result is identical to vs.similarity_search(query, k, score_threshold).
+    Mirrors langchain_qdrant's RetrievalMode.HYBRID query exactly — the only difference is
+    both legs are embedded from DIFFERENT texts. Returns (points, docs) so callers that need
+    RRF scores for CE+RRF blending can use points[i].score alongside docs[i].
     """
-    # Split-path drives both legs, so it needs a HYBRID store: dense embeddings AND
-    # sparse_embeddings. On a DENSE-only (or sparse-only) collection one of these is None,
-    # which would blow up with a cryptic AttributeError on .embed_query below.
     if getattr(vs, "embeddings", None) is None or getattr(vs, "sparse_embeddings", None) is None:
         raise ValueError(
             "SPLIT_PATH_ENABLED requires a HYBRID collection with both a dense and a sparse "
@@ -43,10 +39,21 @@ def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_
         score_threshold=score_threshold,
         with_payload=True,
     ).points
-    return [
+    docs = [
         vs._document_from_point(p, vs.collection_name, vs.content_payload_key, vs.metadata_payload_key)
         for p in points
     ]
+    return points, docs
+
+
+def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_threshold: float):
+    """Split-path hybrid (issue #66): dense leg ← dense_query, sparse leg ← sparse_query.
+
+    Thin wrapper over _split_hybrid_search_raw for callers that don't need RRF scores.
+    When dense_query == sparse_query the result is identical to vs.similarity_search().
+    """
+    _, docs = _split_hybrid_search_raw(vs, dense_query, sparse_query, k, score_threshold)
+    return docs
 
 
 class ToolFactory:
@@ -70,7 +77,31 @@ class ToolFactory:
             # `question` (= rewrittenQuestions[idx]; with rewrite off this is the user's
             # message). `state` is injected via InjectedState and is hidden from the LLM schema.
             original = (state or {}).get("question", "") or query
-            if config.SPLIT_PATH_ENABLED:
+            if config.RERANK_ENABLED:
+                # Rerank path (#104): fetch a DEEPER pool at threshold 0 (so rank_cut chunks
+                # buried below the 0.3 RRF cutoff survive to the reranker), then let the
+                # cross-encoder re-score against the ORIGINAL question pick the top `limit`.
+                # When RERANK_BLEND_ALPHA is set, blends CE score with the RRF score to
+                # prevent full override of literal-match (BM25-driven) chunks.
+                from db import reranker
+                pool_k = max(limit, config.RERANK_PREFETCH_K)
+                if config.SPLIT_PATH_ENABLED:
+                    if config.RERANK_BLEND_ALPHA is not None:
+                        pts, pool = _split_hybrid_search_raw(
+                            self.collection, dense_query=query, sparse_query=original,
+                            k=pool_k, score_threshold=0.0)
+                        rrf_scores = [p.score for p in pts]
+                    else:
+                        pool = _split_hybrid_search(
+                            self.collection, dense_query=query, sparse_query=original,
+                            k=pool_k, score_threshold=0.0)
+                        rrf_scores = None
+                else:
+                    pool = self.collection.similarity_search(query, k=pool_k, score_threshold=0.0)
+                    rrf_scores = None
+                results = reranker.rerank(original, pool, limit,
+                                          rrf_scores=rrf_scores, blend_alpha=config.RERANK_BLEND_ALPHA)
+            elif config.SPLIT_PATH_ENABLED:
                 results = _split_hybrid_search(
                     self.collection, dense_query=query, sparse_query=original,
                     k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)

@@ -125,6 +125,39 @@ SEARCH_SCORE_THRESHOLD = float(os.environ.get("SEARCH_SCORE_THRESHOLD", "0.3"))
 # and the agent query are identical, the result is byte-identical to the normal hybrid.
 SPLIT_PATH_ENABLED = os.environ.get("SPLIT_PATH_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 
+# --- Re-ranking (issue #104: rank_cut 회복 + term-drift 후단 방어) ---
+# Cross-encoder rerank over a DEEPER candidate pool. Retrieval fetches RERANK_PREFETCH_K
+# candidates at score_threshold 0 (so answer chunks buried at rank 6~20 — below the live
+# 0.3 RRF cutoff, our measured rank_cut bucket — are NOT filtered before the reranker sees
+# them), a cross-encoder re-scores every candidate against the user's ORIGINAL question
+# (state["question"], not the agent's reworded tool-call query), and the top `limit` by
+# rerank score are returned. Two wins measured in #104:
+#   (a) rank_cut (15 시나리오셋 실측): buried answer chunks promoted into top-5 without
+#       lowering the global score_threshold (avoids the W1 latency 회귀 경로).
+#   (b) term-drift 후단 방어 (#87, 후보 상한 16/19): split-path puts the original-text answer
+#       in the sparse-leg pool but RRF fusion buries it under dense-leg(drift) noise; reranking
+#       on the ORIGINAL query surfaces it. Only meaningful with SPLIT_PATH_ENABLED=true.
+# DEFAULT OFF — A/B toggle. When ON the reranker is the relevance gate, so the RRF-rank
+# score_threshold is bypassed for the prefetch pool (rerank score decides top-k).
+RERANK_ENABLED = os.environ.get("RERANK_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+RERANK_MODEL = os.environ.get("RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
+# Candidate pool depth fed to the cross-encoder — 20 matches the #104 probe top-20 window.
+RERANK_PREFETCH_K = int(os.environ.get("RERANK_PREFETCH_K", "20"))
+# Rerank on CPU by default (same policy as EMBEDDING_DEVICE — keep GPU VRAM for the LLM).
+RERANK_DEVICE = os.environ.get("RERANK_DEVICE", EMBEDDING_DEVICE)
+# Optional floor on the cross-encoder score below which a candidate is dropped (returns
+# NO_RELEVANT_CHUNKS if nothing clears it). Empty = no floor (return top-k unconditionally).
+# bge-reranker-v2-m3 emits logits (roughly [-11, +11]); leave off for the first A/B, then
+# calibrate against out-of-scope refusal correctness.
+_rerank_floor = os.environ.get("RERANK_SCORE_MIN", "").strip()
+RERANK_SCORE_MIN = float(_rerank_floor) if _rerank_floor else None
+# Score blending: alpha * CE_score_norm + (1-alpha) * RRF_score_norm, before top-k cut.
+# Keeps a partial memory of RRF rank so BM25-matched (literal) chunks aren't fully
+# overridden by the cross-encoder — addresses the "literal-match 실종" regression class.
+# None = pure rerank (alpha=1.0). Candidate values: 0.3 / 0.5 / 0.7 (live sweep pending).
+_blend_alpha = os.environ.get("RERANK_BLEND_ALPHA", "").strip()
+RERANK_BLEND_ALPHA = float(_blend_alpha) if _blend_alpha else None
+
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
 # agent searches less thoroughly. env-overridable so they can be tuned / rolled back
