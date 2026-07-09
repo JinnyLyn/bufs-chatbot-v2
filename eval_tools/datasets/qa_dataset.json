@@ -1542,7 +1542,7 @@
     "id": 92,
     "question": "학적 정보에 이름이 잘못 등록돼 있습니다.",
     "gold_intent": "인적사항 수정",
-    "gold_document": "기타",
+    "gold_document": "2026학년도 1학기 학사안내",
     "gold_chunk_id": "",
     "expected_answer": "학업성적사정표상의 이름 등 인적사항이 사실과 다를 경우 증빙서류를 지참하여 학사지원팀(051-509-5182)으로 문의해야 합니다.",
     "must_include": [
