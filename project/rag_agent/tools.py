@@ -60,8 +60,13 @@ class ToolFactory:
         """Search for the top K most relevant child chunks.
 
         Args:
-            query: Search query string
-            limit: Maximum number of results to return
+            query: Search query. Include the key nouns from the user's original
+                question verbatim (program/institution names, proper nouns, numbers).
+                Documents are indexed with those exact surface forms — do not
+                paraphrase them into administrative synonyms or abbreviations.
+                Adding related terms is fine, but never drop the original nouns.
+            limit: Maximum number of results to return. Use 10 — smaller values
+                cut off relevant chunks ranked 6-10.
         """
         try:
             # Split-path retrieval (issue #66): route the user's ORIGINAL question to the

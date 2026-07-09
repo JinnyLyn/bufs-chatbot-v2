@@ -93,7 +93,7 @@ def orchestrator(state: AgentState, llm_with_tools):
     )
     if not state.get("messages"):
         human_msg = HumanMessage(content=state["question"])
-        force_search = HumanMessage(content="이 질문에 답하려면 첫 단계로 반드시 'search_child_chunks'를 호출하세요.")
+        force_search = HumanMessage(content=get_force_search_instruction())
         response = llm_with_tools.invoke([sys_msg] + summary_injection + [human_msg, force_search])
         return {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
 
@@ -125,7 +125,7 @@ def fallback_response(state: AgentState, llm):
     prompt_content = (
         f"사용자 질문: {state.get('question')}\n\n"
         f"{context_text}\n\n"
-        f"지시:\n위 데이터만 사용해 가능한 한 최선의 답변을 작성하세요."
+        f"{get_fallback_task_instruction()}"
     )
     response = llm.invoke([SystemMessage(content=get_fallback_response_prompt()), HumanMessage(content=prompt_content)])
     return {"messages": [response]}

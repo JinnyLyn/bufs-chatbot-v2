@@ -55,9 +55,11 @@ SPARSE_IDF = os.environ.get("SPARSE_IDF", "true").lower() in ("1", "true", "yes"
 # EMBEDDING_DEVICE=cuda to use the GPU instead.
 EMBEDDING_DEVICE = os.environ.get("EMBEDDING_DEVICE", "cpu")
 # Ollama model for the agent. Must support tool-calling. The default is a small,
-# fast, *non-thinking* instruct model; override with LLM_MODEL to use one you have
-# pulled (e.g. "qwen3:8b"). Avoid "thinking" models — their reasoning tokens leak
-# into the streamed answer.
+# fast, *non-thinking* instruct model that fits a 12 GB local GPU; override with
+# LLM_MODEL to use one you have pulled. Prod / README / .env.example run
+# "qwen3.5:9b" via the env var — the small default here is intentional for local
+# dev, not the deployed model. Avoid "thinking" models — their reasoning tokens
+# leak into the streamed answer.
 # Explicit Ollama server URL for the LLM client (overrides OLLAMA_HOST). Point this at a
 # LOCAL Ollama (e.g. http://127.0.0.1:11435) instead of an OLLAMA_HOST that SSH-tunnels to
 # a remote box. Empty = use OLLAMA_HOST / default.
