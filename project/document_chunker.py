@@ -77,7 +77,13 @@ class DocumentChuncker:
 
     def create_chunks_single(self, md_path):
         doc_path = Path(md_path)
-        
+
+        # KB scope guard (#108): out-of-scope sources (e.g. 근로기관-facing docs) are never
+        # indexed. This is the single chokepoint both reindex.py and DocumentManager.add_documents
+        # route through, so the exclusion holds for every ingest path.
+        if doc_path.stem in config.KB_EXCLUDE_SOURCES:
+            return [], []
+
         with open(doc_path, "r", encoding="utf-8") as f:
             raw = strip_conversion_artifacts(f.read())
         raw = self.__forward_fill_month_tables(raw)

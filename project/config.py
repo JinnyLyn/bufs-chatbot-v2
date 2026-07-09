@@ -15,6 +15,17 @@ MARKDOWN_DIR = os.path.join(_BASE_DIR, "markdown_docs")
 PARENT_STORE_PATH = os.path.join(_BASE_DIR, "parent_store")
 QDRANT_DB_PATH = os.path.join(_BASE_DIR, "qdrant_db")
 
+# KB scope: markdown sources kept OUT of the student index (matched against the .md stem).
+# Employer/근로기관-facing docs are out of scope for student academic queries yet, being large,
+# dominate retrieval — "국가근로장학금 근로기관 안내자료" alone is 20% of child chunks and is the
+# top hit for many unrelated queries (form-field-schema chunks + 국가장학금/국가근로장학금 token
+# overlap) while never being a correct answer. Excluding it recovered +6pp retrieval recall on the
+# qa100 9b set (#108). Comma-separated env KB_EXCLUDE_SOURCES overrides the default set.
+_DEFAULT_EXCLUDED_SOURCES = "2026년도 국가근로장학금 근로기관 안내자료"
+KB_EXCLUDE_SOURCES = frozenset(
+    s.strip() for s in os.environ.get("KB_EXCLUDE_SOURCES", _DEFAULT_EXCLUDED_SOURCES).split(",") if s.strip()
+)
+
 # --- Logging / Observability ---
 # Persistent logs live under <repo>/logs (backend app log + per-day Q&A JSONL).
 LOG_DIR = os.path.join(_BASE_DIR, "logs")

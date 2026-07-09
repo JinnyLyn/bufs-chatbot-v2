@@ -67,6 +67,10 @@ def main() -> None:
     docs = parents_total = children_total = 0
 
     for md in md_files:
+        if md.stem in config.KB_EXCLUDE_SOURCES:
+            print(f"  (skip, out of scope — KB_EXCLUDE_SOURCES) {md.name}")
+            continue
+
         digest = hashlib.md5(md.read_bytes()).hexdigest()
         if digest in seen:
             print(f"  (skip exact-dup of '{seen[digest]}') {md.name}")
