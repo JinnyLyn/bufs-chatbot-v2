@@ -514,7 +514,7 @@
     "id": 31,
     "question": "군 복무 때문에 시험을 못 봤는데 F 처리됐습니다.",
     "gold_intent": "공인결석과 시험",
-    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_document": "기타",
     "gold_chunk_id": "",
     "expected_answer": "공인결석 승인은 출석만 인정될 뿐 시험을 대체하지 않으므로, 사전에 교수님과 시험 대체 방안을 상의했어야 합니다.",
     "must_include": [
@@ -634,7 +634,7 @@
     "id": 38,
     "question": "군 입대 날짜가 학기 중간입니다.",
     "gold_intent": "군휴학 신청",
-    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_document": "학생포털시스템 매뉴얼학부생",
     "gold_chunk_id": "",
     "expected_answer": "입영통지서를 지참하여 군휴학을 신청해야 하며, 이는 일반 결석 처리와는 다른 학적 변동 절차입니다.",
     "must_include": [
@@ -904,7 +904,7 @@
     "id": 54,
     "question": "복학 신청은 했는데 학적 상태가 아직 휴학으로 나옵니다.",
     "gold_intent": "복학 승인 절차",
-    "gold_document": "공인결석 신청 매뉴얼",
+    "gold_document": "학생포털시스템 매뉴얼학부생",
     "gold_chunk_id": "",
     "expected_answer": "학부(과) 및 학사지원팀의 최종 승인 처리가 완료되어야 학적 상태가 변경되므로 포털에서 진행 현황을 확인하십시오.",
     "must_include": [
@@ -1542,7 +1542,7 @@
     "id": 92,
     "question": "학적 정보에 이름이 잘못 등록돼 있습니다.",
     "gold_intent": "인적사항 수정",
-    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_document": "기타",
     "gold_chunk_id": "",
     "expected_answer": "학업성적사정표상의 이름 등 인적사항이 사실과 다를 경우 증빙서류를 지참하여 학사지원팀(051-509-5182)으로 문의해야 합니다.",
     "must_include": [
@@ -1559,7 +1559,7 @@
     "id": 93,
     "question": "개명했는데 학적부 수정은 어떻게 하나요?",
     "gold_intent": "개명 학적 반영",
-    "gold_document": "재학생 및 복학생 등록 안내",
+    "gold_document": "기타",
     "gold_chunk_id": "",
     "expected_answer": "개명 사실이 기재된 주민등록초본 등 증빙서류를 지참하여 본관 학사지원팀을 방문해 학적 수정을 요청하십시오.",
     "must_include": [
@@ -1576,7 +1576,7 @@
     "id": 94,
     "question": "주민등록번호 변경 이력이 있는데 반영 가능한가요?",
     "gold_intent": "학적 정보 갱신",
-    "gold_document": "2026학년도 1학기 학사안내",
+    "gold_document": "기타",
     "gold_chunk_id": "",
     "expected_answer": "네, 공식 증빙서류를 학사지원팀에 제출하면 변경된 주민등록번호를 학적 정보에 반영할 수 있습니다.",
     "must_include": [
