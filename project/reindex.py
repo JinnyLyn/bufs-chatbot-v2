@@ -67,11 +67,16 @@ def main() -> None:
     docs = parents_total = children_total = 0
 
     for md in md_files:
+        digest = hashlib.md5(md.read_bytes()).hexdigest()
+
         if md.stem in config.KB_EXCLUDE_SOURCES:
             print(f"  (skip, out of scope — KB_EXCLUDE_SOURCES) {md.name}")
+            # Record the digest so an exact-content copy under a NON-excluded stem (e.g. the
+            # plus/space-encoded filename pairs this script de-dups) is also filtered — else it
+            # would slip past the stem-based exclusion and reintroduce the out-of-scope chunks.
+            seen.setdefault(digest, md.name)
             continue
 
-        digest = hashlib.md5(md.read_bytes()).hexdigest()
         if digest in seen:
             print(f"  (skip exact-dup of '{seen[digest]}') {md.name}")
             continue

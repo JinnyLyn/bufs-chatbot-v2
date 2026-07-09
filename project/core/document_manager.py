@@ -28,8 +28,18 @@ class DocumentManager:
                 progress_callback((i + 1) / len(document_paths), f"Processing {Path(doc_path).name}")
                 
             doc_name = Path(doc_path).stem
+
+            # KB scope guard (#108): skip out-of-scope sources BEFORE materializing markdown.
+            # If we let it copy/convert first and only drop it at the chunker, the orphaned .md
+            # stays in markdown_docs — inflating get_markdown_files()/health counts with a doc
+            # that was never indexed, and blocking a later re-add (md_path.exists() short-circuit)
+            # if it's removed from the exclusion set.
+            if doc_name in config.KB_EXCLUDE_SOURCES:
+                skipped += 1
+                continue
+
             md_path = self.markdown_dir / f"{doc_name}.md"
-            
+
             if md_path.exists():
                 skipped += 1
                 continue
