@@ -71,13 +71,15 @@ class TestOrchestratorPrompt:
         p = _import_prompts()
         assert "한국어" in p.get_orchestrator_prompt()
 
-    def test_refusal_is_last_resort_with_recheck(self):
+    def test_refusal_requires_context_recheck(self):
         """Issue #81: 11/79 wrong answers were false refusals with the fact IN
-        context — refusing must require re-reading every context block first."""
+        context — before refusing, the model must re-check the excerpts for the
+        question's key terms. (Kept as ONE mild sentence: the 4-step protocol
+        variant measured net-negative on the 0.7 cut in the local qa100 A/B.)"""
         p = _import_prompts()
         text = p.get_orchestrator_prompt()
-        assert "마지막 수단" in text
-        assert "직접 인용" in text
+        assert "다시 확인" in text
+        assert "핵심어" in text
 
     def test_query_anchoring_rule(self):
         """Issue #87: 16/19 term-drift cases are dense-leg — the tool-call query
