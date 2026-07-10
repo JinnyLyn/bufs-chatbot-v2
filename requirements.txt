@@ -11,7 +11,7 @@ langchain-ollama==1.1.0
 langchain-qdrant==1.1.0
 langchain-text-splitters==1.1.2
 langfuse==4.13.0
-langgraph==1.2.7
+langgraph==1.2.9
 docling==2.109.0
 pymupdf==1.28.0        # text-layer fallback for pages Docling drops on std::bad_alloc
 python-dotenv==1.2.2
