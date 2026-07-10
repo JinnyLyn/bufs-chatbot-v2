@@ -1,9 +1,7 @@
 """Fast-refuse robustness probe — over-refuse + under-refuse rates.
 
 The deployed config runs with ``fast_refuse=true``: out-of-document questions
-should be refused quickly ("제공된 자료에서 질문에 답할 수 있는 정보를 찾지
-못했습니다" — the canonical refusal sentence shared by the orchestrator and
-aggregation prompts). Two failure
+should be refused quickly ("제공된 자료에는 해당 정보가 없습니다"). Two failure
 modes matter on a *harder* boundary set than the clean 8-Q refusal check:
 
 * **over-refuse** — an *answerable* question is wrongly refused (the bot bails on

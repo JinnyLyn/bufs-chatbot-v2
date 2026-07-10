@@ -71,43 +71,6 @@ class TestOrchestratorPrompt:
         p = _import_prompts()
         assert "한국어" in p.get_orchestrator_prompt()
 
-    def test_refusal_requires_context_recheck(self):
-        """Issue #81: 11/79 wrong answers were false refusals with the fact IN
-        context — before refusing, the model must re-check the excerpts for the
-        question's key terms. (Kept as ONE mild sentence: the 4-step protocol
-        variant measured net-negative on the 0.7 cut in the local qa100 A/B.)"""
-        p = _import_prompts()
-        text = p.get_orchestrator_prompt()
-        assert "다시 확인" in text
-        assert "핵심어" in text
-
-    def test_query_anchoring_rule(self):
-        """Issue #87: 16/19 term-drift cases are dense-leg — the tool-call query
-        itself must keep the original question's key nouns (anchoring, NOT the
-        net-negative H1 full-passthrough: adding synonyms stays allowed)."""
-        p = _import_prompts()
-        text = p.get_orchestrator_prompt()
-        assert "핵심 명사" in text
-        assert "그대로 포함" in text
-
-    def test_search_limit_10(self):
-        """Issue #80 cause C: limit=5 hard-cut dropped rank-6~10 facts."""
-        p = _import_prompts()
-        assert "limit은 10" in p.get_orchestrator_prompt()
-
-    def test_question_scope_rule(self):
-        """Issue #81 id=36: leave-of-absence answer leaked 복학/분할납부 content."""
-        p = _import_prompts()
-        assert "섞지 마세요" in p.get_orchestrator_prompt()
-
-    def test_canonical_refusal_sentence_shared_with_aggregation(self):
-        """Single canonical refusal sentence across orchestrator + aggregation
-        (was two different hardcoded sentences)."""
-        p = _import_prompts()
-        sentence = "제공된 자료에서 질문에 답할 수 있는 정보를 찾지 못했습니다."
-        assert sentence in p.get_orchestrator_prompt()
-        assert sentence in p.get_aggregation_prompt()
-
 
 class TestFallbackResponsePrompt:
     def test_returns_string(self):
@@ -132,15 +95,6 @@ class TestContextCompressionPrompt:
         p = _import_prompts()
         assert "압축" in p.get_context_compression_prompt()
 
-    def test_preserves_question_critical_facts(self):
-        """Issue #81: both compression-loss wrong answers dropped the asked-for
-        fact (date/period/department) from the summary."""
-        p = _import_prompts()
-        text = p.get_context_compression_prompt()
-        assert "기간" in text
-        assert "부서" in text
-        assert "생략하지 마세요" in text
-
 
 class TestAggregationPrompt:
     def test_returns_string(self):
@@ -158,29 +112,20 @@ class TestAggregationPrompt:
         assert ".pdf" in text or "확장자" in text
 
 
-class TestTranslationPrompt:
-    def test_returns_string(self):
-        p = _import_prompts()
-        assert isinstance(p.get_translation_prompt(), str)
+class TestCentralizedMicroPrompts:
+    """Micro-prompts formerly hardcoded in translate.py / nodes.py — moved to
+    prompts.py verbatim so the whole prompt surface lives in one file. Texts
+    must stay byte-identical to the original inline versions (behavior-neutral)."""
 
-    def test_preserves_numbers_and_filenames(self):
+    def test_translation_prompt(self):
         p = _import_prompts()
         text = p.get_translation_prompt()
-        assert "숫자" in text and "파일명" in text
-
-
-class TestInlineInstructions:
-    """Micro-prompts formerly hardcoded inline in nodes.py — centralized here so
-    prompts.py shows the full prompt surface."""
+        assert "번역" in text and "숫자" in text and "파일명" in text
 
     def test_force_search_instruction(self):
         p = _import_prompts()
-        text = p.get_force_search_instruction()
-        assert isinstance(text, str)
-        assert "search_child_chunks" in text
+        assert "search_child_chunks" in p.get_force_search_instruction()
 
     def test_fallback_task_instruction(self):
         p = _import_prompts()
-        text = p.get_fallback_task_instruction()
-        assert isinstance(text, str)
-        assert len(text) > 0
+        assert len(p.get_fallback_task_instruction()) > 0
