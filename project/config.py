@@ -157,6 +157,11 @@ RERANK_SCORE_MIN = float(_rerank_floor) if _rerank_floor else None
 # None = pure rerank (alpha=1.0). Candidate values: 0.3 / 0.5 / 0.7 (live sweep pending).
 _blend_alpha = os.environ.get("RERANK_BLEND_ALPHA", "").strip()
 RERANK_BLEND_ALPHA = float(_blend_alpha) if _blend_alpha else None
+if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
+    raise ValueError(
+        f"RERANK_BLEND_ALPHA must be in [0, 1], got {RERANK_BLEND_ALPHA}. "
+        "Values outside this range invert RRF-dominant chunk rankings."
+    )
 
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the

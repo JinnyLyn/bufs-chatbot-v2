@@ -34,7 +34,11 @@ run_blend() {  # $1=label  $2=alpha
   echo "[$lab] healthy, eval start $(stamp)" | tee -a "$LOG"
   QA_OUT="$H/qa_$lab.json" "$PY" "$REPO/eval_tools/_qa_blend_eval.py" > "/tmp/eval_${lab}.log" 2>&1
   echo "[$lab] eval done $(stamp)" | tee -a "$LOG"
-  kill "$srv_pid" 2>/dev/null; pkill -f "project/server.py" 2>/dev/null; sleep 3
+  kill "$srv_pid" 2>/dev/null
+  # Kill the server's process group to catch any child processes it spawned.
+  # Using the tracked PID's group avoids pkill -f which would match unrelated processes.
+  pgid=$(ps -o pgid= -p "$srv_pid" 2>/dev/null | tr -d ' ') && [ -n "$pgid" ] && kill -- "-$pgid" 2>/dev/null || true
+  sleep 3
 }
 
 run_blend blend_03 0.3

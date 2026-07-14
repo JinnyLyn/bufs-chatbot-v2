@@ -40,9 +40,10 @@ def rerank(query, docs, top_k, *, rrf_scores=None, blend_alpha=None):
     This prevents the cross-encoder from fully overriding BM25-matched chunks that had
     high RRF scores — the "literal-match 실종" regression class.
 
-    When config.RERANK_SCORE_MIN is set, candidates scoring below it are dropped (so an
-    all-irrelevant pool yields an empty list → NO_RELEVANT_CHUNKS upstream). With no floor
-    the top_k are returned unconditionally (rerank order still applied).
+    When config.RERANK_SCORE_MIN is set, candidates whose FINAL score (blended when
+    blend_alpha is active, raw CE otherwise) falls below it are dropped (so an all-irrelevant
+    pool yields an empty list → NO_RELEVANT_CHUNKS upstream). With no floor the top_k are
+    returned unconditionally (rerank order still applied).
 
     Logs pure inference latency (model.predict wall-clock, excluding model load) so
     warm-up vs inference costs can be separated in the server log.
@@ -69,5 +70,8 @@ def rerank(query, docs, top_k, *, rrf_scores=None, blend_alpha=None):
 
     ranked = sorted(zip(docs, final_scores, ce_scores), key=lambda t: -t[1])
     if config.RERANK_SCORE_MIN is not None:
-        ranked = [t for t in ranked if t[2] >= config.RERANK_SCORE_MIN]
+        # Filter on final score (t[1]) — the same axis used for ranking. When blending is
+        # active final_scores are [0,1]; when not they equal ce_scores. Filtering on raw CE
+        # (t[2]) would be wrong when blend rescues a high-RRF/low-CE chunk into top rank.
+        ranked = [t for t in ranked if t[1] >= config.RERANK_SCORE_MIN]
     return [doc for doc, _, _ in ranked[:top_k]]

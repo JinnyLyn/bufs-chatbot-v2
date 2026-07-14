@@ -99,6 +99,12 @@ class ToolFactory:
                 else:
                     pool = self.collection.similarity_search(query, k=pool_k, score_threshold=0.0)
                     rrf_scores = None
+                if rrf_scores is None and config.RERANK_BLEND_ALPHA is not None:
+                    logger.warning(
+                        "RERANK_BLEND_ALPHA=%.2f has no effect without SPLIT_PATH_ENABLED "
+                        "(no RRF scores available); falling back to pure CE rerank.",
+                        config.RERANK_BLEND_ALPHA,
+                    )
                 results = reranker.rerank(original, pool, limit,
                                           rrf_scores=rrf_scores, blend_alpha=config.RERANK_BLEND_ALPHA)
             elif config.SPLIT_PATH_ENABLED:

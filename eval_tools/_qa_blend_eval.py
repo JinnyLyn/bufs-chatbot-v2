@@ -38,14 +38,17 @@ data = json.load(open(SRC, encoding="utf-8"))
 if isinstance(data, dict): data = data.get("results") or data.get("data") or []
 print(f"running {len(data)} q vs {BASE} (out={OUT})", flush=True)
 
-strict = contains = violated_n = total = 0
+strict = contains = violated_n = total = error_n = 0
 results, durations, toolcalls = [], [], []
 for k, r in enumerate(data, 1):
     q = r["question"]; inc = r.get("must_include") or []; exc = r.get("must_not_include") or []
     try:
         done = ask(q); ans = done.get("answer", ""); dur = done.get("duration_ms"); tc = done.get("tool_calls")
     except Exception as e:
-        done = {}; ans = f"(ERROR {e})"; dur = None; tc = None
+        done = {}; ans = f"(ERROR {e})"; dur = None; tc = None; error_n += 1
+        if error_n >= max(3, len(data) // 5):
+            print(f"\n⚠️  {error_n} consecutive/cumulative errors — server may be down. Aborting.", flush=True)
+            sys.exit(1)
     total += 1
     violated = [p for p in exc if present(p, ans)]; hits = [p for p in inc if present(p, ans)]
     is_strict = (len(hits) == len(inc) and inc) and not violated
