@@ -514,7 +514,7 @@
     "id": 31,
     "question": "군 복무 때문에 시험을 못 봤는데 F 처리됐습니다.",
     "gold_intent": "공인결석과 시험",
-    "gold_document": "기타",
+    "gold_document": "공인결석 신청 매뉴얼",
     "gold_chunk_id": "",
     "expected_answer": "공인결석 승인은 출석만 인정될 뿐 시험을 대체하지 않으므로, 사전에 교수님과 시험 대체 방안을 상의했어야 합니다.",
     "must_include": [
