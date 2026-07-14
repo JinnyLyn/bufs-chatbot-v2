@@ -11,6 +11,12 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 # cohort's graduation requirements never get merged onto the previous cohort's tail.
 _COHORT_HEADER_RE = re.compile(r"^#{1,6}\s*\d{4}\s*(?:~\s*\d{4})?\s*학번")
 
+# Patterns for flat-## document re-normalization (see _normalize_flat_headers).
+# Docling PDF→Markdown conversion collapses all heading levels to ##; these patterns
+# detect the semantic level from naming conventions used in 학사안내-style docs.
+_ROMAN_H2_RE = re.compile(r"^## ([ⅠⅡⅢⅣⅤⅥⅦ][\. ])", re.MULTILINE)
+_GANADASUB_H2_RE = re.compile(r"^## ([가나다라마바사아자차카타파하]\.)", re.MULTILINE)
+
 # Tag prefixed to each denormalized 학사일정 event line. __expand_calendar_rows emits it and
 # __create_child_chunks detects it to split those lines into isolated child chunks — kept as a
 # single constant so the two sites never drift.
@@ -34,6 +40,34 @@ _PICTURE_PLACEHOLDER_RE = re.compile(r"[ \t]*\*{0,2}==>[^\n]*?intentionally omit
 # collapses them back to adjacent rows (no blank line left behind) — keeping the 학사일정 table
 # contiguous for the forward-fill / [일정] passes.
 _PAGE_MARKER_RE = re.compile(r"(?m)^[ \t]*-{2,}[ \t]*end of page\.page_number=\d+[ \t]*-{2,}[ \t]*\r?\n?")
+
+
+def _normalize_flat_headers(text: str) -> str:
+    """Re-normalize Docling's flat ## hierarchy into H1/H2/H3 for structured documents.
+
+    Docling PDF→Markdown conversion collapses all PDF heading levels to ##, losing the
+    hierarchy that MarkdownHeaderTextSplitter needs for meaningful parent boundaries.
+    Large docs like 학사안내 (357 H2 headers, 0 H1/H3) produce parent chunks that
+    cross semantic section boundaries, causing chunking and rank_cut retrieval failures.
+
+    Detects flat-## documents (≥20 H2 headers, no existing H1 or H3) and re-assigns:
+      ## Ⅰ./Ⅱ./… (Unicode Roman numerals)  → # H1  (대섹션 — e.g. Ⅱ. 수강신청)
+      ## 가./나./…  (가나다 sub-items)         → ### H3 (소항목 — e.g. 가. 기간)
+      all other ## headers                    → ## H2 unchanged
+
+    Result: MarkdownHeaderTextSplitter sees a proper 3-level tree so parent chunks
+    align with Roman-numeral major sections, and 가나다 items form their own H3 groups
+    rather than bleeding into unrelated numbered sections.
+    """
+    h2_count = len(re.findall(r"^##(?!#)", text, re.MULTILINE))
+    if h2_count < 20:
+        return text
+    # Don't touch documents that already have explicit H1 or H3.
+    if re.search(r"^# (?!#)", text, re.MULTILINE) or re.search(r"^###", text, re.MULTILINE):
+        return text
+    text = _ROMAN_H2_RE.sub(lambda m: "# " + m.group(1), text)
+    text = _GANADASUB_H2_RE.sub(lambda m: "### " + m.group(1), text)
+    return text
 
 
 def strip_conversion_artifacts(text: str) -> str:
@@ -80,6 +114,7 @@ class DocumentChuncker:
         
         with open(doc_path, "r", encoding="utf-8") as f:
             raw = strip_conversion_artifacts(f.read())
+        raw = _normalize_flat_headers(raw)
         raw = self.__forward_fill_month_tables(raw)
         raw = self.__expand_calendar_rows(raw)
         parent_chunks = self.__parent_splitter.split_text(raw)
@@ -369,6 +404,25 @@ class DocumentChuncker:
             # date ranks #1 instead of being diluted in a packed multi-event chunk. The lines
             # stay in the stored parent (above) so retrieve_parent still gives full context; we
             # remove them from the body that gets the normal recursive split to avoid crowding.
+            # Build breadcrumb path from parent's header metadata (set by MarkdownHeaderTextSplitter
+            # after _normalize_flat_headers assigns proper H1/H2/H3 levels). Prepending the path
+            # to every child chunk makes BM25 match the full section context — e.g. a query for
+            # "재수강 성적 취소 3/4선" hits "[Ⅱ. 수강신청 > 8. 재수강]" even when the child text
+            # only contains the body prose without its own header line.
+            # __merge_small_parents chains multiple header values with " -> " when it merges
+            # small sections. Take only the FIRST value at each level so the breadcrumb
+            # reflects the dominant section rather than every merged section.
+            def _first_meta(val: str) -> str:
+                return val.split(" -> ")[0].strip()
+
+            breadcrumb = " > ".join(
+                p for p in (
+                    _first_meta(p_chunk.metadata.get("H1", "")),
+                    _first_meta(p_chunk.metadata.get("H2", "")),
+                    _first_meta(p_chunk.metadata.get("H3", "")),
+                ) if p
+            )
+
             body_lines, event_children = [], []
             for ln in p_chunk.page_content.split("\n"):
                 if ln.strip().startswith(_CAL_EVENT_TAG):
@@ -378,5 +432,9 @@ class DocumentChuncker:
                 else:
                     body_lines.append(ln)
             body = Document(page_content="\n".join(body_lines), metadata=dict(p_chunk.metadata))
-            all_child_chunks.extend(self.__child_splitter.split_documents([body]))
+            child_docs = self.__child_splitter.split_documents([body])
+            if breadcrumb:
+                for child in child_docs:
+                    child.page_content = f"[{breadcrumb}]\n{child.page_content}"
+            all_child_chunks.extend(child_docs)
             all_child_chunks.extend(event_children)
