@@ -49,6 +49,14 @@ async def lifespan(app: FastAPI):
     logger.info("🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...")
     logger.info("log file: %s", _LOG_PATH)
     init_rag_system()
+    import config as _config
+    if _config.RERANK_ENABLED:
+        import time as _time
+        logger.info("🔨 Pre-loading reranker model (%s) on %s...", _config.RERANK_MODEL, _config.RERANK_DEVICE)
+        _t0 = _time.perf_counter()
+        from db import reranker as _reranker_mod
+        _reranker_mod.get_reranker()
+        logger.info("✅ Reranker ready in %.1fs.", _time.perf_counter() - _t0)
     logger.info("🚀 RAG system ready. Serving. runtime=%s", get_runtime_info())
     yield
 

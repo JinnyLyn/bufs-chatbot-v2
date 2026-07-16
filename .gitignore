@@ -30,6 +30,11 @@ qdrant_db/.lock
 # (regression refs + committed test set); only runs/ is ignored.
 eval_tools/runs/
 
+# Eval-run outputs (per-run JSON/logs — ephemeral, rebuild from _qa_blend_sweep.sh)
+logs/h2eval/
+# App log daily rotations (TimedRotatingFileHandler date-suffixed backups)
+logs/backend/app.log.*
+
 # test / lint / type-check tooling artifacts (CI-generated, never committed)
 .coverage
 .coverage.*
