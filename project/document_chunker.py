@@ -367,7 +367,9 @@ class DocumentChuncker:
             parent_id = f"{doc_path.stem}_parent_{i}"
             # Make single-year queries (e.g. "2020학번") match range headers ("2017~2020학번").
             p_chunk.page_content = self.__expand_cohort_ranges(p_chunk.page_content)
-            p_chunk.metadata.update({"source": str(doc_path.stem)+".pdf", "parent_id": parent_id})
+            _data_dir = Path(config.MARKDOWN_DIR).parent / "data"
+            _src_ext = ".md" if (_data_dir / (doc_path.stem + ".md")).exists() else ".pdf"
+            p_chunk.metadata.update({"source": doc_path.stem + _src_ext, "parent_id": parent_id})
 
             all_parent_pairs.append((parent_id, p_chunk))
 
