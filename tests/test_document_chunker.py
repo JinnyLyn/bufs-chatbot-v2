@@ -338,3 +338,33 @@ class TestConversionArtifactStripping:
         # The post-break row's empty month cell is forward-filled to 6 (would stay empty if
         # the marker had ended the calendar scan early).
         assert "| 6 | 8(월)~12(금)" in blob or "6 | 8(월)~12(금)" in blob
+
+
+# ---------------------------------------------------------------------------
+# KB scope exclusion (#108): out-of-scope sources are never indexed
+# ---------------------------------------------------------------------------
+
+class TestKbExcludeSources:
+    def test_excluded_source_yields_no_chunks(self, tmp_path, monkeypatch):
+        import config
+        chunker = _make_chunker()
+        monkeypatch.setattr(config, "KB_EXCLUDE_SOURCES", frozenset({"out_of_scope_doc"}))
+        md = _write_md(tmp_path, "out_of_scope_doc.md", """\
+            # 근로기관 안내
+
+            제출서류: 성명, 주민번호, 주소. 충분한 길이의 본문을 둡니다. 이 문서는 색인에서 제외되어야 합니다.
+            """)
+        parents, children = chunker.create_chunks_single(md)
+        assert parents == [] and children == []
+
+    def test_non_excluded_source_still_chunked(self, tmp_path, monkeypatch):
+        import config
+        chunker = _make_chunker()
+        monkeypatch.setattr(config, "KB_EXCLUDE_SOURCES", frozenset({"out_of_scope_doc"}))
+        md = _write_md(tmp_path, "in_scope_doc.md", """\
+            # 졸업요건
+
+            졸업을 위해서는 총 130학점 이상을 이수해야 합니다. 충분한 길이의 본문을 둡니다.
+            """)
+        parents, children = chunker.create_chunks_single(md)
+        assert len(parents) >= 1 and len(children) >= 1
