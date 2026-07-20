@@ -184,6 +184,19 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
 # orchestrator's own answer when there is no usable tool evidence (e.g. out-of-scope refusals),
 # so the refusal path is untouched. DEFAULT OFF — A/B on qa100 before enabling in prod.
 CLEAN_SYNTHESIS_ENABLED = os.environ.get("CLEAN_SYNTHESIS_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Scope of the clean-synthesis rerouting. Live A/B + gemma4:26b judge (PR #144, 2026-07-20)
+# measured "always" as accuracy-NEUTRAL (40→39/100): the genfail recoveries (+12) were offset
+# by re-synthesis DEGRADING questions the orchestrator draft already answered correctly (−13,
+# 10 of them outside the #126 target population). "refusal_only" fires only when the draft
+# itself is a refusal ("자료에 없습니다"-class), so every non-refusal draft is kept byte-for-byte
+# — the −13 loss class is structurally impossible, keeping only the refusal-recovery upside.
+# Unlike prompt-level scoping (PR #111: any prompt insertion reshuffles the whole output
+# distribution), a code-level routing condition scopes exactly.
+CLEAN_SYNTHESIS_MODE = os.environ.get("CLEAN_SYNTHESIS_MODE", "refusal_only").strip().lower()
+if CLEAN_SYNTHESIS_MODE not in ("refusal_only", "always"):
+    raise ValueError(
+        f"CLEAN_SYNTHESIS_MODE must be 'refusal_only' or 'always', got {CLEAN_SYNTHESIS_MODE!r}"
+    )
 # Auto parent expansion at the synthesis step. #126 found retrieve_parent_chunks is called
 # 0/100 in live runs (the parent-child design's stage 2 is dead in practice) and 9 of the 20
 # "same-doc different-chunk" failures have their evidence inside a parent the agent ALREADY saw.

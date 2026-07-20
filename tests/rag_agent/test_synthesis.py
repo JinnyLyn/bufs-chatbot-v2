@@ -118,14 +118,62 @@ class TestCleanSynthesisRouting:
 
     def test_enabled_with_evidence_routes_to_clean_synthesis(self, monkeypatch):
         monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_MODE", "always")
         state = self._final_answer_state([_tool_msg(CHUNK_A)])
         assert edges.route_after_orchestrator_call(state) == "clean_synthesis"
 
     def test_enabled_without_evidence_keeps_collect_answer(self, monkeypatch):
         """Refusal path: no usable evidence → the orchestrator's own answer survives."""
         monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_MODE", "always")
         state = self._final_answer_state([_tool_msg("NO_RELEVANT_CHUNKS")])
         assert edges.route_after_orchestrator_call(state) == "collect_answer"
+
+    # -- refusal_only mode (default; PR #144 conditional gate) --
+
+    def _draft_state(self, draft: str, extra_msgs=None):
+        msgs = list(extra_msgs or []) + [AIMessage(content=draft)]
+        return {"iteration_count": 1, "tool_call_count": 1, "messages": msgs}
+
+    def test_refusal_only_is_the_default_mode(self):
+        assert config.CLEAN_SYNTHESIS_MODE == "refusal_only"
+
+    def test_refusal_only_reroutes_refusal_draft(self, monkeypatch):
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_MODE", "refusal_only")
+        state = self._draft_state("제공된 자료에는 해당 정보가 없습니다.", [_tool_msg(CHUNK_A)])
+        assert edges.route_after_orchestrator_call(state) == "clean_synthesis"
+
+    def test_refusal_only_keeps_non_refusal_draft(self, monkeypatch):
+        """The −13 loss class of the 'always' A/B: a correct draft must stay untouched."""
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_MODE", "refusal_only")
+        state = self._draft_state("수강 취소는 3/4선 이전까지 가능합니다.", [_tool_msg(CHUNK_A)])
+        assert edges.route_after_orchestrator_call(state) == "collect_answer"
+
+    def test_refusal_only_ignores_refusal_without_evidence(self, monkeypatch):
+        """Out-of-scope refusal with no evidence stays a refusal (correct behavior)."""
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_MODE", "refusal_only")
+        state = self._draft_state("제공된 자료에는 해당 정보가 없습니다.", [_tool_msg("NO_RELEVANT_CHUNKS")])
+        assert edges.route_after_orchestrator_call(state) == "collect_answer"
+
+    @pytest.mark.parametrize("draft", [
+        "제공된 자료에는 해당 정보가 없습니다.",
+        "제공된 자료에서 질문에 답할 수 있는 정보를 찾지 못했습니다.",
+        "관련 정보가 없어 답변드리기 어렵습니다.",
+        "해당 내용은 확인할 수 없습니다.",
+    ])
+    def test_refusal_pattern_matches_canonical_refusals(self, draft):
+        assert edges._is_refusal_draft(AIMessage(content=draft)) is True
+
+    @pytest.mark.parametrize("draft", [
+        "수강 취소는 3/4선 이전까지 가능합니다.",
+        "졸업학점은 130학점 이상 이수해야 합니다.",
+        "",
+    ])
+    def test_refusal_pattern_ignores_normal_answers(self, draft):
+        assert edges._is_refusal_draft(AIMessage(content=draft)) is False
 
     def test_enabled_does_not_touch_tools_route(self, monkeypatch):
         monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
