@@ -174,6 +174,31 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
         "Values outside this range invert RRF-dominant chunk rankings."
     )
 
+# --- Generation-side levers (issue #126: 생성실패 40건 법의학 + 시뮬레이션 A/B) ---
+# Clean final synthesis. The #126 simulation showed 13/40 of live generation failures pass
+# when the SAME child chunks the agent saw are fed to one clean single-shot answer-from-context
+# call (fallback prompt, temp0) — i.e. the failure point is the agent loop's multi-turn answer
+# synthesis, not the context or the model's extraction ability. When ON, an orchestrator "final
+# answer" (no tool calls) is replaced by one clean synthesis call over the collected tool
+# evidence (a generalization of the existing fallback path). Routing falls back to the
+# orchestrator's own answer when there is no usable tool evidence (e.g. out-of-scope refusals),
+# so the refusal path is untouched. DEFAULT OFF — A/B on qa100 before enabling in prod.
+CLEAN_SYNTHESIS_ENABLED = os.environ.get("CLEAN_SYNTHESIS_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Auto parent expansion at the synthesis step. #126 found retrieve_parent_chunks is called
+# 0/100 in live runs (the parent-child design's stage 2 is dead in practice) and 9 of the 20
+# "same-doc different-chunk" failures have their evidence inside a parent the agent ALREADY saw.
+# The naive simulation (parents REPLACING children) went net +4 (8 recovered − 4 regressed on
+# needle-in-haystack dilution), so this implements the comment's improved design: KEEP the child
+# snippets and APPEND the parent originals (merge, not replace), deduped in first-seen order.
+# Expansion happens only in the synthesis/fallback context assembly — the agent loop, its token
+# budget, and the compression path are untouched. DEFAULT OFF — A/B toggle.
+PARENT_EXPANSION_ENABLED = os.environ.get("PARENT_EXPANSION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Caps matching the #126 simulation arms (상한 3개 / 9000자). NOTE: with the default
+# LLM_NUM_CTX=8192 a full 9000-char expansion can push the synthesis prompt past the context
+# window — when A/B-ing this lever raise LLM_NUM_CTX or lower PARENT_EXPANSION_MAX_CHARS.
+PARENT_EXPANSION_MAX_PARENTS = int(os.environ.get("PARENT_EXPANSION_MAX_PARENTS", "3"))
+PARENT_EXPANSION_MAX_CHARS = int(os.environ.get("PARENT_EXPANSION_MAX_CHARS", "9000"))
+
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
 # agent searches less thoroughly. env-overridable so they can be tuned / rolled back
