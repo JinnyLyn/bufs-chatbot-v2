@@ -175,8 +175,15 @@ def _expand_parent_context(unique_contents: List[str]) -> List[str]:
         if not content:
             logger.warning("parent expansion: empty content for parent_id=%s — skipped", pid)
             continue
+        if any(content in uc for uc in unique_contents):
+            # The agent already fetched this parent's full text via retrieve_parent_chunks
+            # (tool output embeds the same stripped content) — appending it again would
+            # only duplicate large context.
+            continue
         source = (parent.get("metadata") or {}).get("source", "unknown")
         block = f"--- 원문 (Parent ID: {pid} / File Name: {source}) ---\n{content}"
+        # The first parent is always kept even past the char cap (rank priority; with
+        # MAX_PARENT_SIZE=6000 a single parent fits the default 9000 budget anyway).
         if blocks and total_chars + len(block) > config.PARENT_EXPANSION_MAX_CHARS:
             break
         blocks.append(block)

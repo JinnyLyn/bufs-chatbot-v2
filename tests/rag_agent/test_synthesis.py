@@ -207,6 +207,22 @@ class TestExpandParentContext:
         assert len(blocks) == 1
         assert "전문 B" in blocks[0]
 
+    def test_parent_already_fetched_by_agent_is_skipped(self, parent_store):
+        """If the agent already pulled the parent via retrieve_parent_chunks, its full
+        text is in a ToolMessage — expansion must not duplicate it."""
+        full_text = "원문 전체 표 내용"
+        parent_store({
+            "guide_parent_3": _parent(full_text),
+            "guide_parent_7": _parent("전문 B"),
+        })
+        # retrieve_parent_chunks output embeds the same stripped content.
+        parent_tool_output = (
+            f"Parent ID: guide_parent_3\nFile Name: 학사안내.pdf\nContent: {full_text}"
+        )
+        blocks = nodes._expand_parent_context([CHUNK_A, parent_tool_output, CHUNK_B])
+        assert len(blocks) == 1
+        assert "guide_parent_7" in blocks[0]
+
     def test_store_init_failure_degrades_to_no_expansion(self, monkeypatch, caplog):
         monkeypatch.setattr(nodes, "_parent_store", None)
 
