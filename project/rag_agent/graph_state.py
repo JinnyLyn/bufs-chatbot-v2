@@ -14,9 +14,12 @@ class State(MessagesState):
     """State for main agent graph"""
     questionIsClear: bool = False
     conversation_summary: str = ""
-    originalQuery: str = "" 
+    originalQuery: str = ""
     rewrittenQuestions: List[str] = []
     agent_answers: Annotated[List[dict], accumulate_or_reset] = []
+    # Issue #145: user conditions extracted from the question (UserSlots.model_dump();
+    # {} when SLOT_EXTRACTION_ENABLED is off or nothing was stated).
+    userSlots: dict = {}
 
 class AgentState(MessagesState):
     """State for individual agent subgraph"""
@@ -28,3 +31,5 @@ class AgentState(MessagesState):
     agent_answers: List[dict] = []
     tool_call_count: Annotated[int, operator.add] = 0
     iteration_count: Annotated[int, operator.add] = 0
+    # Issue #145: carried into each per-question agent via the Send payload.
+    user_slots: dict = {}

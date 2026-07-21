@@ -1,16 +1,19 @@
-from typing import Literal, Set
+import logging
+from typing import List, Literal, Set
 from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage, AIMessage, ToolMessage
 from langgraph.types import Command
 from .graph_state import State, AgentState
-from .schemas import QueryAnalysis
+from .schemas import QueryAnalysis, UserSlots
 from .prompts import *
 import config
 from utils import estimate_context_tokens
 from config import BASE_TOKEN_THRESHOLD, TOKEN_GROWTH_FACTOR
 
+logger = logging.getLogger(__name__)
 
-def _invoke_structured_rewrite(llm, messages):
-    """Invoke with_structured_output(QueryAnalysis), trying methods until one parses.
+
+def _invoke_structured(llm, messages, schema):
+    """Invoke with_structured_output(schema), trying methods until one parses.
 
     Ollama models support different structured-output mechanisms (qwen3.5:9b →
     function_calling; qwen3:4b-instruct → json_schema/default), so fall back across
@@ -26,14 +29,75 @@ def _invoke_structured_rewrite(llm, messages):
     for method in methods:
         try:
             structured = (
-                base.with_structured_output(QueryAnalysis)
+                base.with_structured_output(schema)
                 if method is None
-                else base.with_structured_output(QueryAnalysis, method=method)
+                else base.with_structured_output(schema, method=method)
             )
             return structured.invoke(messages)
         except Exception as exc:  # parse / validation error → try the next method
             last_exc = exc
     raise last_exc
+
+
+def _invoke_structured_rewrite(llm, messages):
+    """Backward-compatible wrapper (QueryAnalysis) — see _invoke_structured."""
+    return _invoke_structured(llm, messages, QueryAnalysis)
+
+
+# --- User-slot extraction (issue #145 처방 1) ---
+
+_SLOT_LABELS = [
+    ("admission_year", "학번/입학년도"),
+    ("grade", "학년"),
+    ("semester", "대상 학기"),
+    ("status", "학적 신분"),
+    ("major", "전공/학과"),
+    ("credits", "이수학점/평점"),
+    ("leave_type", "휴학 유형"),
+]
+
+
+def format_user_slots(slots: dict) -> str:
+    """Render extracted slots as the deterministic '[사용자 상황 조건]' block.
+
+    Returns "" when nothing was extracted — the empty string is the scoping contract:
+    no block → no injection → the question's trajectory is byte-identical to OFF.
+    """
+    if not slots:
+        return ""
+    lines = [
+        f"- {label}: {str(slots.get(key)).strip()}"
+        for key, label in _SLOT_LABELS
+        if str(slots.get(key) or "").strip()
+    ]
+    lines += [
+        f"- 기타 조건: {str(x).strip()}"
+        for x in (slots.get("extra") or [])
+        if str(x or "").strip()
+    ]
+    if not lines:
+        return ""
+    return "[사용자 상황 조건]\n" + "\n".join(lines)
+
+
+def extract_user_slots(llm, question: str) -> dict:
+    """Extract explicitly-stated user conditions from the question (one structured call).
+
+    Any failure degrades to {} — the pipeline must never die on the extractor, but the
+    failure is logged so it stays traceable (no silent errors).
+    """
+    if not (question or "").strip():
+        return {}
+    try:
+        result = _invoke_structured(
+            llm,
+            [SystemMessage(content=get_slot_extraction_prompt()), HumanMessage(content=question)],
+            UserSlots,
+        )
+        return result.model_dump() if result is not None else {}
+    except Exception:
+        logger.exception("slot extraction failed — continuing without user slots")
+        return {}
 
 def summarize_history(state: State, llm):
     if len(state["messages"]) < 4:
@@ -59,13 +123,19 @@ def rewrite_query(state: State, llm):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
 
+    # Issue #145 처방 1: extract explicitly-stated user conditions from the ORIGINAL
+    # question (pre-rewrite surface form) so the generation stage can apply them.
+    # {} when disabled or nothing stated → downstream injections are no-ops.
+    user_slots = extract_user_slots(llm, last_message.content) if config.SLOT_EXTRACTION_ENABLED else {}
+
     # Issue #15 A/B switch: when rewriting is disabled, pass the original question straight to
     # the agent as the single search query (no LLM rewrite, no clarify detour). bge-m3 already
     # handles Korean well, so the raw surface form often retrieves better than a rewrite.
     if not config.REWRITE_ENABLED:
         delete_all = [RemoveMessage(id=m.id) for m in state["messages"] if not isinstance(m, SystemMessage)]
         return {"questionIsClear": True, "messages": delete_all,
-                "originalQuery": last_message.content, "rewrittenQuestions": [last_message.content]}
+                "originalQuery": last_message.content, "rewrittenQuestions": [last_message.content],
+                "userSlots": user_slots}
 
     context_section = (f"대화 요약:\n{conversation_summary}\n" if conversation_summary.strip() else "") + f"사용자 질문:\n{last_message.content}\n"
 
@@ -75,7 +145,8 @@ def rewrite_query(state: State, llm):
 
     if response.questions and response.is_clear:
         delete_all = [RemoveMessage(id=m.id) for m in state["messages"] if not isinstance(m, SystemMessage)]
-        return {"questionIsClear": True, "messages": delete_all, "originalQuery": last_message.content, "rewrittenQuestions": response.questions}
+        return {"questionIsClear": True, "messages": delete_all, "originalQuery": last_message.content,
+                "rewrittenQuestions": response.questions, "userSlots": user_slots}
 
     clarification = response.clarification_needed if response.clarification_needed and len(response.clarification_needed.strip()) > 10 else "질문을 정확히 이해하려면 추가 정보가 필요합니다."
     return {"questionIsClear": False, "messages": [AIMessage(content=clarification)]}
@@ -91,13 +162,25 @@ def orchestrator(state: AgentState, llm_with_tools):
         [HumanMessage(content=f"[이전 조사에서 압축된 컨텍스트]\n\n{context_summary}")]
         if context_summary else []
     )
+    # Issue #145 처방 1: surface the user's stated conditions on EVERY orchestrator turn
+    # (same pattern as summary_injection — injected, not appended to state, so the message
+    # history stays clean). Empty block → no injection → byte-identical to OFF.
+    slot_text = format_user_slots(state.get("user_slots") or {}) if config.SLOT_EXTRACTION_ENABLED else ""
+    slot_injection = (
+        [HumanMessage(content=(
+            f"{slot_text}\n\n"
+            "위 조건은 사용자가 질문에 명시한 개인 상황입니다. 조건에 해당하는 규정(조건별 차이·예외 포함)을 "
+            "찾아 적용하고, 어떤 조건을 근거로 판단했는지 답변에 명시하세요."
+        ))]
+        if slot_text else []
+    )
     if not state.get("messages"):
         human_msg = HumanMessage(content=state["question"])
         force_search = HumanMessage(content="이 질문에 답하려면 첫 단계로 반드시 'search_child_chunks'를 호출하세요.")
-        response = llm_with_tools.invoke([sys_msg] + summary_injection + [human_msg, force_search])
+        response = llm_with_tools.invoke([sys_msg] + summary_injection + slot_injection + [human_msg, force_search])
         return {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
 
-    response = llm_with_tools.invoke([sys_msg] + summary_injection + state["messages"])
+    response = llm_with_tools.invoke([sys_msg] + summary_injection + slot_injection + state["messages"])
     tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
     return {"messages": [response], "tool_call_count": len(tool_calls) if tool_calls else 0, "iteration_count": 1}
 
@@ -220,6 +303,18 @@ def aggregate_answers(state: State, llm):
     for i, ans in enumerate(sorted_answers, start=1):
         formatted_answers += (f"\n답변 {i}:\n"f"{ans['answer']}\n")
 
-    user_message = HumanMessage(content=f"""원래 사용자 질문: {state["originalQuery"]}\n검색된 답변:{formatted_answers}""")
+    content = f"""원래 사용자 질문: {state["originalQuery"]}\n검색된 답변:{formatted_answers}"""
+
+    # Issue #145 처방 1: final condition-coverage check. Only appended when slots exist,
+    # so slot-free questions aggregate on byte-identical input.
+    slot_text = format_user_slots(state.get("userSlots") or {}) if config.SLOT_EXTRACTION_ENABLED else ""
+    if slot_text:
+        content += (
+            f"\n\n{slot_text}\n\n"
+            "위 조건이 답변에 반영되었는지 확인하세요. 조건에 따라 규정이 달라지는 부분은 "
+            "사용자의 조건 기준으로 답하고, 조건과 관련된 규정이 검색된 답변에 없으면 그 사실을 명시하세요."
+        )
+
+    user_message = HumanMessage(content=content)
     synthesis_response = llm.invoke([SystemMessage(content=get_aggregation_prompt()), user_message])
     return {"messages": [AIMessage(content=synthesis_response.content)]}

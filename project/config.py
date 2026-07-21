@@ -174,6 +174,19 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
         "Values outside this range invert RRF-dominant chunk rankings."
     )
 
+# --- Generation-side lever (issue #145 처방 1: 시나리오형 필수 슬롯 추출) ---
+# The 2026-07-20 baseline split (factual100 F1 0.835 vs qa100 F1 0.349, doc_recall 0.792 vs
+# answer Recall 0.316) shows scenario questions fail at CONDITION APPLICATION, not just search:
+# the agent retrieves the right document yet answers without applying the user's stated
+# conditions (학번/신분/휴학 유형 …). When ON, one structured-output call extracts the
+# EXPLICITLY-STATED user conditions from the question (never inferred — see UserSlots), and
+# the condition block is injected into the orchestrator turns and the final aggregation so
+# the answer must apply/flag each condition. Questions with NO stated conditions are
+# byte-identical to OFF (no injection), so the factual-question population is untouched —
+# the same code-level scoping principle as PR #144's refusal_only gate (prompt-level scoping
+# is impossible per PR #111). DEFAULT OFF — A/B on qa100 before enabling.
+SLOT_EXTRACTION_ENABLED = os.environ.get("SLOT_EXTRACTION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
 # agent searches less thoroughly. env-overridable so they can be tuned / rolled back
