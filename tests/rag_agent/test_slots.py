@@ -137,30 +137,24 @@ class _CapturingToolsLLM:
 
 
 class TestOrchestratorInjection:
-    def test_slots_injected_on_first_turn(self, monkeypatch):
+    def test_v3_orchestrator_never_injects_slots(self, monkeypatch):
+        """v3 design: the agent loop is slot-blind — both in-loop variants regressed
+        (v1 refusals 33→50, v2 refusals +10 & doc_hit −6). Slots reach the answer
+        only at aggregate_answers."""
         monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
         llm = _CapturingToolsLLM()
         nodes.orchestrator({"question": "휴학 연장 되나요?", "user_slots": SLOTS}, llm)
         joined = "\n".join(m.content for m in llm.messages)
-        assert "[사용자 상황 조건]" in joined
-        assert "2024학번" in joined
+        assert "[사용자 상황 조건]" not in joined
 
-    def test_no_slots_no_injection(self, monkeypatch):
-        """Scoping contract: slot-free question → prompt sequence identical to OFF."""
+    def test_orchestrator_identical_on_off(self, monkeypatch):
         monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
         on = _CapturingToolsLLM()
-        nodes.orchestrator({"question": "휴학 최대 기간은?", "user_slots": {}}, on)
+        nodes.orchestrator({"question": "휴학 최대 기간은?", "user_slots": SLOTS}, on)
         monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
         off = _CapturingToolsLLM()
         nodes.orchestrator({"question": "휴학 최대 기간은?", "user_slots": {}}, off)
         assert [m.content for m in on.messages] == [m.content for m in off.messages]
-
-    def test_disabled_ignores_stale_slots(self, monkeypatch):
-        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
-        llm = _CapturingToolsLLM()
-        nodes.orchestrator({"question": "q", "user_slots": SLOTS}, llm)
-        joined = "\n".join(m.content for m in llm.messages)
-        assert "[사용자 상황 조건]" not in joined
 
 
 # ---------------------------------------------------------------------------

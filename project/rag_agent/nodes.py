@@ -162,27 +162,19 @@ def orchestrator(state: AgentState, llm_with_tools):
         [HumanMessage(content=f"[이전 조사에서 압축된 컨텍스트]\n\n{context_summary}")]
         if context_summary else []
     )
-    # Issue #145 처방 1: surface the user's stated conditions on EVERY orchestrator turn
-    # (same pattern as summary_injection — injected, not appended to state, so the message
-    # history stays clean). Empty block → no injection → byte-identical to OFF.
-    slot_text = format_user_slots(state.get("user_slots") or {}) if config.SLOT_EXTRACTION_ENABLED else ""
-    # v2 wording (S1 A/B: v1's "판단 근거 명시/없으면 그 사실을 명시" meta-instructions
-    # acted as refusal bait — refusals 33→50. Keep only the positive apply-instruction.)
-    slot_injection = (
-        [HumanMessage(content=(
-            f"{slot_text}\n\n"
-            "위 조건은 사용자가 질문에 명시한 개인 상황입니다. 규정이 조건(학번·신분·유형 등)에 따라 "
-            "달라지면 위 조건에 해당하는 경우를 기준으로 답하세요."
-        ))]
-        if slot_text else []
-    )
+    # Issue #145 처방 1 — v3: NO orchestrator-side slot injection. Both in-loop variants
+    # regressed on the S0-matched A/B: v1(전체 지시) refusals 33→50, v2(적용 지시만)
+    # refusals 33→43 AND doc_hit 76→70 — a condition block inside the agent loop pushes
+    # qwen3.5:9b toward hedging and perturbs its search-query formulation. Slots are
+    # applied at aggregate_answers only (see below), which by construction cannot touch
+    # retrieval or the agent trajectory.
     if not state.get("messages"):
         human_msg = HumanMessage(content=state["question"])
         force_search = HumanMessage(content="이 질문에 답하려면 첫 단계로 반드시 'search_child_chunks'를 호출하세요.")
-        response = llm_with_tools.invoke([sys_msg] + summary_injection + slot_injection + [human_msg, force_search])
+        response = llm_with_tools.invoke([sys_msg] + summary_injection + [human_msg, force_search])
         return {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
 
-    response = llm_with_tools.invoke([sys_msg] + summary_injection + slot_injection + state["messages"])
+    response = llm_with_tools.invoke([sys_msg] + summary_injection + state["messages"])
     tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
     return {"messages": [response], "tool_call_count": len(tool_calls) if tool_calls else 0, "iteration_count": 1}
 
