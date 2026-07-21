@@ -28,3 +28,4 @@ class UserSlots(BaseModel):
     credits: str = Field(default="", description="이수학점·평점 등 수치 조건 (예: '18학점 신청', '평점 4.0'). 명시된 경우만.")
     leave_type: str = Field(default="", description="휴학 유형 (예: '일반휴학', '병역휴학', '질병휴학'). 명시된 경우만.")
     extra: List[str] = Field(default_factory=list, description="그 외 답변에 영향을 주는 명시적 개인 조건 (예: '등록금 일부만 납부', '수강신청 기간을 놓침'). 질문의 주제 자체는 넣지 않는다.")
+    required_conditions: List[str] = Field(default_factory=list, description="답이 개인 조건에 따라 달라지는 질문에서, 정확한 답을 위해 필요하지만 질문에 명시되지 않은 조건 이름 목록 (예: '휴학 유형', '학번'). 규정 조회형(일반 사실) 질문이거나 조건이 이미 명시돼 있으면 반드시 빈 목록.")

@@ -196,6 +196,82 @@ class TestAggregationInjection:
 
 
 # ---------------------------------------------------------------------------
+# aggregate_answers clarify injection (처방 2)
+# ---------------------------------------------------------------------------
+
+class TestClarifyInjection:
+    def _state(self, slots):
+        return {"originalQuery": "휴학 연장 되나요?", "userSlots": slots,
+                "agent_answers": [{"index": 0, "question": "q", "answer": "a"}]}
+
+    MISSING = {"required_conditions": ["휴학 유형", "누적 휴학 기간"]}
+
+    def test_missing_conditions_inject_conditional_answer_instruction(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", True)
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state(self.MISSING), llm)
+        user = llm.messages[1].content
+        assert "[확인 필요 조건]" in user
+        assert "휴학 유형, 누적 휴학 기간" in user
+        assert "경우를 나눠 답하세요" in user           # conditional answer, not hard stop
+        assert "거부하지 마세요" in user                 # refusal-bait guard
+
+    def test_clarify_off_no_injection(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", False)
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state(self.MISSING), llm)
+        assert "[확인 필요 조건]" not in llm.messages[1].content
+
+    def test_clarify_requires_extraction(self, monkeypatch):
+        """SLOT_CLARIFY_ENABLED without extraction is a no-op (documented dependency)."""
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", True)
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state(self.MISSING), llm)
+        assert "[확인 필요 조건]" not in llm.messages[1].content
+
+    def test_no_missing_conditions_byte_identical_to_off(self, monkeypatch):
+        """Factual questions (empty required_conditions) must aggregate on OFF-identical input."""
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", True)
+        on = _CapturingLLM()
+        nodes.aggregate_answers(self._state({"required_conditions": []}), on)
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", False)
+        off = _CapturingLLM()
+        nodes.aggregate_answers(self._state({}), off)
+        assert on.messages[1].content == off.messages[1].content
+
+    def test_blank_condition_entries_skipped(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", True)
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state({"required_conditions": ["", "  "]}), llm)
+        assert "[확인 필요 조건]" not in llm.messages[1].content
+
+    def test_clarify_and_stated_slots_coexist(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", True)
+        slots = dict(SLOTS, required_conditions=["누적 휴학 기간"])
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state(slots), llm)
+        user = llm.messages[1].content
+        assert "[사용자 상황 조건]" in user
+        assert "[확인 필요 조건]" in user
+
+
+class TestUserSlotsSchema:
+    def test_required_conditions_defaults_empty(self):
+        assert UserSlots().model_dump()["required_conditions"] == []
+
+    def test_required_conditions_not_rendered_as_stated_slot(self):
+        text = nodes.format_user_slots({"required_conditions": ["휴학 유형"]})
+        assert text == ""  # missing conditions are not "stated" conditions
+
+
+# ---------------------------------------------------------------------------
 # route_after_rewrite carries the slots
 # ---------------------------------------------------------------------------
 

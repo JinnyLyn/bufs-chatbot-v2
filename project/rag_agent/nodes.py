@@ -301,13 +301,32 @@ def aggregate_answers(state: State, llm):
 
     # Issue #145 처방 1: final condition-coverage check. Only appended when slots exist,
     # so slot-free questions aggregate on byte-identical input.
-    slot_text = format_user_slots(state.get("userSlots") or {}) if config.SLOT_EXTRACTION_ENABLED else ""
+    slots = state.get("userSlots") or {}
+    slot_text = format_user_slots(slots) if config.SLOT_EXTRACTION_ENABLED else ""
     if slot_text:
         # v2 wording: the v1 "없으면 그 사실을 명시하세요" clause invited refusal-style
         # hedging (S1 A/B refusals +17) — keep only the condition-application instruction.
         content += (
             f"\n\n{slot_text}\n\n"
             "조건에 따라 규정이 달라지는 부분은 사용자의 조건 기준으로 답하세요."
+        )
+
+    # Issue #145 처방 2 (슬롯-clarify): the extractor flagged conditions the answer depends
+    # on that the user did NOT state. Instruct a CONDITIONAL answer (content preserved —
+    # a hard stop-and-ask would repeat issue #51's false-clarification regression) plus one
+    # closing sentence asking for the missing conditions. Empty list → no injection.
+    missing = [
+        str(c).strip()
+        for c in (slots.get("required_conditions") or [])
+        if str(c or "").strip()
+    ] if (config.SLOT_EXTRACTION_ENABLED and config.SLOT_CLARIFY_ENABLED) else []
+    if missing:
+        content += (
+            f"\n\n[확인 필요 조건] 정확한 답에 필요하지만 질문에 없는 정보: {', '.join(missing)}\n\n"
+            "지시: 검색된 답변의 내용은 빠짐없이 유지하되, 위 조건에 따라 규정이 달라지는 부분은 "
+            "경우를 나눠 답하세요(예: 일반휴학이면 …, 병역휴학이면 …). 답변 마지막에 위 정보를 "
+            "알려주시면 더 정확한 안내가 가능하다는 요청을 한 문장으로만 덧붙이세요. "
+            "확인 요청을 이유로 본문 내용을 생략하거나 답변을 거부하지 마세요."
         )
 
     user_message = HumanMessage(content=content)

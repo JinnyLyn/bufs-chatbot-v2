@@ -186,6 +186,14 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
 # the same code-level scoping principle as PR #144's refusal_only gate (prompt-level scoping
 # is impossible per PR #111). DEFAULT OFF — A/B on qa100 before enabling.
 SLOT_EXTRACTION_ENABLED = os.environ.get("SLOT_EXTRACTION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# 처방 2 (슬롯-clarify 결합): when the extractor judges that the answer DEPENDS on personal
+# conditions the user did not state (UserSlots.required_conditions), the aggregation stage is
+# instructed to (a) answer CONDITIONALLY per case from the retrieved content — never dropping
+# content (a hard stop-and-ask would zero the answer and repeat issue #51's false-clarification
+# regression) — and (b) close with ONE sentence asking for the missing conditions. Aggregation-
+# only injection (the sole placement measured safe in the #145 처방-1 ablation: in-loop variants
+# regressed refusals/doc_hit). Requires SLOT_EXTRACTION_ENABLED (no-op without it). DEFAULT OFF.
+SLOT_CLARIFY_ENABLED = os.environ.get("SLOT_CLARIFY_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
