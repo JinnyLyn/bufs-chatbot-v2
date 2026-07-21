@@ -187,7 +187,9 @@ class TestAggregationInjection:
         nodes.aggregate_answers(self._state(SLOTS), llm)
         user = llm.messages[1].content
         assert "[사용자 상황 조건]" in user
-        assert "조건이 답변에 반영되었는지" in user
+        # v2 wording: positive apply-instruction only (no refusal-bait meta clause)
+        assert "사용자의 조건 기준으로 답하세요" in user
+        assert "명시하세요" not in user
 
     def test_no_slots_input_identical_to_off(self, monkeypatch):
         monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
