@@ -166,11 +166,13 @@ def orchestrator(state: AgentState, llm_with_tools):
     # (same pattern as summary_injection — injected, not appended to state, so the message
     # history stays clean). Empty block → no injection → byte-identical to OFF.
     slot_text = format_user_slots(state.get("user_slots") or {}) if config.SLOT_EXTRACTION_ENABLED else ""
+    # v2 wording (S1 A/B: v1's "판단 근거 명시/없으면 그 사실을 명시" meta-instructions
+    # acted as refusal bait — refusals 33→50. Keep only the positive apply-instruction.)
     slot_injection = (
         [HumanMessage(content=(
             f"{slot_text}\n\n"
-            "위 조건은 사용자가 질문에 명시한 개인 상황입니다. 조건에 해당하는 규정(조건별 차이·예외 포함)을 "
-            "찾아 적용하고, 어떤 조건을 근거로 판단했는지 답변에 명시하세요."
+            "위 조건은 사용자가 질문에 명시한 개인 상황입니다. 규정이 조건(학번·신분·유형 등)에 따라 "
+            "달라지면 위 조건에 해당하는 경우를 기준으로 답하세요."
         ))]
         if slot_text else []
     )
@@ -309,10 +311,11 @@ def aggregate_answers(state: State, llm):
     # so slot-free questions aggregate on byte-identical input.
     slot_text = format_user_slots(state.get("userSlots") or {}) if config.SLOT_EXTRACTION_ENABLED else ""
     if slot_text:
+        # v2 wording: the v1 "없으면 그 사실을 명시하세요" clause invited refusal-style
+        # hedging (S1 A/B refusals +17) — keep only the condition-application instruction.
         content += (
             f"\n\n{slot_text}\n\n"
-            "위 조건이 답변에 반영되었는지 확인하세요. 조건에 따라 규정이 달라지는 부분은 "
-            "사용자의 조건 기준으로 답하고, 조건과 관련된 규정이 검색된 답변에 없으면 그 사실을 명시하세요."
+            "조건에 따라 규정이 달라지는 부분은 사용자의 조건 기준으로 답하세요."
         )
 
     user_message = HumanMessage(content=content)
