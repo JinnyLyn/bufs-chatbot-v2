@@ -31,5 +31,3 @@ class AgentState(MessagesState):
     agent_answers: List[dict] = []
     tool_call_count: Annotated[int, operator.add] = 0
     iteration_count: Annotated[int, operator.add] = 0
-    # Issue #145: carried into each per-question agent via the Send payload.
-    user_slots: dict = {}

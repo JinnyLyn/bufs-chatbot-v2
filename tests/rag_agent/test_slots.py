@@ -272,16 +272,13 @@ class TestUserSlotsSchema:
 
 
 # ---------------------------------------------------------------------------
-# route_after_rewrite carries the slots
+# route_after_rewrite (agent subgraph stays slot-blind — v3 design)
 # ---------------------------------------------------------------------------
 
-class TestSendCarriesSlots:
-    def test_send_payload_includes_user_slots(self):
+class TestSendStaysSlotBlind:
+    def test_send_payload_has_no_slot_key(self):
+        """Slots live in the OUTER state only (consumed at aggregate_answers); the
+        per-question agent gets none — in-loop slot use regressed in the ablation."""
         state = {"questionIsClear": True, "rewrittenQuestions": ["q1"], "userSlots": SLOTS}
         sends = edges.route_after_rewrite(state)
-        assert sends[0].arg["user_slots"] == SLOTS
-
-    def test_send_payload_defaults_to_empty(self):
-        state = {"questionIsClear": True, "rewrittenQuestions": ["q1"]}
-        sends = edges.route_after_rewrite(state)
-        assert sends[0].arg["user_slots"] == {}
+        assert "user_slots" not in sends[0].arg
