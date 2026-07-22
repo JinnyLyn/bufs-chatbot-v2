@@ -80,6 +80,64 @@ def format_user_slots(slots: dict) -> str:
     return "[사용자 상황 조건]\n" + "\n".join(lines)
 
 
+def _slot_search_queries(question: str, slots: dict) -> List[str]:
+    """Deterministic slot-derived search queries (issue #145 슬롯 기반 2차 검색).
+
+    One query per condition term, in a fixed order: stated slot values (_SLOT_LABELS
+    order) → extra conditions → required-condition names. Deduped, capped at
+    SLOT_SEARCH_MAX_QUERIES. Empty list when there is nothing to search on — the
+    scoping contract (no terms → no supplementary block → OFF-identical input).
+    """
+    terms: List[str] = [
+        str(slots.get(key)).strip()
+        for key, _ in _SLOT_LABELS
+        if str(slots.get(key) or "").strip()
+    ]
+    terms += [str(x).strip() for x in (slots.get("extra") or []) if str(x or "").strip()]
+    terms += [str(c).strip() for c in (slots.get("required_conditions") or []) if str(c or "").strip()]
+    unique_terms = list(dict.fromkeys(terms))[: config.SLOT_SEARCH_MAX_QUERIES]
+    q = (question or "").strip()
+    return [f"{q} {t}".strip() for t in unique_terms]
+
+
+def _slot_secondary_search(collection, question: str, slots: dict) -> str:
+    """Run the slot-derived queries against the child collection and format the hits
+    as a supplementary-evidence block (same Parent ID/File Name/Content layout as the
+    retrieval tool, so the LLM sees one consistent evidence format).
+
+    Purely additive and code-driven: the agent's own retrieval already happened and is
+    untouched. Any failure degrades to fewer (or zero) hits — logged, never fatal.
+    """
+    queries = _slot_search_queries(question, slots)
+    if not queries or collection is None:
+        return ""
+    blocks: List[str] = []
+    seen_contents = set()
+    for query in queries:
+        try:
+            results = collection.similarity_search(
+                query, k=config.SLOT_SEARCH_LIMIT, score_threshold=config.SEARCH_SCORE_THRESHOLD)
+        except Exception:
+            logger.exception("slot secondary search failed for query=%r — skipping", query)
+            continue
+        for doc in results:
+            content = (doc.page_content or "").strip()
+            if not content or content in seen_contents:
+                continue
+            seen_contents.add(content)
+            blocks.append(
+                f"Parent ID: {doc.metadata.get('parent_id', '')}\n"
+                f"File Name: {doc.metadata.get('source', '')}\n"
+                f"Content: {content}"
+            )
+    if not blocks:
+        return ""
+    return (
+        "[보충 검색 자료 — 사용자 조건 기반 추가 검색]\n\n"
+        + "\n\n".join(f"--- 보충 {i} ---\n{b}" for i, b in enumerate(blocks, 1))
+    )
+
+
 def extract_user_slots(llm, question: str) -> dict:
     """Extract explicitly-stated user conditions from the question (one structured call).
 
@@ -287,7 +345,7 @@ def collect_answer(state: AgentState):
     }
 # --- End of Agent Nodes---
 
-def aggregate_answers(state: State, llm):
+def aggregate_answers(state: State, llm, collection=None):
     if not state.get("agent_answers"):
         return {"messages": [AIMessage(content="생성된 답변이 없습니다.")]}
 
@@ -328,6 +386,18 @@ def aggregate_answers(state: State, llm):
             "알려주시면 더 정확한 안내가 가능하다는 요청을 한 문장으로만 덧붙이세요. "
             "확인 요청을 이유로 본문 내용을 생략하거나 답변을 거부하지 마세요."
         )
+
+    # Issue #145 슬롯 기반 2차 검색: code-driven supplementary retrieval on the condition
+    # terms — feeds the clarify lever the per-case rule chunks it is asked to split on.
+    # Empty block (no terms / disabled / no collection / no hits) → OFF-identical input.
+    if config.SLOT_EXTRACTION_ENABLED and config.SLOT_SEARCH_ENABLED:
+        supplement = _slot_secondary_search(collection, state.get("originalQuery", ""), slots)
+        if supplement:
+            content += (
+                f"\n\n{supplement}\n\n"
+                "지시: 위 보충 자료에 근거한 사실은 답변에 사용할 수 있습니다. "
+                "보충 자료와 검색된 답변 어디에도 없는 내용은 추가하지 마세요."
+            )
 
     user_message = HumanMessage(content=content)
     synthesis_response = llm.invoke([SystemMessage(content=get_aggregation_prompt()), user_message])

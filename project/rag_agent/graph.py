@@ -7,7 +7,9 @@ from .graph_state import State
 from .nodes import *
 from .edges import *
 
-def create_agent_graph(llm, tools_list):
+def create_agent_graph(llm, tools_list, collection=None):
+    # `collection` (child-chunk vector store) powers the slot-based secondary search in
+    # aggregate_answers (#145). Optional: None disables that lever regardless of config.
     llm_with_tools = llm.bind_tools(tools_list)
     tool_node = ToolNode(tools_list)
 
@@ -36,7 +38,7 @@ def create_agent_graph(llm, tools_list):
     graph_builder.add_node("rewrite_query", partial(rewrite_query, llm=llm))
     graph_builder.add_node(request_clarification)
     graph_builder.add_node("agent", agent_subgraph)
-    graph_builder.add_node("aggregate_answers", partial(aggregate_answers, llm=llm))
+    graph_builder.add_node("aggregate_answers", partial(aggregate_answers, llm=llm, collection=collection))
 
     graph_builder.add_edge(START, "summarize_history")
     graph_builder.add_edge("summarize_history", "rewrite_query")

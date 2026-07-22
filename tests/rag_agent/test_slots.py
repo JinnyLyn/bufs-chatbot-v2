@@ -262,6 +262,128 @@ class TestClarifyInjection:
         assert "[확인 필요 조건]" in user
 
 
+class _FakeDoc:
+    def __init__(self, content, parent_id="p1", source="학사안내.pdf"):
+        self.page_content = content
+        self.metadata = {"parent_id": parent_id, "source": source}
+
+
+class _FakeCollection:
+    def __init__(self, results=None, fail=False):
+        self.results = results or []
+        self.fail = fail
+        self.queries = []
+
+    def similarity_search(self, query, k=None, score_threshold=None):
+        self.queries.append(query)
+        if self.fail:
+            raise RuntimeError("qdrant down")
+        return self.results
+
+
+class TestSlotSearchQueries:
+    Q = "휴학 연장 되나요?"
+
+    def test_no_terms_returns_empty(self):
+        assert nodes._slot_search_queries(self.Q, {}) == []
+
+    def test_terms_in_deterministic_order(self):
+        slots = {"leave_type": "병역휴학", "admission_year": "2024학번",
+                 "extra": ["등록금 일부만 납부"], "required_conditions": ["누적 휴학 기간"]}
+        qs = nodes._slot_search_queries(self.Q, slots)
+        # _SLOT_LABELS order first (admission_year before leave_type), then extra, then required
+        assert qs[0] == f"{self.Q} 2024학번"
+        assert qs[1] == f"{self.Q} 병역휴학"
+        assert len(qs) == 3  # capped at SLOT_SEARCH_MAX_QUERIES default 3
+
+    def test_duplicate_terms_deduped(self):
+        slots = {"leave_type": "병역휴학", "required_conditions": ["병역휴학"]}
+        qs = nodes._slot_search_queries(self.Q, slots)
+        assert len(qs) == 1
+
+    def test_cap_respected(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_SEARCH_MAX_QUERIES", 1)
+        slots = {"admission_year": "2024학번", "leave_type": "병역휴학"}
+        assert len(nodes._slot_search_queries(self.Q, slots)) == 1
+
+
+class TestSlotSecondarySearch:
+    Q = "휴학 연장 되나요?"
+    SLOTS_ONE = {"leave_type": "병역휴학"}
+
+    def test_no_collection_returns_empty(self):
+        assert nodes._slot_secondary_search(None, self.Q, self.SLOTS_ONE) == ""
+
+    def test_hits_formatted_as_supplement_block(self):
+        coll = _FakeCollection([_FakeDoc("병역휴학은 통산 제한에 미포함")])
+        block = nodes._slot_secondary_search(coll, self.Q, self.SLOTS_ONE)
+        assert block.startswith("[보충 검색 자료")
+        assert "--- 보충 1 ---" in block
+        assert "병역휴학은 통산 제한에 미포함" in block
+        assert "Parent ID: p1" in block
+
+    def test_duplicate_chunks_across_queries_deduped(self):
+        coll = _FakeCollection([_FakeDoc("같은 청크")])
+        slots = {"admission_year": "2024학번", "leave_type": "병역휴학"}
+        block = nodes._slot_secondary_search(coll, self.Q, slots)
+        assert block.count("같은 청크") == 1
+        assert len(coll.queries) == 2  # both queries ran
+
+    def test_search_failure_degrades_and_logs(self, caplog):
+        coll = _FakeCollection(fail=True)
+        with caplog.at_level(logging.ERROR, logger="rag_agent.nodes"):
+            assert nodes._slot_secondary_search(coll, self.Q, self.SLOTS_ONE) == ""
+        assert any("slot secondary search failed" in r.getMessage() for r in caplog.records)
+
+    def test_no_hits_returns_empty(self):
+        assert nodes._slot_secondary_search(_FakeCollection([]), self.Q, self.SLOTS_ONE) == ""
+
+
+class TestAggregationSupplement:
+    def _state(self, slots):
+        return {"originalQuery": "휴학 연장 되나요?", "userSlots": slots,
+                "agent_answers": [{"index": 0, "question": "q", "answer": "a"}]}
+
+    def test_supplement_appended_when_enabled(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_SEARCH_ENABLED", True)
+        coll = _FakeCollection([_FakeDoc("병역휴학 규정")])
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state({"leave_type": "병역휴학"}), llm, collection=coll)
+        user = llm.messages[1].content
+        assert "[보충 검색 자료" in user
+        assert "보충 자료에 근거한 사실은 답변에 사용할 수 있습니다" in user
+
+    def test_search_off_no_supplement(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_SEARCH_ENABLED", False)
+        coll = _FakeCollection([_FakeDoc("병역휴학 규정")])
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state({"leave_type": "병역휴학"}), llm, collection=coll)
+        assert "[보충 검색 자료" not in llm.messages[1].content
+        assert coll.queries == []  # no search even attempted
+
+    def test_slot_free_question_byte_identical_to_off(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_SEARCH_ENABLED", True)
+        coll = _FakeCollection([_FakeDoc("x")])
+        on = _CapturingLLM()
+        nodes.aggregate_answers(self._state({}), on, collection=coll)
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
+        monkeypatch.setattr(config, "SLOT_SEARCH_ENABLED", False)
+        off = _CapturingLLM()
+        nodes.aggregate_answers(self._state({}), off, collection=coll)
+        assert on.messages[1].content == off.messages[1].content
+        assert coll.queries == []
+
+    def test_no_collection_graceful(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_SEARCH_ENABLED", True)
+        llm = _CapturingLLM()
+        nodes.aggregate_answers(self._state({"leave_type": "병역휴학"}), llm, collection=None)
+        assert "[보충 검색 자료" not in llm.messages[1].content
+
+
 class TestUserSlotsSchema:
     def test_required_conditions_defaults_empty(self):
         assert UserSlots().model_dump()["required_conditions"] == []

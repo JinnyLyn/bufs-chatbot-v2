@@ -194,6 +194,20 @@ SLOT_EXTRACTION_ENABLED = os.environ.get("SLOT_EXTRACTION_ENABLED", "false").low
 # only injection (the sole placement measured safe in the #145 처방-1 ablation: in-loop variants
 # regressed refusals/doc_hit). Requires SLOT_EXTRACTION_ENABLED (no-op without it). DEFAULT OFF.
 SLOT_CLARIFY_ENABLED = os.environ.get("SLOT_CLARIFY_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# 슬롯 기반 2차 검색 (#145 후속, Chunk-문제 타격): CODE-driven supplementary retrieval at the
+# aggregation stage — the agent is never asked to search differently (retrieve_parent's 0/100
+# tool-choice lesson + the in-loop-injection regressions). Deterministic queries are built from
+# the user's STATED slot values ("병역휴학") and the extractor's required-condition NAMES
+# ("휴학 유형" — surfaces the very rule tables that differentiate the cases the clarify lever
+# asks to split), searched directly against the child collection, and appended to the
+# aggregation context as a clearly-labeled supplementary-evidence block. Agent trajectory,
+# tool outputs, and the doc_hit metric are untouched by construction; slot-free questions
+# stay byte-identical. Requires SLOT_EXTRACTION_ENABLED. DEFAULT OFF — A/B before enabling.
+SLOT_SEARCH_ENABLED = os.environ.get("SLOT_SEARCH_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Per-query top-k and the cap on how many slot-derived queries run (latency guard: each query
+# is one CPU embedding pass + a Qdrant lookup — negligible vs an LLM call, but bounded anyway).
+SLOT_SEARCH_LIMIT = int(os.environ.get("SLOT_SEARCH_LIMIT", "3"))
+SLOT_SEARCH_MAX_QUERIES = int(os.environ.get("SLOT_SEARCH_MAX_QUERIES", "3"))
 
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
