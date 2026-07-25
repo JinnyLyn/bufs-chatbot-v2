@@ -1,6 +1,6 @@
 fastapi>=0.139.2
 uvicorn[standard]>=0.51.0
-sse-starlette>=3.4.5
+sse-starlette>=3.4.6
 fastembed==0.8.0
 kiwipiepy==0.23.2         # Korean morphological tokenizer for the BM25 sparse leg (SPARSE_MODEL=kiwi)
 gradio==6.20.0
@@ -10,12 +10,12 @@ langchain-huggingface==1.2.2
 langchain-ollama==1.1.0
 langchain-qdrant==1.1.0
 langchain-text-splitters==1.1.2
-langfuse==4.14.0
+langfuse==4.14.1
 langgraph==1.2.9
-docling==2.113.0
+docling==2.115.0
 pymupdf==1.28.0        # text-layer fallback for pages Docling drops on std::bad_alloc
 python-dotenv==1.2.2
-sentence-transformers==5.6.0
+sentence-transformers==5.6.1
 tiktoken==0.13.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
 requests>=2.34.2          # debug/status.py, debug/langfuse_client.py
