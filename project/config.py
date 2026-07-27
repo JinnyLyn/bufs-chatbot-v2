@@ -176,6 +176,79 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
         "Values outside this range invert RRF-dominant chunk rankings."
     )
 
+# --- Generation-side lever (issue #145 처방 1: 시나리오형 필수 슬롯 추출) ---
+# The 2026-07-20 baseline split (factual100 F1 0.835 vs qa100 F1 0.349, doc_recall 0.792 vs
+# answer Recall 0.316) shows scenario questions fail at CONDITION APPLICATION, not just search:
+# the agent retrieves the right document yet answers without applying the user's stated
+# conditions (학번/신분/휴학 유형 …). When ON, one structured-output call extracts the
+# EXPLICITLY-STATED user conditions from the question (never inferred — see UserSlots), and
+# the condition block is injected into the orchestrator turns and the final aggregation so
+# the answer must apply/flag each condition. Questions with NO stated conditions are
+# byte-identical to OFF (no injection), so the factual-question population is untouched —
+# the same code-level scoping principle as PR #144's refusal_only gate (prompt-level scoping
+# is impossible per PR #111). DEFAULT OFF — A/B on qa100 before enabling.
+SLOT_EXTRACTION_ENABLED = os.environ.get("SLOT_EXTRACTION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# 처방 2 (슬롯-clarify 결합): when the extractor judges that the answer DEPENDS on personal
+# conditions the user did not state (UserSlots.required_conditions), the aggregation stage is
+# instructed to (a) answer CONDITIONALLY per case from the retrieved content — never dropping
+# content (a hard stop-and-ask would zero the answer and repeat issue #51's false-clarification
+# regression) — and (b) close with ONE sentence asking for the missing conditions. Aggregation-
+# only injection (the sole placement measured safe in the #145 처방-1 ablation: in-loop variants
+# regressed refusals/doc_hit). Requires SLOT_EXTRACTION_ENABLED (no-op without it). DEFAULT OFF.
+SLOT_CLARIFY_ENABLED = os.environ.get("SLOT_CLARIFY_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# 슬롯 기반 2차 검색 (#145 후속, Chunk-문제 타격): CODE-driven supplementary retrieval at the
+# aggregation stage — the agent is never asked to search differently (retrieve_parent's 0/100
+# tool-choice lesson + the in-loop-injection regressions). Deterministic queries are built from
+# the user's STATED slot values ("병역휴학") and the extractor's required-condition NAMES
+# ("휴학 유형" — surfaces the very rule tables that differentiate the cases the clarify lever
+# asks to split), searched directly against the child collection, and appended to the
+# aggregation context as a clearly-labeled supplementary-evidence block. Agent trajectory,
+# tool outputs, and the doc_hit metric are untouched by construction; slot-free questions
+# stay byte-identical. Requires SLOT_EXTRACTION_ENABLED. DEFAULT OFF — A/B before enabling.
+SLOT_SEARCH_ENABLED = os.environ.get("SLOT_SEARCH_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Per-query top-k and the cap on how many slot-derived queries run (latency guard: each query
+# is one CPU embedding pass + a Qdrant lookup — negligible vs an LLM call, but bounded anyway).
+SLOT_SEARCH_LIMIT = int(os.environ.get("SLOT_SEARCH_LIMIT", "3"))
+SLOT_SEARCH_MAX_QUERIES = int(os.environ.get("SLOT_SEARCH_MAX_QUERIES", "3"))
+
+# --- Generation-side levers (issue #126: 생성실패 40건 법의학 + 시뮬레이션 A/B) ---
+# Clean final synthesis. The #126 simulation showed 13/40 of live generation failures pass
+# when the SAME child chunks the agent saw are fed to one clean single-shot answer-from-context
+# call (fallback prompt, temp0) — i.e. the failure point is the agent loop's multi-turn answer
+# synthesis, not the context or the model's extraction ability. When ON, an orchestrator "final
+# answer" (no tool calls) is replaced by one clean synthesis call over the collected tool
+# evidence (a generalization of the existing fallback path). Routing falls back to the
+# orchestrator's own answer when there is no usable tool evidence (e.g. out-of-scope refusals),
+# so the refusal path is untouched. DEFAULT OFF — A/B on qa100 before enabling in prod.
+CLEAN_SYNTHESIS_ENABLED = os.environ.get("CLEAN_SYNTHESIS_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Scope of the clean-synthesis rerouting. Live A/B + gemma4:26b judge (PR #144, 2026-07-20)
+# measured "always" as accuracy-NEUTRAL (40→39/100): the genfail recoveries (+12) were offset
+# by re-synthesis DEGRADING questions the orchestrator draft already answered correctly (−13,
+# 10 of them outside the #126 target population). "refusal_only" fires only when the draft
+# itself is a refusal ("자료에 없습니다"-class), so every non-refusal draft is kept byte-for-byte
+# — the −13 loss class is structurally impossible, keeping only the refusal-recovery upside.
+# Unlike prompt-level scoping (PR #111: any prompt insertion reshuffles the whole output
+# distribution), a code-level routing condition scopes exactly.
+CLEAN_SYNTHESIS_MODE = os.environ.get("CLEAN_SYNTHESIS_MODE", "refusal_only").strip().lower()
+if CLEAN_SYNTHESIS_MODE not in ("refusal_only", "always"):
+    raise ValueError(
+        f"CLEAN_SYNTHESIS_MODE must be 'refusal_only' or 'always', got {CLEAN_SYNTHESIS_MODE!r}"
+    )
+# Auto parent expansion at the synthesis step. #126 found retrieve_parent_chunks is called
+# 0/100 in live runs (the parent-child design's stage 2 is dead in practice) and 9 of the 20
+# "same-doc different-chunk" failures have their evidence inside a parent the agent ALREADY saw.
+# The naive simulation (parents REPLACING children) went net +4 (8 recovered − 4 regressed on
+# needle-in-haystack dilution), so this implements the comment's improved design: KEEP the child
+# snippets and APPEND the parent originals (merge, not replace), deduped in first-seen order.
+# Expansion happens only in the synthesis/fallback context assembly — the agent loop, its token
+# budget, and the compression path are untouched. DEFAULT OFF — A/B toggle.
+PARENT_EXPANSION_ENABLED = os.environ.get("PARENT_EXPANSION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Caps matching the #126 simulation arms (상한 3개 / 9000자). NOTE: with the default
+# LLM_NUM_CTX=8192 a full 9000-char expansion can push the synthesis prompt past the context
+# window — when A/B-ing this lever raise LLM_NUM_CTX or lower PARENT_EXPANSION_MAX_CHARS.
+PARENT_EXPANSION_MAX_PARENTS = int(os.environ.get("PARENT_EXPANSION_MAX_PARENTS", "3"))
+PARENT_EXPANSION_MAX_CHARS = int(os.environ.get("PARENT_EXPANSION_MAX_CHARS", "9000"))
+
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
 # agent searches less thoroughly. env-overridable so they can be tuned / rolled back
