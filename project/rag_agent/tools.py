@@ -123,14 +123,16 @@ class ToolFactory:
                 for doc in results
             ])            
 
-        except Exception as e:
+        except Exception:
             # Do not let the failure vanish into the returned string: a split-path API
             # drift (qdrant-client/langchain-qdrant bump) or a DENSE-only collection would
-            # otherwise degrade to RETRIEVAL_ERROR with no server-side trace.
+            # otherwise degrade to RETRIEVAL_ERROR with no server-side trace. The detail
+            # stays in the server log only — the returned string is a stable marker so
+            # internal error text never reaches the LLM/user.
             logger.exception(
                 "search_child_chunks failed (split_path=%s)", config.SPLIT_PATH_ENABLED
             )
-            return f"RETRIEVAL_ERROR: {str(e)}"
+            return "RETRIEVAL_ERROR: search failed, see server log"
     
     def _retrieve_many_parent_chunks(self, parent_ids: List[str]) -> str:
         """Retrieve full parent chunks by their IDs.
@@ -151,9 +153,9 @@ class ToolFactory:
                 for doc in raw_parents
             ])
 
-        except Exception as e:
+        except Exception:
             logger.exception("retrieve_many_parent_chunks failed")
-            return f"PARENT_RETRIEVAL_ERROR: {str(e)}"
+            return "PARENT_RETRIEVAL_ERROR: retrieval failed, see server log"
 
     def _retrieve_parent_chunks(self, parent_id: str) -> str:
         """Retrieve full parent chunks by their IDs.
@@ -172,9 +174,9 @@ class ToolFactory:
                 f"Content: {parent.get('content', '').strip()}"
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("retrieve_parent_chunks failed (parent_id=%s)", parent_id)
-            return f"PARENT_RETRIEVAL_ERROR: {str(e)}"
+            return "PARENT_RETRIEVAL_ERROR: retrieval failed, see server log"
 
     def create_tools(self) -> List:
         """Create and return the list of tools."""

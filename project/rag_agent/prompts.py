@@ -230,3 +230,24 @@ def get_aggregation_prompt() -> str:
 
 사용 가능한 정보가 없으면 다음 문장만 출력하세요: "제공된 자료에서 질문에 답할 수 있는 정보를 찾지 못했습니다."
 """
+
+
+# --- 마이크로 프롬프트 (중앙화 전용 — 문구는 기존 인라인 버전과 바이트 동일해야 한다) ---
+# 이 파일이 프롬프트 표면 전체의 단일 소스다. 문구 수정은 반드시 A/B 측정과 함께 할 것
+# (PR #111의 로컬 qa100 5-way A/B: 직관적 지시 추가가 전부 0.7컷 정답수를 깎았다).
+
+
+def get_translation_prompt() -> str:
+    return (
+        "당신은 전문 번역가입니다. 사용자의 메시지를 자연스럽고 유창한 한국어로 번역하세요. "
+        "한국어 번역문만 출력하고, 머리말, 주석, 따옴표를 붙이지 마세요. "
+        "Markdown 형식, 숫자, 학점 수, URL, 문서명, 파일명은 그대로 보존하세요."
+    )
+
+
+def get_force_search_instruction() -> str:
+    return "이 질문에 답하려면 첫 단계로 반드시 'search_child_chunks'를 호출하세요."
+
+
+def get_fallback_task_instruction() -> str:
+    return "지시:\n위 데이터만 사용해 가능한 한 최선의 답변을 작성하세요."

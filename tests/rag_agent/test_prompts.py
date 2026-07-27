@@ -110,3 +110,22 @@ class TestAggregationPrompt:
         p = _import_prompts()
         text = p.get_aggregation_prompt()
         assert ".pdf" in text or "확장자" in text
+
+
+class TestCentralizedMicroPrompts:
+    """Micro-prompts formerly hardcoded in translate.py / nodes.py — moved to
+    prompts.py verbatim so the whole prompt surface lives in one file. Texts
+    must stay byte-identical to the original inline versions (behavior-neutral)."""
+
+    def test_translation_prompt(self):
+        p = _import_prompts()
+        text = p.get_translation_prompt()
+        assert "번역" in text and "숫자" in text and "파일명" in text
+
+    def test_force_search_instruction(self):
+        p = _import_prompts()
+        assert "search_child_chunks" in p.get_force_search_instruction()
+
+    def test_fallback_task_instruction(self):
+        p = _import_prompts()
+        assert len(p.get_fallback_task_instruction()) > 0
