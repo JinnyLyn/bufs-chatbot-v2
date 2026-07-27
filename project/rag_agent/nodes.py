@@ -1,4 +1,6 @@
-from typing import Literal, Set
+import logging
+import re
+from typing import List, Literal, Set
 from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage, AIMessage, ToolMessage
 from langgraph.types import Command
 from .graph_state import State, AgentState
@@ -7,6 +9,20 @@ from .prompts import *
 import config
 from utils import estimate_context_tokens
 from config import BASE_TOKEN_THRESHOLD, TOKEN_GROWTH_FACTOR
+
+logger = logging.getLogger(__name__)
+
+# Lazily-built singleton so importing nodes.py never touches the filesystem
+# (ParentStoreManager.__init__ mkdirs the store path).
+_parent_store = None
+
+
+def _get_parent_store():
+    global _parent_store
+    if _parent_store is None:
+        from db.parent_store_manager import ParentStoreManager
+        _parent_store = ParentStoreManager()
+    return _parent_store
 
 
 def _invoke_structured_rewrite(llm, messages):
@@ -101,14 +117,86 @@ def orchestrator(state: AgentState, llm_with_tools):
     tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
     return {"messages": [response], "tool_call_count": len(tool_calls) if tool_calls else 0, "iteration_count": 1}
 
-def fallback_response(state: AgentState, llm):
+def _collect_unique_tool_contents(state: AgentState) -> List[str]:
+    """Unique ToolMessage contents in first-seen order (the agent's actual evidence)."""
     seen = set()
     unique_contents = []
     for m in state["messages"]:
         if isinstance(m, ToolMessage) and m.content not in seen:
             unique_contents.append(m.content)
             seen.add(m.content)
+    return unique_contents
 
+
+# Matches the "Parent ID: <id>" line the retrieval tools prepend to every chunk block
+# (see ToolFactory._search_child_chunks / _retrieve_parent_chunks output format).
+_PARENT_ID_LINE = re.compile(r"(?m)^Parent ID:\s*(.+?)\s*$")
+
+
+def _expand_parent_context(unique_contents: List[str]) -> List[str]:
+    """Auto parent expansion (issue #126): load the parent originals for the child chunks
+    the agent actually saw.
+
+    Returns formatted parent blocks, deduped by parent_id in first-seen order (매칭:
+    #126 시뮬레이션의 "본 순서 dedup"), capped at PARENT_EXPANSION_MAX_PARENTS /
+    PARENT_EXPANSION_MAX_CHARS. Any failure degrades to fewer (or zero) blocks — the
+    answer path must never die on an expansion error, but every failure is logged
+    with the offending parent_id so it stays traceable.
+    """
+    ordered_ids: List[str] = []
+    seen_ids = set()
+    for content in unique_contents:
+        for pid in _PARENT_ID_LINE.findall(content or ""):
+            if pid and pid not in seen_ids:
+                seen_ids.add(pid)
+                ordered_ids.append(pid)
+
+    if not ordered_ids:
+        return []
+
+    try:
+        store = _get_parent_store()
+    except Exception:
+        logger.exception("parent expansion disabled for this call: parent store init failed")
+        return []
+
+    blocks: List[str] = []
+    total_chars = 0
+    for pid in ordered_ids:
+        if len(blocks) >= config.PARENT_EXPANSION_MAX_PARENTS:
+            break
+        try:
+            parent = store.load_content(pid)
+        except Exception:
+            # Missing/corrupt parent file must not kill the answer — skip it, keep the trace.
+            logger.exception("parent expansion: failed to load parent_id=%s", pid)
+            continue
+        content = (parent.get("content") or "").strip()
+        if not content:
+            logger.warning("parent expansion: empty content for parent_id=%s — skipped", pid)
+            continue
+        if any(content in uc for uc in unique_contents):
+            # The agent already fetched this parent's full text via retrieve_parent_chunks
+            # (tool output embeds the same stripped content) — appending it again would
+            # only duplicate large context.
+            continue
+        source = (parent.get("metadata") or {}).get("source", "unknown")
+        block = f"--- 원문 (Parent ID: {pid} / File Name: {source}) ---\n{content}"
+        # The first parent is always kept even past the char cap (rank priority; with
+        # MAX_PARENT_SIZE=6000 a single parent fits the default 9000 budget anyway).
+        if blocks and total_chars + len(block) > config.PARENT_EXPANSION_MAX_CHARS:
+            break
+        blocks.append(block)
+        total_chars += len(block)
+    return blocks
+
+
+def _build_synthesis_prompt_content(state: AgentState) -> str:
+    """Assemble the answer-from-context user prompt shared by fallback_response and
+    clean_synthesis. Layout for the child-evidence part is byte-identical to the
+    pre-#126 fallback_response; parent expansion only APPENDS a section (merge, not
+    replace — #126's naive full-replacement arm regressed 4 needle-in-haystack cases)."""
+    unique_contents = _collect_unique_tool_contents(state)
     context_summary = state.get("context_summary", "").strip()
 
     context_parts = []
@@ -120,13 +208,40 @@ def fallback_response(state: AgentState, llm):
             "\n\n".join(f"--- 데이터 출처 {i} ---\n{content}" for i, content in enumerate(unique_contents, 1))
         )
 
+    if config.PARENT_EXPANSION_ENABLED and unique_contents:
+        parent_blocks = _expand_parent_context(unique_contents)
+        if parent_blocks:
+            context_parts.append(
+                "## 원문 맥락 (검색된 조각의 상위 문단 전체)\n\n" + "\n\n".join(parent_blocks)
+            )
+
     context_text = "\n\n".join(context_parts) if context_parts else "문서에서 검색된 데이터가 없습니다."
 
-    prompt_content = (
+    return (
         f"사용자 질문: {state.get('question')}\n\n"
         f"{context_text}\n\n"
         f"{get_fallback_task_instruction()}"
     )
+
+
+def fallback_response(state: AgentState, llm):
+    prompt_content = _build_synthesis_prompt_content(state)
+    response = llm.invoke([SystemMessage(content=get_fallback_response_prompt()), HumanMessage(content=prompt_content)])
+    return {"messages": [response]}
+
+
+def clean_synthesis(state: AgentState, llm):
+    """Final clean synthesis (issue #126): one single-shot answer-from-context call over the
+    evidence the agent collected, replacing the orchestrator's in-loop draft answer.
+
+    #126's simulation showed 1/3 of live generation failures (13/40) pass when the same
+    chunks are given to exactly this call (fallback prompt + task instruction, temp0) —
+    the multi-turn agent loop, not the context, is what loses them. Reuses the fallback
+    prompt/assembly verbatim so live behavior matches the measured arm. Only routed to
+    when usable tool evidence exists (see route_after_orchestrator_call), so refusal
+    paths keep the orchestrator's own answer.
+    """
+    prompt_content = _build_synthesis_prompt_content(state)
     response = llm.invoke([SystemMessage(content=get_fallback_response_prompt()), HumanMessage(content=prompt_content)])
     return {"messages": [response]}
 

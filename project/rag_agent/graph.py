@@ -19,14 +19,16 @@ def create_agent_graph(llm, tools_list):
     agent_builder.add_node("tools", tool_node)
     agent_builder.add_node("compress_context", partial(compress_context, llm=llm))
     agent_builder.add_node("fallback_response", partial(fallback_response, llm=llm))
+    agent_builder.add_node("clean_synthesis", partial(clean_synthesis, llm=llm))
     agent_builder.add_node(should_compress_context)
     agent_builder.add_node(collect_answer)
 
     agent_builder.add_edge(START, "orchestrator")
-    agent_builder.add_conditional_edges("orchestrator", route_after_orchestrator_call, {"tools": "tools", "fallback_response": "fallback_response", "collect_answer": "collect_answer"})
+    agent_builder.add_conditional_edges("orchestrator", route_after_orchestrator_call, {"tools": "tools", "fallback_response": "fallback_response", "collect_answer": "collect_answer", "clean_synthesis": "clean_synthesis"})
     agent_builder.add_edge("tools", "should_compress_context")
     agent_builder.add_edge("compress_context", "orchestrator")
     agent_builder.add_edge("fallback_response", "collect_answer")
+    agent_builder.add_edge("clean_synthesis", "collect_answer")
     agent_builder.add_edge("collect_answer", END)
 
     agent_subgraph = agent_builder.compile()
