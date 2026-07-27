@@ -57,7 +57,7 @@ class RAGSystem:
             except Exception as exc:  # noqa: BLE001 — startup must not fail on a warmup ping
                 logger.warning("LLM warmup ping failed (continuing): %s", exc)
         tools = ToolFactory(collection).create_tools()
-        self.agent_graph = create_agent_graph(llm, tools)
+        self.agent_graph = create_agent_graph(llm, tools, collection=collection)
 
     def get_config(self):
         cfg = {"configurable": {"thread_id": self.thread_id}, "recursion_limit": self.recursion_limit}
