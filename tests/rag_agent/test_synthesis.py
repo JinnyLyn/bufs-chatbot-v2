@@ -184,10 +184,23 @@ class TestCleanSynthesisRouting:
                  "messages": [_tool_msg(CHUNK_A), msg]}
         assert edges.route_after_orchestrator_call(state) == "tools"
 
-    def test_enabled_does_not_touch_fallback_route(self, monkeypatch):
+    def test_budget_exhausted_final_answer_is_still_adopted(self, monkeypatch):
+        """PR #161: a ready final answer survives the budget boundary — it must not be
+        discarded and re-synthesized by fallback_response (upstream 8b3e5ff0)."""
         monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
         state = self._final_answer_state([_tool_msg(CHUNK_A)])
         state["iteration_count"] = config.MAX_ITERATIONS
+        assert edges.route_after_orchestrator_call(state) == "collect_answer"
+
+    def test_budget_exhausted_tool_request_falls_back(self, monkeypatch):
+        """The budget still gates further tool execution: a pending tool request at
+        the boundary goes to fallback_response, never to tools."""
+        monkeypatch.setattr(config, "CLEAN_SYNTHESIS_ENABLED", True)
+        msg = AIMessage(content="", tool_calls=[
+            {"name": "search_child_chunks", "args": {"query": "q"}, "id": "tc1"}
+        ])
+        state = {"iteration_count": config.MAX_ITERATIONS, "tool_call_count": 1,
+                 "messages": [_tool_msg(CHUNK_A), msg]}
         assert edges.route_after_orchestrator_call(state) == "fallback_response"
 
 

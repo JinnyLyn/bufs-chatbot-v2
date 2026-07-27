@@ -56,10 +56,6 @@ def route_after_rewrite(state: State) -> Literal["request_clarification", "agent
 def route_after_orchestrator_call(state: AgentState) -> Literal["tools", "fallback_response", "collect_answer", "clean_synthesis"]:
     iteration = state.get("iteration_count", 0)
     tool_count = state.get("tool_call_count", 0)
-
-    if iteration >= MAX_ITERATIONS or tool_count > MAX_TOOL_CALLS:
-        return "fallback_response"
-
     last_message = state["messages"][-1]
     tool_calls = getattr(last_message, "tool_calls", None) or []
 
@@ -78,5 +74,8 @@ def route_after_orchestrator_call(state: AgentState) -> Literal["tools", "fallba
             if config.CLEAN_SYNTHESIS_MODE == "always" or _is_refusal_draft(last_message):
                 return "clean_synthesis"
         return "collect_answer"
+
+    if iteration >= MAX_ITERATIONS or tool_count > MAX_TOOL_CALLS:
+        return "fallback_response"
 
     return "tools"
