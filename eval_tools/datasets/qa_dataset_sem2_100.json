@@ -922,7 +922,7 @@
     "id": 55,
     "question": "2학기 공인결석 신청 시 증빙서류 파일이 여러 개면 어떻게 하나요?",
     "gold_intent": "공인결석 파일 첨부",
-    "gold_document": "[학생]+공인결석+신청+매뉴얼",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
     "gold_chunk_id": "383",
     "expected_answer": "파일이 2개 이상일 경우 반드시 압축파일로 첨부하여 제출해야 합니다.",
     "must_include": [
@@ -939,7 +939,7 @@
     "id": 56,
     "question": "2학기 중 코로나19 확진으로 결석할 때 공인결석 사유는 무엇인가요?",
     "gold_intent": "코로나 공인결석",
-    "gold_document": "[학생]+공인결석+신청+매뉴얼",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
     "gold_chunk_id": "384",
     "expected_answer": "격리 의무가 없으므로, 증상이 있을 경우 외래진료(최대 2일) 사유로 신청 가능합니다.",
     "must_include": [
@@ -956,7 +956,7 @@
     "id": 57,
     "question": "2학기 조기취업 공인결석 승인 후 기말에 제출해야 하는 서류는?",
     "gold_intent": "조기취업 최종 서류",
-    "gold_document": "[학생]+공인결석+신청+매뉴얼",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
     "gold_chunk_id": "386",
     "expected_answer": "학기 말에 재직증빙서류를 최종 제출하여 실제 재직 여부를 확인받아야 합니다.",
     "must_include": [
@@ -973,7 +973,7 @@
     "id": 58,
     "question": "2학기 OCU 수업도 공인결석 신청이 가능한가요?",
     "gold_intent": "OCU 공인결석 여부",
-    "gold_document": "[학생]+공인결석+신청+매뉴얼",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
     "gold_chunk_id": "383",
     "expected_answer": "OCU와 같이 VOD가 업로드되는 수업은 공인결석 신청 대신 기한 내 동영상을 시청해야 출석 인정됩니다.",
     "must_include": [
@@ -990,7 +990,7 @@
     "id": 59,
     "question": "2학기 공인결석 '승인'이 나면 바로 출석으로 처리되나요?",
     "gold_intent": "공인결석 처리 권한",
-    "gold_document": "[학생]+공인결석+신청+매뉴얼",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
     "gold_chunk_id": "384",
     "expected_answer": "아닙니다. 승인 후 수업 담당 교수님이 최종적으로 출결 인정 처리를 해야 완료됩니다.",
     "must_include": [
