@@ -1,5 +1,15 @@
+import json
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _model_dict_to_text(value: dict) -> str:
+    """Model-authored sub-object → readable text. Keys are kept — they may label the
+    values (e.g. {"신청": "18학점", "졸업요건": "21학점"})."""
+    try:
+        return json.dumps(value, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return str(value)
 
 class QueryAnalysis(BaseModel):
     is_clear: bool = Field(
@@ -29,3 +39,42 @@ class UserSlots(BaseModel):
     leave_type: str = Field(default="", description="휴학 유형 (예: '일반휴학', '병역휴학', '질병휴학'). 명시된 경우만.")
     extra: List[str] = Field(default_factory=list, description="그 외 답변에 영향을 주는 명시적 개인 조건 (예: '등록금 일부만 납부', '수강신청 기간을 놓침'). 질문의 주제 자체는 넣지 않는다.")
     required_conditions: List[str] = Field(default_factory=list, description="답이 개인 조건에 따라 달라지는 질문에서, 정확한 답을 위해 필요하지만 질문에 명시되지 않은 조건 이름 목록 (예: '휴학 유형', '학번'). 규정 조회형(일반 사실) 질문이거나 조건이 이미 명시돼 있으면 반드시 빈 목록.")
+
+    # --- Type tolerance -----------------------------------------------------
+    # These fields are populated from MODEL-AUTHORED tool-call JSON, where "empty" and
+    # "number" arrive in whatever shape the model chose. Pydantic rejects the whole object
+    # on a single mismatch, so ONE stray field discards every other slot and the question
+    # silently degrades to no-slots. Measured live (2026-07-27, qwen3.5:9b, "이번 학기
+    # 18학점 신청했는데 …"): the model returned extra="" and the ValidationError threw away
+    # the correctly-extracted credits/semester too. Coerce the known mismatches instead.
+
+    @field_validator("admission_year", "grade", "semester", "status", "major", "credits",
+                     "leave_type", mode="before")
+    @classmethod
+    def _coerce_scalar(cls, value):
+        """null → "", number/bool → its text, dict → its JSON, list → comma-joined text."""
+        if value is None:
+            return ""
+        if isinstance(value, (int, float, bool)):
+            return str(value)
+        if isinstance(value, dict):
+            return _model_dict_to_text(value) if value else ""
+        if isinstance(value, (list, tuple)):
+            return ", ".join(
+                str(v).strip() for v in value if v is not None and str(v).strip())
+        return value
+
+    @field_validator("extra", "required_conditions", mode="before")
+    @classmethod
+    def _coerce_list(cls, value):
+        """null/"" (the model's way of saying "none") → [], bare string/dict → one-item list."""
+        if value is None:
+            return []
+        if isinstance(value, str):
+            text = value.strip()
+            return [text] if text else []
+        if isinstance(value, dict):
+            return [_model_dict_to_text(value)] if value else []
+        if isinstance(value, (list, tuple)):
+            return [str(v).strip() for v in value if v is not None and str(v).strip()]
+        return value
