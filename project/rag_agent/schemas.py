@@ -1,5 +1,15 @@
+import json
 from typing import List
 from pydantic import BaseModel, Field, field_validator
+
+
+def _model_dict_to_text(value: dict) -> str:
+    """Model-authored sub-object → readable text. Keys are kept — they may label the
+    values (e.g. {"신청": "18학점", "졸업요건": "21학점"})."""
+    try:
+        return json.dumps(value, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return str(value)
 
 class QueryAnalysis(BaseModel):
     is_clear: bool = Field(
@@ -42,24 +52,29 @@ class UserSlots(BaseModel):
                      "leave_type", mode="before")
     @classmethod
     def _coerce_scalar(cls, value):
-        """null → "", number/bool → its text, list → comma-joined text."""
+        """null → "", number/bool → its text, dict → its JSON, list → comma-joined text."""
         if value is None:
             return ""
         if isinstance(value, (int, float, bool)):
             return str(value)
+        if isinstance(value, dict):
+            return _model_dict_to_text(value) if value else ""
         if isinstance(value, (list, tuple)):
-            return ", ".join(str(v).strip() for v in value if str(v or "").strip())
+            return ", ".join(
+                str(v).strip() for v in value if v is not None and str(v).strip())
         return value
 
     @field_validator("extra", "required_conditions", mode="before")
     @classmethod
     def _coerce_list(cls, value):
-        """null/"" (the model's way of saying "none") → [], bare string → one-item list."""
+        """null/"" (the model's way of saying "none") → [], bare string/dict → one-item list."""
         if value is None:
             return []
         if isinstance(value, str):
             text = value.strip()
             return [text] if text else []
+        if isinstance(value, dict):
+            return [_model_dict_to_text(value)] if value else []
         if isinstance(value, (list, tuple)):
-            return [str(v).strip() for v in value if str(v or "").strip()]
+            return [str(v).strip() for v in value if v is not None and str(v).strip()]
         return value

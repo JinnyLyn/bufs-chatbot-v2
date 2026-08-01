@@ -96,3 +96,22 @@ class TestUserSlotsTypeTolerance:
     def test_defaults_still_empty(self):
         s = self._slots()
         assert s.extra == [] and s.required_conditions == [] and s.admission_year == ""
+
+    def test_dict_for_scalar_field_becomes_json_text(self):
+        s = self._slots(credits={"신청": "18학점", "졸업요건": "21학점"}, major="영어학과")
+        assert s.credits == '{"신청": "18학점", "졸업요건": "21학점"}'
+        assert s.major == "영어학과"   # the sibling slot survives
+
+    def test_dict_for_list_field_becomes_one_item(self):
+        s = self._slots(extra={"note": "등록금 일부만 납부"})
+        assert s.extra == ['{"note": "등록금 일부만 납부"}']
+
+    def test_empty_dict_means_none(self):
+        s = self._slots(credits={}, extra={})
+        assert s.credits == "" and s.extra == []
+
+    def test_zero_list_item_is_kept(self):
+        assert self._slots(extra=[0, "조건"]).extra == ["0", "조건"]
+
+    def test_zero_in_scalar_list_is_kept(self):
+        assert self._slots(credits=[0, "18학점"]).credits == "0, 18학점"
