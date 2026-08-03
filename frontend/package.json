@@ -13,8 +13,8 @@
     "prepare": "cd .. && git config core.hooksPath .claude/githooks || true"
   },
   "dependencies": {
-    "lucide-react": "^1.26.0",
-    "next": "16.2.11",
+    "lucide-react": "^1.27.0",
+    "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",
@@ -26,7 +26,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.11",
+    "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
     "typescript": "^6"
   }

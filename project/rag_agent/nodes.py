@@ -49,6 +49,7 @@ def _invoke_structured(llm, messages, schema):
             return structured.invoke(messages)
         except Exception as exc:  # parse / validation error → try the next method
             last_exc = exc
+            logger.debug("structured output method=%r failed (%s) — trying next", method, exc)
     raise last_exc
 
 
