@@ -176,6 +176,26 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
         "Values outside this range invert RRF-dominant chunk rankings."
     )
 
+# --- Retrieval-side lever: 학기 스코프 (학기 교차 오염) ---
+# The KB holds one 학사안내 per semester, describing the same fact *kinds* with different
+# values, so a 2학기 question retrieves lexically near-identical 1학기 chunks. Measured on the
+# sem2 100-Q set (qwen3.5:9b, 2026-07-29): across the 97 questions that say "2학기", retrieved
+# source slots split 166 2학기 / 166 1학기 / 63 neutral — HALF the retrieval budget goes to the
+# wrong semester, and three answers quoted 1학기 dates verbatim (ids 3, 17, 32).
+# When ON, rag_agent.semester decides the question's target semester (explicit "N학기" marker,
+# else today's semester) and DEMOTES other-semester chunks below the rest — never deletes them,
+# so evidence that genuinely lives in the other semester's guide is still reachable.
+# DEFAULT OFF — A/B toggle.
+SEMESTER_FILTER_ENABLED = os.environ.get("SEMESTER_FILTER_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Demotion only helps if the pool is deeper than `limit` — otherwise there is nothing to
+# promote in place of the demoted chunks. Pool depth = limit * factor.
+SEMESTER_POOL_FACTOR = int(os.environ.get("SEMESTER_POOL_FACTOR", "3"))
+if SEMESTER_POOL_FACTOR < 1:
+    raise ValueError(f"SEMESTER_POOL_FACTOR must be >= 1, got {SEMESTER_POOL_FACTOR}")
+# Freeze "today" for reproducible evals / tests (ISO date, e.g. 2026-08-03). Empty = real clock.
+# A live A/B run months later must reproduce the semester the run was scored under.
+SEMESTER_TODAY = os.environ.get("SEMESTER_TODAY", "").strip()
+
 # --- Generation-side lever (issue #145 처방 1: 시나리오형 필수 슬롯 추출) ---
 # The 2026-07-20 baseline split (factual100 F1 0.835 vs qa100 F1 0.349, doc_recall 0.792 vs
 # answer Recall 0.316) shows scenario questions fail at CONDITION APPLICATION, not just search:
