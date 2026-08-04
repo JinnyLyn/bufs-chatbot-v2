@@ -217,8 +217,24 @@ class TestToken:
     def test_me_without_token_rejected(self, auth_client):
         assert auth_client.get("/api/user/me").status_code == 401
 
-    def test_me_with_malformed_token_rejected(self, auth_client):
-        assert auth_client.get("/api/user/me", headers=_auth("not-a-token")).status_code == 401
+    @pytest.mark.parametrize(
+        "bad_token",
+        [
+            "not-a-token",       # 점 없음
+            "a.b.c",             # 토막이 셋
+            ".",                 # 빈 토막
+            "aGVsbG8=.sig",      # base64url 알파벳 밖('=')
+        ],
+    )
+    def test_malformed_token_rejected_not_500(self, auth_client, bad_token):
+        """쓰레기 입력은 401이어야 한다 — 500이면 비로그인 폴백이 깨진다.
+
+        비ASCII 토큰은 여기서 시험하지 않는다: HTTP 헤더는 ASCII 전용이라 클라이언트가
+        보낼 수조차 없다. 그 경로는 쿼리스트링(SSE)뿐이라
+        TestChatStreamPersistsHistory.test_invalid_token_does_not_break_chat 이 담당한다.
+        """
+        resp = auth_client.get("/api/user/me", headers=_auth(bad_token))
+        assert resp.status_code == 401, f"{bad_token!r} → {resp.status_code}"
 
     def test_tampered_payload_rejected(self, auth_client):
         """서명은 그대로 두고 payload만 다른 user_id로 바꿔치기 → 거부돼야 한다."""
@@ -382,10 +398,17 @@ class TestChatStreamPersistsHistory:
             "/api/user/chat-history", headers=_auth(token)
         ).json()["total"] == 0
 
-    def test_invalid_token_does_not_break_chat(self, auth_client, chat_client):
-        """만료·위조 토큰이어도 채팅은 되어야 한다 — 로그인은 선택이다."""
+    @pytest.mark.parametrize(
+        "bad_token", ["garbage.token", "한글.토큰", "abc.한글서명", "a.b.c", "%20.%20"]
+    )
+    def test_invalid_token_does_not_break_chat(self, auth_client, chat_client, bad_token):
+        """만료·위조·깨진 토큰이어도 채팅은 되어야 한다 — 로그인은 선택이다.
+
+        비ASCII 케이스가 회귀 방지의 핵심: 예전엔 verify_user_token이 예외를 던져
+        익명 폴백 대신 500이 났다.
+        """
         token, _ = _register(auth_client)
-        resp = self._ask(chat_client, access_token="garbage.token")
+        resp = self._ask(chat_client, access_token=bad_token)
         assert resp.status_code == 200 and "done" in resp.text
         assert auth_client.get(
             "/api/user/chat-history", headers=_auth(token)
@@ -403,3 +426,46 @@ class TestChatStreamPersistsHistory:
         assert auth_client.get(
             "/api/user/chat-history", headers=_auth(token)
         ).json()["total"] == 0
+
+
+# ---------------------------------------------------------------------------
+# 액세스 로그 토큰 가리기 (api/log_setup.py)
+# ---------------------------------------------------------------------------
+
+class TestAccessLogRedaction:
+    """EventSource가 헤더를 못 붙여 토큰이 쿼리로 간다 — 로그에 평문으로 남으면 안 된다."""
+
+    def _emit(self, path: str) -> str:
+        import io
+        import logging
+
+        from uvicorn.logging import AccessFormatter
+
+        from api.log_setup import _RedactQuerySecrets  # noqa: SLF001 — 테스트 대상
+
+        buf = io.StringIO()
+        handler = logging.StreamHandler(buf)
+        handler.setFormatter(AccessFormatter('%(client_addr)s - "%(request_line)s" %(status_code)s'))
+        logger = logging.getLogger(f"uvicorn.access.test.{id(buf)}")
+        logger.propagate = False
+        logger.handlers = []
+        logger.addFilter(_RedactQuerySecrets())
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        # uvicorn이 실제로 넘기는 args 모양 그대로.
+        logger.info('%s - "%s %s HTTP/%s" %d', "127.0.0.1:1234", "GET", path, "1.1", 200)
+        return buf.getvalue()
+
+    def test_token_value_is_redacted(self):
+        out = self._emit("/api/chat/stream?session_id=abc&question=hi&access_token=eyJhbGc.SECRETSIG")
+        assert "SECRETSIG" not in out
+        assert "access_token=<redacted>" in out
+
+    def test_other_params_survive(self):
+        """디버깅에 필요한 나머지 쿼리는 그대로 남아야 한다."""
+        out = self._emit("/api/chat/stream?session_id=abc&question=hi&access_token=tok.sig")
+        assert "session_id=abc" in out and "question=hi" in out
+
+    def test_request_without_token_is_untouched(self):
+        out = self._emit("/api/chat/stream?session_id=abc&question=hi")
+        assert "redacted" not in out and "session_id=abc" in out

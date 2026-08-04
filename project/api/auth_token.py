@@ -19,6 +19,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,6 +30,9 @@ import config
 logger = logging.getLogger(__name__)
 
 _secret: Optional[bytes] = None
+
+# 발급되는 토큰은 base64url 두 토막뿐이다 (`_b64encode` 결과 + '.' + 서명).
+_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 
 # 로그아웃한 토큰. 프로세스 메모리에만 있으므로 서버 재시작 시 비워진다 — 재시작 후에도
 # 살아있는 토큰이 마음에 걸린다면 USER_TOKEN_TTL_HOURS를 줄이는 쪽이 현실적이다.
@@ -104,13 +108,18 @@ def create_user_token(user: dict) -> tuple[str, str]:
 
 
 def verify_user_token(token: str) -> Optional[dict]:
-    """서명·만료·블랙리스트를 검사하고 payload를 반환. 무효면 None."""
+    """서명·만료·블랙리스트를 검사하고 payload를 반환. 무효면 None.
+
+    어떤 입력이 와도 예외를 던지지 않는다 — 이 함수는 로그인 선택 경로(채팅)에서도
+    불리므로, 망가진 토큰 하나가 500으로 번지면 비로그인 폴백이 동작하지 않는다.
+    """
     if not token or token in _blacklisted:
         return None
-    parts = token.split(".")
-    if len(parts) != 2:
+    # 서명 계산 전에 모양부터 본다. `_sign()`의 encode("ascii")와 compare_digest는
+    # 비ASCII 문자에 예외를 던지는데, 토큰은 전적으로 외부 입력이다.
+    if not _TOKEN_RE.fullmatch(token):
         return None
-    payload_b64, signature = parts
+    payload_b64, signature = token.split(".")
     if not hmac.compare_digest(signature, _sign(payload_b64)):
         return None
     try:
