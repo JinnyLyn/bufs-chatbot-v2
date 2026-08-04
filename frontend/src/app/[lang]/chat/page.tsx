@@ -52,6 +52,7 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
       <Sidebar
         lang={lang}
         messages={messages}
+        sessionId={sessionId}
         onSelectQuestion={sendMessage}
         onClearChat={clearMessages}
         onNewChat={clearMessages}

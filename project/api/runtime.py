@@ -103,6 +103,16 @@ def get_session(session_id: str) -> Optional[dict]:
         return _sessions.get(session_id)
 
 
+def delete_session(session_id: str) -> bool:
+    """세션 메타데이터를 삭제 (로그아웃용). 삭제됐으면 True.
+
+    LangGraph 체크포인터의 대화 메모리는 별도로, 프론트가 로그아웃 후 새 session_id를
+    발급받으므로 이전 thread에는 더 이상 접근하지 않는다.
+    """
+    with _sessions_lock:
+        return _sessions.pop(session_id, None) is not None
+
+
 def ensure_session(session_id: str, lang: str = "ko") -> dict:
     """Return existing session metadata, or register it on the fly.
 

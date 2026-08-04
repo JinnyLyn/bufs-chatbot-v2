@@ -44,6 +44,16 @@ export interface UserProfile {
   student_type: string;
 }
 
+// 로그인 계정 (GET /api/user/me)
+export interface AuthUser {
+  id: number;
+  username: string;
+  nickname: string;
+  student_id: string;
+  department: string;
+  student_type: string;
+}
+
 export interface StreamDoneData {
   answer: string;
   source_urls: SourceURL[];

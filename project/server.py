@@ -39,7 +39,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from api import chat as chat_router
 from api import health as health_router
 from api import session as session_router
+from api import user as user_router
 from api.runtime import get_runtime_info, init_rag_system
+from db.user_db import init_db as init_user_db
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("🔨 Initializing agentic-RAG system (LLM + embeddings + Qdrant + graph)...")
     logger.info("log file: %s", _LOG_PATH)
+    init_user_db()  # 계정/이력 SQLite — 가볍고 RAG 초기화와 무관하므로 먼저 띄운다
     init_rag_system()
     import config as _config
     if _config.RERANK_ENABLED:
@@ -75,6 +78,7 @@ app.add_middleware(
 app.include_router(session_router.router)
 app.include_router(chat_router.router)
 app.include_router(health_router.router)
+app.include_router(user_router.router)
 
 
 @app.get("/")

@@ -26,6 +26,20 @@ KB_EXCLUDE_SOURCES = frozenset(
     s.strip() for s in os.environ.get("KB_EXCLUDE_SOURCES", _DEFAULT_EXCLUDED_SOURCES).split(",") if s.strip()
 )
 
+# --- User accounts (로그인/회원가입) ---
+# 계정과 로그인 사용자 질문 이력은 SQLite 파일 하나에 담는다 (Qdrant/parent_store와 별개).
+# 개인정보이므로 생성물과 같이 커밋 대상이 아니다 — .gitignore 참조.
+USER_DB_PATH = os.environ.get("USER_DB_PATH", os.path.join(_BASE_DIR, "data", "users.db"))
+# PBKDF2-SHA256 반복 횟수. OWASP 2024 권장 600k. 테스트에서만 낮춰 잡는다.
+USER_PBKDF2_ITERATIONS = int(os.environ.get("USER_PBKDF2_ITERATIONS", "600000"))
+# 인증 토큰 서명키. 미지정 시 USER_TOKEN_SECRET_FILE 에 1회 생성·재사용한다
+# (하드코딩된 기본 시크릿을 소스에 두지 않기 위함 — api/auth_token.py 참조).
+USER_TOKEN_SECRET = os.environ.get("USER_TOKEN_SECRET", "")
+USER_TOKEN_SECRET_FILE = os.environ.get(
+    "USER_TOKEN_SECRET_FILE", os.path.join(_BASE_DIR, "data", ".user_token.key")
+)
+USER_TOKEN_TTL_HOURS = int(os.environ.get("USER_TOKEN_TTL_HOURS", "24"))
+
 # --- Logging / Observability ---
 # Persistent logs live under <repo>/logs (backend app log + per-day Q&A JSONL).
 LOG_DIR = os.path.join(_BASE_DIR, "logs")

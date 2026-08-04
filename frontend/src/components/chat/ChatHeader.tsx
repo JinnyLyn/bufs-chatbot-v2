@@ -1,7 +1,9 @@
 "use client";
-import { Menu, Globe, MessageSquare } from "lucide-react";
+import { Menu, Globe, MessageSquare, LogIn, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ChatHeaderProps {
   lang: Lang;
@@ -12,6 +14,8 @@ interface ChatHeaderProps {
 
 export default function ChatHeader({ lang, title, onToggleSidebar, onToggleLang }: ChatHeaderProps) {
   const displayTitle = title || t(lang, "brand.name");
+  const router = useRouter();
+  const { user, isLoggedIn, loading } = useAuth();
 
   return (
     <header className="h-14 md:h-16 border-b border-slate-100 px-4 md:px-6 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
@@ -47,6 +51,24 @@ export default function ChatHeader({ lang, title, onToggleSidebar, onToggleLang 
         >
           <Globe className="w-3.5 h-3.5" /> {lang === "ko" ? "EN" : "KO"}
         </button>
+
+        {/* 로그인 상태 — 검증이 끝나기 전에는 아무것도 보이지 않게 해 깜빡임을 막는다. */}
+        {loading ? null : isLoggedIn && user ? (
+          <span
+            title={`${user.student_id}${t(lang, "sidebar.year_suffix")} · ${user.department}`}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 rounded-full text-[11px] font-bold text-blue-700 max-w-[9rem]"
+          >
+            <User className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{user.nickname}</span>
+          </span>
+        ) : (
+          <button
+            onClick={() => router.push(`/${lang}/login`)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-full text-[11px] font-bold text-white transition-all"
+          >
+            <LogIn className="w-3.5 h-3.5" /> {t(lang, "auth.login")}
+          </button>
+        )}
       </div>
     </header>
   );

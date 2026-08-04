@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback, useRef } from "react";
 import { sseUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 import type { ChatMessage, StreamDoneData, SourceURL, SearchResultItem } from "@/lib/types";
 
 export function useChat(sessionId: string | null) {
@@ -25,6 +26,10 @@ export function useChat(sessionId: string | null) {
         session_id: sessionId,
         question: question.trim(),
       };
+      // 로그인 상태면 토큰을 실어 이 턴을 계정 이력에 남긴다. EventSource는 헤더를
+      // 못 붙이므로 쿼리로 보낸다 — 비로그인이면 그냥 빠지고 채팅은 그대로 동작한다.
+      const token = getAuthToken();
+      if (token) params.access_token = token;
       const url = sseUrl("/api/chat/stream", params);
 
       const es = new EventSource(url);
