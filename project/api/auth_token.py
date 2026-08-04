@@ -19,8 +19,8 @@ import hmac
 import json
 import logging
 import os
-import re
 import secrets
+import string
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 _secret: Optional[bytes] = None
 
 # 발급되는 토큰은 base64url 두 토막뿐이다 (`_b64encode` 결과 + '.' + 서명).
-_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
+_B64URL_CHARS = frozenset(string.ascii_letters + string.digits + "-_")
 
 # 로그아웃한 토큰. 프로세스 메모리에만 있으므로 서버 재시작 시 비워진다 — 재시작 후에도
 # 살아있는 토큰이 마음에 걸린다면 USER_TOKEN_TTL_HOURS를 줄이는 쪽이 현실적이다.
@@ -117,9 +117,16 @@ def verify_user_token(token: str) -> Optional[dict]:
         return None
     # 서명 계산 전에 모양부터 본다. `_sign()`의 encode("ascii")와 compare_digest는
     # 비ASCII 문자에 예외를 던지는데, 토큰은 전적으로 외부 입력이다.
-    if not _TOKEN_RE.fullmatch(token):
+    #
+    # 정규식을 쓰지 않는다: `[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+` 는 CodeQL 이 ReDoS
+    # (py/polynomial-redos)로 잡는다. 집합 검사는 입력 길이에 선형이라 그 여지가 없고
+    # 읽기도 더 쉽다.
+    payload_b64, sep, signature = token.partition(".")
+    if not sep or not payload_b64 or not signature:
         return None
-    payload_b64, signature = token.split(".")
+    # 남은 토막에 '.' 이 또 있으면 base64url 밖 문자이므로 아래 검사에서 걸러진다.
+    if not (_B64URL_CHARS.issuperset(payload_b64) and _B64URL_CHARS.issuperset(signature)):
+        return None
     if not hmac.compare_digest(signature, _sign(payload_b64)):
         return None
     try:
