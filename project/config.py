@@ -1,4 +1,5 @@
 import os
+from datetime import date as _date
 
 # The Ollama *client* must dial a real address. When OLLAMA_HOST is a bind-all
 # address (0.0.0.0 — set so the Ollama *server* listens on every interface), the
@@ -195,6 +196,15 @@ if SEMESTER_POOL_FACTOR < 1:
 # Freeze "today" for reproducible evals / tests (ISO date, e.g. 2026-08-03). Empty = real clock.
 # A live A/B run months later must reproduce the semester the run was scored under.
 SEMESTER_TODAY = os.environ.get("SEMESTER_TODAY", "").strip()
+if SEMESTER_TODAY:
+    # Fail fast at import: the consumer (_apply_semester_scope) swallows runtime exceptions
+    # by design, so a typo here would silently disable scoping and invalidate an A/B arm.
+    try:
+        _date.fromisoformat(SEMESTER_TODAY)
+    except ValueError:
+        raise ValueError(
+            f"SEMESTER_TODAY must be an ISO date (YYYY-MM-DD) or empty, got {SEMESTER_TODAY!r}"
+        ) from None
 
 # --- Generation-side lever (issue #145 처방 1: 시나리오형 필수 슬롯 추출) ---
 # The 2026-07-20 baseline split (factual100 F1 0.835 vs qa100 F1 0.349, doc_recall 0.792 vs

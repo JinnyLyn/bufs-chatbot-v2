@@ -26,7 +26,9 @@ Design decisions, each driven by a case that would otherwise regress:
 3. **A semester marker naming a *different* 학년도 is ignored.** id=9 asks "2027학년도 1학기를
    위한 온라인 휴학 신청은 언제?" — the answer lives in the **2026학년도 2학기** guide, because a
    guide publishes the *next* semester's 휴복학 일정. Trusting the literal "1학기" here would
-   demote the only document that can answer it.
+   demote the only document that can answer it. The year that decides is the one *attached
+   to the marker*: "2025학년도 1학기에 휴학했는데 2026학년도에 복학…" must not pass this guard
+   just because the current year appears somewhere else in the question.
 
 4. **Both markers present → fall back to today's semester.** id=63 ("2학기에 … 1학기 레벨 1에서
    2로 …") names both; the question is asked *from* 2학기.
@@ -45,6 +47,8 @@ from typing import Optional
 _SEM_IN_TEXT = re.compile(r"제?\s*([12])\s*학기")
 # 학년도 / 학년 度 forms: "2026학년도", "2026 학년도", "2026년도"
 _ACADEMIC_YEAR = re.compile(r"(20\d{2})\s*학?년\s*도")
+# A 학년도 directly qualifying a semester marker: "2027학년도 1학기", "2026년도의 제2학기".
+_YEAR_SEM_PAIR = re.compile(r"(20\d{2})\s*학?년\s*도의?\s*제?\s*([12])\s*학기")
 # Filename forms: "2026학년도2학기학사안내", "2026-1 수강신청 매뉴얼", "2026년 1학기 …"
 _SEM_IN_SOURCE = re.compile(r"([12])\s*학기")
 _SEM_IN_SOURCE_DASH = re.compile(r"20\d{2}\s*-\s*([12])(?!\d)")
@@ -81,9 +85,16 @@ def target_semester(question: str, today: Optional[_dt.date] = None) -> int:
         return cur_sem
 
     marked = found.pop()
+    # #3 keys on the 학년도 *attached to the marker*, not any year in the question: a bare
+    # set-membership check would trust 2025's "1학기" in "2025학년도 1학기에 휴학했는데
+    # 2026학년도에 복학…" merely because cur_year appears elsewhere.
+    paired = {int(y) for y, s in _YEAR_SEM_PAIR.findall(question or "") if int(s) == marked}
+    if paired:
+        return marked if cur_year in paired else cur_sem
     years = {int(y) for y in _ACADEMIC_YEAR.findall(question or "")}
     if years and cur_year not in years:
-        # marker belongs to a different 학년도 (#3) — the answering guide is the current one
+        # unpaired marker, and every named 학년도 is a different one (#3) — the answering
+        # guide is the current one
         return cur_sem
     return marked
 

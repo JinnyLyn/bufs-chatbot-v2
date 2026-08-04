@@ -65,6 +65,25 @@ def test_regression_id9_other_academic_year_marker_is_ignored():
     assert sem.target_semester(q, AUG) == 2
 
 
+def test_mixed_year_question_pairs_marker_with_its_year():
+    """혼합 연도: cur_year가 질문 어딘가에 있어도, 마커에 붙은 학년도가 다르면 무시(#3).
+
+    독립 집합 검사만 하면 '2026학년도'가 아무 데나 있다는 이유로 2025년의 '1학기'를 믿어버린다.
+    """
+    q = "2025학년도 1학기에 휴학했는데 2026학년도에 복학하려면 언제 신청해야 하나요?"
+    assert sem.target_semester(q, AUG) == 2
+
+
+def test_marker_paired_with_current_year_wins_despite_other_years():
+    q = "2025학년도에 입학했는데 2026학년도 1학기 재수강 신청은 언제인가요?"
+    assert sem.target_semester(q, AUG) == 1
+
+
+def test_unpaired_marker_with_only_other_years_defers_to_today():
+    q = "2027학년도 신입생인데, 1학기 수강신청 절차가 궁금해요"
+    assert sem.target_semester(q, AUG) == 2
+
+
 def test_regression_id27_전기_is_not_a_semester_marker():
     """'전기 학위수여식' = 2월 졸업식이지 1학기가 아니다."""
     q = "2026학년도 전기 학위수여식(졸업식) 날짜는?"
