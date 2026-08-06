@@ -20,6 +20,10 @@ class State(MessagesState):
     # Issue #145: user conditions extracted from the question (UserSlots.model_dump();
     # {} when SLOT_EXTRACTION_ENABLED is off or nothing was stated).
     userSlots: dict = {}
+    # #176: the slot secondary-search supplement block aggregate_answers fed into the
+    # draft — recorded (only when SELF_CHECK_ENABLED) so the self-check judge sees the
+    # same evidence the draft was built from.
+    slot_supplement: str = ""
 
 class AgentState(MessagesState):
     """State for individual agent subgraph"""

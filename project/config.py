@@ -279,6 +279,21 @@ PARENT_EXPANSION_ENABLED = os.environ.get("PARENT_EXPANSION_ENABLED", "false").l
 PARENT_EXPANSION_MAX_PARENTS = int(os.environ.get("PARENT_EXPANSION_MAX_PARENTS", "3"))
 PARENT_EXPANSION_MAX_CHARS = int(os.environ.get("PARENT_EXPANSION_MAX_CHARS", "9000"))
 
+# --- Generation-side lever: 답변 전 자가검사 (#176 = #145 처방 4) ---
+# qa100 guard 위반 10/100 — 확신이 낮거나 필수 조건이 빠진 상태에서 단정하는 답변.
+# When ON, a post-aggregation JUDGE call (structured verdict; evidence = the per-question
+# answers plus the slot-supplement block aggregation fed the draft) checks the draft for (a) assertions
+# unsupported by the evidence and (b) condition-dependent rules stated unconditionally.
+# PASS ⇒ the aggregated answer is kept BYTE-IDENTICAL — no re-synthesis (the PR #144
+# "always" arm measured re-synthesis degrading already-correct answers −13). FAIL ⇒ one
+# scoped REWRITE call converts only the flagged parts into conditional phrasing plus a
+# single closing clarify sentence (#51: never a hard stop-and-ask; PR #146 wording
+# precedent), preserving content. Judge failure/exception degrades to keeping the draft.
+# Aggregation-after intervention only — the agent loop and its prompts are untouched
+# (#111 / #145 처방 1 ablation: in-loop injections regress regardless of wording).
+# DEFAULT OFF — A/B per #162 before enabling.
+SELF_CHECK_ENABLED = os.environ.get("SELF_CHECK_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
 # agent searches less thoroughly. env-overridable so they can be tuned / rolled back
