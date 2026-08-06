@@ -1,6 +1,6 @@
 import json
 import re
-from langchain_core.messages import HumanMessage, AIMessageChunk, ToolMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 
 SILENT_NODES = {"rewrite_query"}
 SYSTEM_NODES = {"summarize_history", "rewrite_query"}
@@ -128,6 +128,7 @@ class ChatInterface:
             response_messages  = []
             active_tool_calls  = {}
             system_node_buffer = {}
+            answer_streamed    = False
 
             for chunk, metadata in self.rag_system.agent_graph.stream(stream_input, config=config, stream_mode="messages"):
                 node = metadata.get("langgraph_node", "")
@@ -143,8 +144,21 @@ class ChatInterface:
 
                 elif isinstance(chunk, AIMessageChunk) and chunk.content and node not in SILENT_NODES:
                     self._handle_llm_token(chunk, node, response_messages)
+                    if node == "aggregate_answers":
+                        answer_streamed = True
 
                 yield response_messages
+
+            # Answer adopted without an LLM call (#177 clean-synthesis bypass) emits no
+            # chunks — read it from the completed graph state so the UI still shows it.
+            if not answer_streamed:
+                final_state = self.rag_system.agent_graph.get_state(config)
+                if not final_state.next:
+                    for msg in reversed(final_state.values.get("messages", [])):
+                        if isinstance(msg, AIMessage) and msg.content:
+                            response_messages.append(str(msg.content))
+                            yield response_messages
+                            break
 
         except Exception as e:
             yield f"❌ Error: {str(e)}"

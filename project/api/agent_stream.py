@@ -59,6 +59,19 @@ def _extract_clarification(state) -> str | None:
     return None
 
 
+def _final_answer_from_state(state) -> str | None:
+    """Answer adopted without an LLM call (e.g. the #177 clean-synthesis bypass, or
+    aggregate's no-answers message) emits no AIMessageChunk, so the token loop collects
+    nothing. On a COMPLETED run the last outer AIMessage is aggregate_answers' output —
+    surface it instead of the generic failure string."""
+    if state.next:
+        return None
+    for msg in reversed(state.values.get("messages", [])):
+        if isinstance(msg, AIMessage) and msg.content:
+            return str(msg.content)
+    return None
+
+
 def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
     # ContextVars don't cross thread boundaries — re-bind the trace id inside this
     # worker thread so any logging here carries the request's id.
@@ -117,9 +130,13 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
 
         answer = "".join(answer_parts).strip()
 
-        # No aggregated answer means the graph interrupted to ask for clarification.
+        # No streamed answer: either the graph interrupted to ask for clarification,
+        # or the final answer was adopted without an LLM call and never hit the
+        # token stream (#177 bypass) — read it from the final state before giving up.
         if not answer:
-            answer = _extract_clarification(final_state) or _FALLBACK_KO
+            answer = (_extract_clarification(final_state)
+                      or _final_answer_from_state(final_state)
+                      or _FALLBACK_KO)
             yield ("token", answer)
 
         # Language fallback: if a Korean question still receives a mostly non-Korean

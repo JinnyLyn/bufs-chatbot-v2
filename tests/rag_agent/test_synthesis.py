@@ -378,3 +378,147 @@ class TestSynthesisNodes:
         human = captured["messages"][1]
         assert CHUNK_A in human.content
         assert "사용자 질문: 질문?" in human.content
+
+
+# ---------------------------------------------------------------------------
+# #177 P2 — parent expansion survives compress_context
+# ---------------------------------------------------------------------------
+
+class TestParentExpansionAfterCompress:
+    def _msgs(self):
+        return [
+            HumanMessage(content="질문", id="m0"),
+            _tool_msg(CHUNK_A).model_copy(update={"id": "t1"}),
+            _tool_msg(CHUNK_B).model_copy(update={"id": "t2"}),
+            _tool_msg(CHUNK_A).model_copy(update={"id": "t3"}),  # dup — dedup 대상
+        ]
+
+    def test_compress_harvests_parent_ids_first_seen_deduped(self, monkeypatch):
+        monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", True)
+        class _LLM:
+            def invoke(self, messages, **kwargs):
+                return AIMessage(content="요약")
+        state = {"messages": self._msgs(), "question": "질문",
+                 "context_summary": "", "retrieval_keys": set()}
+        out = nodes.compress_context(state, _LLM())
+        assert out["observed_parent_ids"] == ["guide_parent_3", "guide_parent_7"]
+
+    def test_compress_merges_with_previous_harvest(self, monkeypatch):
+        monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", True)
+        class _LLM:
+            def invoke(self, messages, **kwargs):
+                return AIMessage(content="요약")
+        state = {"messages": self._msgs(), "question": "질문", "context_summary": "이전",
+                 "retrieval_keys": set(),
+                 "observed_parent_ids": ["old_parent", "guide_parent_7"]}
+        out = nodes.compress_context(state, _LLM())
+        assert out["observed_parent_ids"] == ["old_parent", "guide_parent_7", "guide_parent_3"]
+
+    def test_compress_lever_off_touches_no_state(self, monkeypatch):
+        monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", False)
+        class _LLM:
+            def invoke(self, messages, **kwargs):
+                return AIMessage(content="요약")
+        state = {"messages": self._msgs(), "question": "질문",
+                 "context_summary": "", "retrieval_keys": set()}
+        assert "observed_parent_ids" not in nodes.compress_context(state, _LLM())
+
+    def test_expansion_prior_ids_rank_after_current_and_dedup(self, parent_store):
+        """현재 프롬프트에 실재하는 청크의 parent가 예산 우선(#126 실측 arm) — prior는 그 뒤."""
+        parent_store({
+            "guide_parent_3": {"content": "원문 A", "metadata": {"source": "학사안내.pdf"}},
+            "guide_parent_7": {"content": "원문 B", "metadata": {"source": "학사안내.pdf"}},
+        })
+        blocks = nodes._expand_parent_context([CHUNK_A], prior_ids=["guide_parent_7", "guide_parent_3"])
+        assert [b.splitlines()[0] for b in blocks] == [
+            "--- 원문 (Parent ID: guide_parent_3 / File Name: 학사안내.pdf) ---",
+            "--- 원문 (Parent ID: guide_parent_7 / File Name: 학사안내.pdf) ---",
+        ]
+
+    def test_na_placeholder_is_never_a_candidate(self, parent_store):
+        parent_store({"guide_parent_3": {"content": "원문 A", "metadata": {"source": "학사안내.pdf"}}})
+        blocks = nodes._expand_parent_context(
+            ["Parent ID: n/a\nFile Name: x\nContent: y", CHUNK_A], prior_ids=["n/a"])
+        assert len(blocks) == 1 and "guide_parent_3" in blocks[0]
+
+    def test_synthesis_expands_from_observed_ids_after_compress(self, parent_store, monkeypatch):
+        """압축 직후(현재 반복 ToolMessage 0건)에도 관찰된 parent가 확장된다 — P2의 표적."""
+        monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", True)
+        parent_store({"guide_parent_3": {"content": "원문 전체", "metadata": {"source": "학사안내.pdf"}}})
+        state = {"question": "질문?", "messages": [], "context_summary": "압축 요약",
+                 "observed_parent_ids": ["guide_parent_3"]}
+        content = nodes._build_synthesis_prompt_content(state)
+        assert "## 원문 맥락" in content and "원문 전체" in content
+
+    def test_lever_off_ignores_observed_ids(self, parent_store, monkeypatch):
+        monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", False)
+        parent_store({"guide_parent_3": {"content": "원문 전체", "metadata": {"source": "학사안내.pdf"}}})
+        state = {"question": "질문?", "messages": [], "context_summary": "압축 요약",
+                 "observed_parent_ids": ["guide_parent_3"]}
+        assert "## 원문 맥락" not in nodes._build_synthesis_prompt_content(state)
+
+
+# ---------------------------------------------------------------------------
+# #177 P1 — clean_synthesis 답변의 aggregation 재통과 우회
+# ---------------------------------------------------------------------------
+
+class TestCleanSynthesisAggregationBypass:
+    def _state(self, answers):
+        return {"agent_answers": answers, "originalQuery": "질문", "userSlots": {}}
+
+    def _ans(self, idx, text, clean):
+        return {"index": idx, "question": "q", "answer": text, "clean": clean}
+
+    def test_single_clean_answer_bypasses_aggregation_llm(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
+        class _LLM:
+            def invoke(self, *a, **k):
+                raise AssertionError("aggregation LLM must not be called on bypass")
+        out = nodes.aggregate_answers(self._state([self._ans(0, "클린 답", True)]), _LLM())
+        assert out["messages"][0].content == "클린 답"
+
+    def test_non_clean_answer_still_aggregates(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
+        calls = []
+        class _LLM:
+            def invoke(self, messages, **kwargs):
+                calls.append(messages)
+                return AIMessage(content="합성")
+        out = nodes.aggregate_answers(self._state([self._ans(0, "초안", False)]), _LLM())
+        assert calls and out["messages"][0].content == "합성"
+
+    def test_multi_answers_still_aggregate_even_if_clean(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", False)
+        calls = []
+        class _LLM:
+            def invoke(self, messages, **kwargs):
+                calls.append(messages)
+                return AIMessage(content="합성")
+        answers = [self._ans(0, "답1", True), self._ans(1, "답2", True)]
+        nodes.aggregate_answers(self._state(answers), _LLM())
+        assert calls
+
+    def test_slot_lever_on_disables_bypass(self, monkeypatch):
+        monkeypatch.setattr(config, "SLOT_EXTRACTION_ENABLED", True)
+        monkeypatch.setattr(config, "SLOT_CLARIFY_ENABLED", False)
+        monkeypatch.setattr(config, "SLOT_SEARCH_ENABLED", False)
+        calls = []
+        class _LLM:
+            def invoke(self, messages, **kwargs):
+                calls.append(messages)
+                return AIMessage(content="합성")
+        nodes.aggregate_answers(self._state([self._ans(0, "클린 답", True)]), _LLM())
+        assert calls
+
+    def test_collect_answer_marks_clean_only_when_valid(self):
+        valid = {"messages": [AIMessage(content="답")], "question_index": 0,
+                 "question": "q", "clean_synthesized": True}
+        assert nodes.collect_answer(valid)["agent_answers"][0]["clean"] is True
+        invalid = {"messages": [AIMessage(content="")], "question_index": 0,
+                   "question": "q", "clean_synthesized": True}
+        assert nodes.collect_answer(invalid)["agent_answers"][0]["clean"] is False
+
+    def test_clean_synthesis_sets_state_flag(self, fake_llm, monkeypatch):
+        monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", False)
+        state = {"question": "질문?", "messages": [_tool_msg(CHUNK_A)]}
+        assert nodes.clean_synthesis(state, fake_llm)["clean_synthesized"] is True
