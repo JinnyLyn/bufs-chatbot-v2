@@ -66,7 +66,7 @@
       "온라인휴·복학신청"
     ],
     "must_not_include": [
-      "자동 연장됩니다"
+      "학부(과) 사무실 승인 후 연장"
     ],
     "difficulty": "Medium",
     "category": "휴학"
@@ -102,7 +102,7 @@
       "8월 30일"
     ],
     "must_not_include": [
-      "학사지원팀 방문 접수"
+      "수강신청 사이트에서 신청"
     ],
     "difficulty": "Easy",
     "category": "휴학"
@@ -392,7 +392,7 @@
       "이월 제외"
     ],
     "must_not_include": [
-      "2023학번도 적용"
+      "학기당 5학점까지 이월"
     ],
     "difficulty": "Medium",
     "category": "수강신청"
@@ -501,7 +501,7 @@
       "개강 전에 통보"
     ],
     "must_not_include": [
-      "학점 수와 무관하게 부과"
+      "평점 2.0 미만"
     ],
     "difficulty": "Medium",
     "category": "성적"
@@ -555,7 +555,7 @@
       "이의신청"
     ],
     "must_not_include": [
-      "방학 중에도 정정 가능"
+      "다음 학기에 정정 신청"
     ],
     "difficulty": "Easy",
     "category": "성적"
@@ -573,7 +573,7 @@
       "마이크로전공 9학점"
     ],
     "must_not_include": [
-      "부전공으로 대체"
+      "부전공 30학점"
     ],
     "difficulty": "Hard",
     "category": "졸업"
@@ -700,7 +700,7 @@
       "2024학번 부전공 없음"
     ],
     "must_not_include": [
-      "졸업 시 자동 정리"
+      "학사지원팀이 임의 선택"
     ],
     "difficulty": "Medium",
     "category": "전과/복전"
@@ -718,7 +718,7 @@
       "신청서 직접 제출"
     ],
     "must_not_include": [
-      "온라인으로만 신청"
+      "수강신청 사이트에서 신청"
     ],
     "difficulty": "Medium",
     "category": "전과/복전"
