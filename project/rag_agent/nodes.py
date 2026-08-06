@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from typing import List, Literal, Set
 from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage, AIMessage, ToolMessage
 from langgraph.types import Command
@@ -241,10 +242,17 @@ def orchestrator(state: AgentState, llm_with_tools):
     # applied at aggregate_answers only (see below), which by construction cannot touch
     # retrieval or the agent trajectory.
     if not state.get("messages"):
+        # #89: arm the elapsed-budget reference BEFORE the first LLM turn so that turn's
+        # latency counts against the budget. State-only and gated, so the lever-off path's
+        # state stays byte-identical.
+        started_at = time.monotonic() if config.TOOL_CALL_SOFT_TIMEOUT_S > 0 else None
         human_msg = HumanMessage(content=state["question"])
         force_search = HumanMessage(content=get_force_search_instruction())
         response = llm_with_tools.invoke([sys_msg] + summary_injection + [human_msg, force_search])
-        return {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
+        update = {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
+        if started_at is not None:
+            update["loop_started_at"] = started_at
+        return update
 
     response = llm_with_tools.invoke([sys_msg] + summary_injection + state["messages"])
     tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
@@ -256,6 +264,10 @@ def _collect_unique_tool_contents(state: AgentState) -> List[str]:
     unique_contents = []
     for m in state["messages"]:
         if isinstance(m, ToolMessage) and m.content not in seen:
+            # #89: the budget marker is an instruction to the orchestrator, not evidence —
+            # rendering it under "## 검색된 데이터" would leak it into the answer prompt.
+            if str(m.content or "").startswith("SEARCH_BUDGET_EXCEEDED"):
+                continue
             unique_contents.append(m.content)
             seen.add(m.content)
     return unique_contents
@@ -428,6 +440,10 @@ def compress_context(state: AgentState, llm):
                 tool_calls_info = f" | 도구 호출: {calls}"
             conversation_text += f"[어시스턴트{tool_calls_info}]\n{msg.content or '(도구 호출만 있음)'}\n\n"
         elif isinstance(msg, ToolMessage):
+            # #89: keep the budget marker out of the compression LLM — it would be baked
+            # into context_summary as a "search failure" and re-injected every later turn.
+            if str(msg.content or "").startswith("SEARCH_BUDGET_EXCEEDED"):
+                continue
             tool_name = getattr(msg, "name", "tool")
             conversation_text += f"[도구 결과 - {tool_name}]\n{msg.content}\n\n"
 

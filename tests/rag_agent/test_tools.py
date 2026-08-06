@@ -129,3 +129,74 @@ class TestGraphCompile:
             pytest.skip(f"Heavy dep missing: {e}")
         except Exception as e:
             pytest.fail(f"Graph import raised unexpected error: {e}")
+
+
+# ---------------------------------------------------------------------------
+# #89 — TOOL_CALL_SOFT_TIMEOUT_S elapsed soft cap
+# ---------------------------------------------------------------------------
+
+class TestSearchBudgetSoftTimeout:
+    def _search(self, tmp_path, col):
+        factory = _make_tool_factory(tmp_path, col)
+        return next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+
+    def test_exceeded_budget_refuses_search_without_touching_collection(
+            self, tmp_path, env_isolated, monkeypatch):
+        monkeypatch.setenv("TOOL_CALL_SOFT_TIMEOUT_S", "90")
+        col = MagicMock()
+        search = self._search(tmp_path, col)
+        import time as _time
+        result = search.invoke({"query": "q", "limit": 5,
+                                "state": {"loop_started_at": _time.monotonic() - 120}})
+        assert result.startswith("SEARCH_BUDGET_EXCEEDED")
+        col.similarity_search.assert_not_called()
+
+    def test_within_budget_searches_normally(self, tmp_path, env_isolated, monkeypatch):
+        monkeypatch.setenv("TOOL_CALL_SOFT_TIMEOUT_S", "90")
+        col = _make_fake_collection([])
+        search = self._search(tmp_path, col)
+        import time as _time
+        result = search.invoke({"query": "q", "limit": 5,
+                                "state": {"loop_started_at": _time.monotonic() - 1}})
+        assert result == "NO_RELEVANT_CHUNKS"
+        col.similarity_search.assert_called_once()
+
+    def test_unarmed_state_never_triggers(self, tmp_path, env_isolated, monkeypatch):
+        """loop_started_at=0.0(미장전)이면 예산 검사가 발화하지 않는다."""
+        monkeypatch.setenv("TOOL_CALL_SOFT_TIMEOUT_S", "90")
+        col = _make_fake_collection([])
+        search = self._search(tmp_path, col)
+        result = search.invoke({"query": "q", "limit": 5, "state": {"loop_started_at": 0.0}})
+        assert result == "NO_RELEVANT_CHUNKS"
+
+    def test_lever_off_ignores_stale_timestamp(self, tmp_path, env_isolated):
+        col = _make_fake_collection([])
+        search = self._search(tmp_path, col)
+        result = search.invoke({"query": "q", "limit": 5, "state": {"loop_started_at": 1.0}})
+        assert result == "NO_RELEVANT_CHUNKS"
+        col.similarity_search.assert_called_once()
+
+
+class TestBudgetHelperAndParentGate:
+    def test_negative_elapsed_fails_open(self, tmp_path, env_isolated, monkeypatch):
+        """다른 클록 도메인의 loop_started_at(음수 경과)은 검사 무력화 — 검색은 계속된다."""
+        monkeypatch.setenv("TOOL_CALL_SOFT_TIMEOUT_S", "90")
+        col = _make_fake_collection([])
+        factory = _make_tool_factory(tmp_path, col)
+        search = next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+        import time as _time
+        result = search.invoke({"query": "q", "limit": 5,
+                                "state": {"loop_started_at": _time.monotonic() + 10_000}})
+        assert result == "NO_RELEVANT_CHUNKS"
+        col.similarity_search.assert_called_once()
+
+    def test_parent_retrieval_is_budget_gated(self, tmp_path, env_isolated, monkeypatch):
+        monkeypatch.setenv("TOOL_CALL_SOFT_TIMEOUT_S", "90")
+        _seed_parent_store(tmp_path, "p0", "부모 내용")
+        factory = _make_tool_factory(tmp_path, _make_fake_collection())
+        retrieve = next(t for t in factory.create_tools() if t.name == "retrieve_parent_chunks")
+        import time as _time
+        result = retrieve.invoke({"parent_id": "p0",
+                                  "state": {"loop_started_at": _time.monotonic() - 120}})
+        assert result.startswith("SEARCH_BUDGET_EXCEEDED")
+        assert retrieve.invoke({"parent_id": "p0", "state": {}}).find("부모 내용") >= 0

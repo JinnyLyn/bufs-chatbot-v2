@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Annotated, List
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
@@ -79,6 +80,31 @@ def _apply_semester_scope(docs: list, question: str, limit: int) -> list:
         return docs[:limit]
 
 
+def _budget_exceeded(state: dict) -> bool:
+    """#89 elapsed-budget check shared by both retrieval tools. Never raises.
+
+    loop_started_at is a time.monotonic() reference armed by the orchestrator's first
+    turn (in-process InMemorySaver — monotonic is valid across the fan-out threads).
+    A negative elapsed means the reference came from another boot/process (a durable-
+    checkpointer future); fail OPEN with a warning rather than refusing every search.
+    """
+    if config.TOOL_CALL_SOFT_TIMEOUT_S <= 0:
+        return False
+    started = (state or {}).get("loop_started_at") or 0.0
+    if not started:
+        return False
+    elapsed = time.monotonic() - started
+    if elapsed < 0:
+        logger.warning("loop_started_at is from another clock domain (elapsed=%.1fs) — "
+                       "budget check disabled for this call", elapsed)
+        return False
+    if elapsed > config.TOOL_CALL_SOFT_TIMEOUT_S:
+        logger.info("search budget exceeded (%.1fs > %.0fs) — refusing retrieval",
+                    elapsed, config.TOOL_CALL_SOFT_TIMEOUT_S)
+        return True
+    return False
+
+
 class ToolFactory:
 
     def __init__(self, collection):
@@ -94,6 +120,17 @@ class ToolFactory:
             limit: Maximum number of results to return
         """
         try:
+            # Latency guardrail (#89): past the elapsed budget, refuse further searches —
+            # the marker tells the orchestrator to answer from what it already collected.
+            # Defense-in-depth behind the edges-level cut (route_after_orchestrator_call
+            # forces fallback_response on the next tool request): this fires when the
+            # budget crosses mid-ToolNode batch. The marker is never evidence
+            # (edges._has_tool_evidence), never a source (api/sources), and never enters
+            # the synthesis/compression prompts (nodes.py filters).
+            if _budget_exceeded(state):
+                return ("SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다. "
+                        "추가 검색 없이 현재까지 수집된 컨텍스트로 답하세요.")
+
             # Split-path retrieval (issue #66): route the user's ORIGINAL question to the
             # surface-sensitive sparse leg and the agent's query to the dense leg. The agent
             # subgraph's AgentState carries the original (pre-agent-paraphrase) question as
@@ -188,13 +225,20 @@ class ToolFactory:
             logger.exception("retrieve_many_parent_chunks failed")
             return "PARENT_RETRIEVAL_ERROR: retrieval failed, see server log"
 
-    def _retrieve_parent_chunks(self, parent_id: str) -> str:
+    def _retrieve_parent_chunks(self, parent_id: str,
+                                state: Annotated[dict, InjectedState] = None) -> str:
         """Retrieve full parent chunks by their IDs.
-    
+
         Args:
             parent_id: Parent chunk ID to retrieve
         """
         try:
+            # #89: parent pulls are budget-gated too — post-budget parents inflate the
+            # context and trigger the expensive compress_context node, the exact tail
+            # the lever exists to cut.
+            if _budget_exceeded(state):
+                return ("SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다. "
+                        "추가 검색 없이 현재까지 수집된 컨텍스트로 답하세요.")
             parent = self.parent_store_manager.load_content(parent_id)
             if not parent:
                 return "NO_PARENT_DOCUMENT"
