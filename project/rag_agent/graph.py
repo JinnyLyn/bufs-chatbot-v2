@@ -3,6 +3,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.prebuilt import ToolNode
 from functools import partial
 
+import config
 from .graph_state import State
 from .nodes import *
 from .edges import *
@@ -47,7 +48,14 @@ def create_agent_graph(llm, tools_list, collection=None):
     graph_builder.add_conditional_edges("rewrite_query", route_after_rewrite)
     graph_builder.add_edge("request_clarification", "rewrite_query")
     graph_builder.add_edge(["agent"], "aggregate_answers")
-    graph_builder.add_edge("aggregate_answers", END)
+    # #176: 자가검사 노드 — 레버 ON일 때만 그래프에 존재. OFF면 노드 자체가 없어
+    # 토폴로지가 기존과 동일하다 (config는 서버 기동 시 읽힘 — env 레버).
+    if config.SELF_CHECK_ENABLED:
+        graph_builder.add_node("self_check", partial(self_check, llm=llm))
+        graph_builder.add_edge("aggregate_answers", "self_check")
+        graph_builder.add_edge("self_check", END)
+    else:
+        graph_builder.add_edge("aggregate_answers", END)
 
     agent_graph = graph_builder.compile(checkpointer=checkpointer, interrupt_before=["request_clarification"])
 

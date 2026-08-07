@@ -5,7 +5,7 @@ from typing import List, Literal, Optional, Set
 from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage, AIMessage, ToolMessage
 from langgraph.types import Command
 from .graph_state import State, AgentState
-from .schemas import QueryAnalysis, UserSlots
+from .schemas import QueryAnalysis, SelfCheckVerdict, UserSlots
 from .prompts import *
 import config
 from utils import estimate_context_tokens
@@ -26,12 +26,13 @@ def _get_parent_store():
     return _parent_store
 
 
-def _invoke_structured(llm, messages, schema):
+def _invoke_structured(llm, messages, schema, invoke_config=None):
     """Invoke with_structured_output(schema), trying methods until one parses.
 
     Ollama models support different structured-output mechanisms (qwen3.5:9b →
     function_calling; qwen3:4b-instruct → json_schema/default), so fall back across
-    them rather than hard-coding one.
+    them rather than hard-coding one. ``invoke_config`` is passed through to invoke()
+    (e.g. tags that let the streaming layer filter internal calls, #176).
     """
     # NOTE: .with_config(temperature=…) is a no-op in langchain-ollama 1.1.0 (sampling options
     # are read only from the ChatOllama constructor), so it was dropped — the global temperature
@@ -47,7 +48,9 @@ def _invoke_structured(llm, messages, schema):
                 if method is None
                 else base.with_structured_output(schema, method=method)
             )
-            return structured.invoke(messages)
+            if invoke_config is None:
+                return structured.invoke(messages)
+            return structured.invoke(messages, config=invoke_config)
         except Exception as exc:  # parse / validation error → try the next method
             last_exc = exc
             logger.debug("structured output method=%r failed (%s) — trying next", method, exc)
@@ -569,8 +572,9 @@ def aggregate_answers(state: State, llm, collection=None):
     # Issue #145 슬롯 기반 2차 검색: code-driven supplementary retrieval on the condition
     # terms — feeds the clarify lever the per-case rule chunks it is asked to split on.
     # Empty block (no terms / disabled / no collection / no hits) → OFF-identical input.
+    supplement = ""
     if config.SLOT_EXTRACTION_ENABLED and config.SLOT_SEARCH_ENABLED:
-        supplement = _slot_secondary_search(collection, state.get("originalQuery", ""), slots)
+        supplement = _slot_secondary_search(collection, state.get("originalQuery", ""), slots) or ""
         if supplement:
             content += (
                 f"\n\n{supplement}\n\n"
@@ -580,4 +584,91 @@ def aggregate_answers(state: State, llm, collection=None):
 
     user_message = HumanMessage(content=content)
     synthesis_response = llm.invoke([SystemMessage(content=get_aggregation_prompt()), user_message])
-    return {"messages": [AIMessage(content=synthesis_response.content)]}
+    result = {"messages": [AIMessage(content=synthesis_response.content)]}
+    if config.SELF_CHECK_ENABLED and supplement:
+        # #176: 자가검사 judge가 초안과 같은 근거를 보게 한다 — 보충 자료를 빼면
+        # 보충에서 온 올바른 사실이 '근거 없는 단정'으로 오판된다. 레버 OFF면 미기록.
+        result["slot_supplement"] = supplement
+    return result
+
+
+def self_check(state: State, llm):
+    """답변 전 자가검사 (#176 = #145 처방 4). Post-aggregation, default OFF.
+
+    JUDGE(구조화 판정) → PASS면 state 무변경(집계 답변 바이트 그대로) → FAIL일 때만
+    지적사항-스코프 REWRITE 1회. 판정 실패·빈 재작성 등 모든 예외는 초안 유지로
+    강등 — 이 노드는 답변을 잃게 만들 수 없다. JUDGE 호출은 "selfcheck_judge" 태그를
+    달아 스트리밍 계층이 내부 토큰을 사용자 답변으로 내보내지 않게 한다.
+    """
+    draft, draft_id = "", None
+    for msg in reversed(state.get("messages", [])):
+        if isinstance(msg, AIMessage) and msg.content:
+            draft = str(msg.content)
+            draft_id = getattr(msg, "id", None)
+            break
+
+    answers = sorted(state.get("agent_answers") or [], key=lambda x: x["index"])
+    evidence = "\n".join(f"\n답변 {i}:\n{a['answer']}" for i, a in enumerate(answers, start=1))
+    # 집계가 초안에 쓴 근거를 그대로 재현해야 한다: 슬롯 2차 검색 보충 자료를 빼면
+    # 보충에서 온 올바른 사실이 '근거 없는 단정'으로 오판·삭제된다.
+    supplement = str(state.get("slot_supplement") or "").strip()
+    if supplement:
+        evidence += f"\n\n{supplement}"
+    if not draft.strip() or not evidence.strip():
+        return {}
+
+    judge_input = (
+        f"사용자 질문: {state.get('originalQuery', '')}\n\n"
+        f"근거 자료 (검색된 답변들):{evidence}\n\n"
+        f"최종 답변 초안:\n{draft}"
+    )
+    # 판정 결과의 필드 접근까지 try 안에 둔다 (extract_user_slots의 model_dump와 같은
+    # 이유): 비정상 반환형이 노드 밖으로 새면 그래프 예외 → 답변 유실.
+    try:
+        verdict = _invoke_structured(
+            llm,
+            [SystemMessage(content=get_self_check_prompt()), HumanMessage(content=judge_input)],
+            SelfCheckVerdict,
+            invoke_config={"tags": ["selfcheck_judge"]},
+        )
+        if verdict is None or verdict.ok:
+            return {}
+        unsupported = [str(c).strip() for c in (verdict.unsupported_claims or []) if str(c or "").strip()]
+        missing = [str(c).strip() for c in (verdict.missing_conditions or []) if str(c or "").strip()]
+    except Exception:
+        logger.exception("self-check judge failed — keeping the aggregated answer")
+        return {}
+
+    findings = ""
+    if unsupported:
+        findings += "근거 없는 단정:\n" + "\n".join(f"- {c}" for c in unsupported) + "\n"
+    if missing:
+        findings += "조건 무시 단정 (질문에 없는 조건):\n" + "\n".join(f"- {c}" for c in missing) + "\n"
+    if not findings:
+        # ok=False인데 지적사항이 비어 있으면 재작성할 대상이 없다 — 초안 유지.
+        logger.warning("self-check verdict not ok but no findings — keeping the draft")
+        return {}
+    if missing:
+        # 되묻기 한 문장은 실제로 빠진 조건이 있을 때만 — 무조건 헤징은 #51이 잰 비용.
+        findings += ("\n추가 지시: 답변 마지막에 위 조건을 알려주면 더 정확한 안내가 "
+                     "가능하다는 요청을 한 문장으로만 덧붙이세요.\n")
+
+    try:
+        response = llm.invoke([
+            SystemMessage(content=get_self_check_rewrite_prompt()),
+            HumanMessage(content=f"{judge_input}\n\n지적사항:\n{findings}"),
+        ])
+    except Exception:
+        logger.exception("self-check rewrite failed — keeping the aggregated answer")
+        return {}
+    if not str(getattr(response, "content", "") or "").strip():
+        logger.warning("self-check rewrite returned empty — keeping the draft")
+        return {}
+    logger.info("self-check rewrote the answer (%d unsupported, %d missing-condition findings)",
+                len(unsupported), len(missing))
+    # 재작성은 초안의 '대체'다 — 초안을 지우지 않으면 다음 턴 summarize_history가
+    # 지적된 초안과 수정본의 모순 쌍을 함께 요약하게 된다.
+    rewrite = [AIMessage(content=str(response.content))]
+    if draft_id:
+        rewrite.insert(0, RemoveMessage(id=draft_id))
+    return {"messages": rewrite}

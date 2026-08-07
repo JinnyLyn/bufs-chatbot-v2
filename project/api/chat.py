@@ -40,10 +40,12 @@ def _finalize(tid: str, session_id: str, question: str, payload: dict, t0: float
     )
     logger.info(
         "PIPELINE_TIMING tid=%s total=%dms summarize=%dms rewrite=%dms agent=%dms "
-        "aggregate=%dms other=%dms sub_q=%d tool_calls=%d model=%s",
+        "aggregate=%dms other=%dms sub_q=%d tool_calls=%d model=%s%s",
         tid, total_ms, timing.get("summarize_history", 0), timing.get("rewrite_query", 0),
         timing.get("agent", 0), timing.get("aggregate_answers", 0), timing.get("other", 0),
         payload.get("sub_questions", 0), payload.get("tool_calls", 0), payload.get("model", ""),
+        # #176: appended only when the lever is on so the OFF log line is unchanged.
+        f" self_check={timing['self_check']}ms" if "self_check" in timing else "",
     )
     try:
         get_qa_logger().log(
