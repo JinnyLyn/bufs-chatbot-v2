@@ -380,6 +380,28 @@ class TestSynthesisNodes:
         assert "사용자 질문: 질문?" in human.content
 
 
+def test_budget_marker_excluded_from_synthesis_and_compression(monkeypatch):
+    """#89: 마커는 합성 프롬프트의 '검색된 데이터'에도, 압축 LLM 입력에도 안 들어간다."""
+    monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", False)
+    marker = ToolMessage(content="SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다.",
+                         tool_call_id="t9")
+    state = {"question": "질문?", "messages": [_tool_msg(CHUNK_A), marker]}
+    content = nodes._build_synthesis_prompt_content(state)
+    assert "SEARCH_BUDGET_EXCEEDED" not in content and CHUNK_A in content
+
+    captured = {}
+    class _LLM:
+        def invoke(self, messages, **kwargs):
+            captured["human"] = messages[1].content
+            return AIMessage(content="요약")
+    st = {"messages": [HumanMessage(content="q", id="m0"),
+                       _tool_msg(CHUNK_A).model_copy(update={"id": "t1"}),
+                       marker.model_copy(update={"id": "t2"})],
+          "question": "q", "context_summary": "", "retrieval_keys": set()}
+    nodes.compress_context(st, _LLM())
+    assert "SEARCH_BUDGET_EXCEEDED" not in captured["human"]
+
+
 # ---------------------------------------------------------------------------
 # #177 P2 — parent expansion survives compress_context
 # ---------------------------------------------------------------------------

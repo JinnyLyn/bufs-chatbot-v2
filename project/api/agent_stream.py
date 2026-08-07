@@ -113,6 +113,10 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
             last_ts = now
 
             if isinstance(chunk, ToolMessage):
+                # #89: a budget-refused call is not an executed search — counting it would
+                # distort the tool_calls metric exactly in the runs the lever fires on.
+                if str(chunk.content or "").startswith("SEARCH_BUDGET_EXCEEDED"):
+                    continue
                 tool_call_count += 1
                 if chunk.content:
                     tool_contents.append(str(chunk.content))
