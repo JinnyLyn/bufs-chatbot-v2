@@ -30,7 +30,7 @@ import pytest
 pytestmark = pytest.mark.integration
 
 _OLLAMA_URL = os.environ.get("OLLAMA_BASE_URL", "")
-_LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3:4b-instruct-2507-q4_K_M")
+_LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3.5:9b")  # keep in sync with config.LLM_MODEL
 
 _SKIP_NO_OLLAMA = pytest.mark.skipif(
     not _OLLAMA_URL,

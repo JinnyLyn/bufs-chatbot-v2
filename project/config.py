@@ -66,17 +66,17 @@ SPARSE_IDF = os.environ.get("SPARSE_IDF", "true").lower() in ("1", "true", "yes"
 # (query embedding is a single short forward pass — fast enough on CPU). Set
 # EMBEDDING_DEVICE=cuda to use the GPU instead.
 EMBEDDING_DEVICE = os.environ.get("EMBEDDING_DEVICE", "cpu")
-# Ollama model for the agent. Must support tool-calling. The default is a small,
-# fast, *non-thinking* instruct model that fits a 12 GB local GPU; override with
-# LLM_MODEL to use one you have pulled. Prod / README / .env.example run
-# "qwen3.5:9b" via the env var — the small default here is intentional for local
-# dev, not the deployed model. Avoid "thinking" models — their reasoning tokens
-# leak into the streamed answer.
+# Ollama model for the agent. Must support tool-calling. The default is the model we
+# actually deploy and evaluate against ("qwen3.5:9b", matching README / .env.example),
+# so a bare run reproduces the reported numbers instead of silently measuring a smaller
+# dev model. It fits a 12 GB GPU at LLM_NUM_CTX=8192. On a smaller GPU (or when you want
+# a faster local loop) override with LLM_MODEL — e.g. "qwen3:4b-instruct-2507-q4_K_M".
+# Avoid "thinking" models — their reasoning tokens leak into the streamed answer.
 # Explicit Ollama server URL for the LLM client (overrides OLLAMA_HOST). Point this at a
 # LOCAL Ollama (e.g. http://127.0.0.1:11435) instead of an OLLAMA_HOST that SSH-tunnels to
 # a remote box. Empty = use OLLAMA_HOST / default.
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "").strip()
-LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3:4b-instruct-2507-q4_K_M")
+LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3.5:9b")
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0"))
 # Disable "thinking" mode by default: on Qwen3-family models the reasoning tokens
 # otherwise leak into the streamed answer and slow generation down. Set

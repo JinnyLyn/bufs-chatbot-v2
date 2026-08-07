@@ -95,10 +95,10 @@ pytest -m integration -v
 ```
 
 > **모델 이름 주의**: `LLM_MODEL`은 대상 Ollama에 **실제로 존재하는** 모델이어야 한다
-> (`curl http://127.0.0.1:11434/api/tags`로 확인). config 기본값
-> `qwen3:4b-instruct-2507-q4_K_M`이 해당 인스턴스에 없으면 `model not found`로 실패하므로,
-> 존재하는 모델(예: `qwen3.5:9b`)로 오버라이드한다. H100 인스턴스마다 pull 된 모델이 다를 수
-> 있으니 항상 `/api/tags`로 먼저 확인할 것.
+> (`curl http://127.0.0.1:11434/api/tags`로 확인). config 기본값 `qwen3.5:9b`가
+> 해당 인스턴스에 없으면 `model not found`로 실패하므로, 존재하는 모델
+> (예: `qwen3:4b-instruct-2507-q4_K_M`)로 오버라이드한다. H100 인스턴스마다 pull 된 모델이
+> 다를 수 있으니 항상 `/api/tags`로 먼저 확인할 것.
 
 > **참고**: `pytest -m integration` 실행 시 테스트가 하나도 수집되지 않으면 pytest는
 > **exit code 5**를 반환합니다 (테스트 없음). CI에서 이를 성공으로 처리하려면
