@@ -184,7 +184,7 @@
       "미리 담아두기"
     ],
     "must_not_include": [
-      "18학점"
+      "18학점까지"
     ],
     "difficulty": "Easy",
     "category": "수강신청"
@@ -602,7 +602,7 @@
       "100만원 미만"
     ],
     "must_not_include": [
-      "4학년"
+      "4학년 제외"
     ],
     "difficulty": "Medium",
     "category": "등록금"
@@ -773,7 +773,7 @@
       "표기"
     ],
     "must_not_include": [
-      "삭제"
+      "성적증명서에서 삭제"
     ],
     "difficulty": "Easy",
     "category": "성적"
@@ -1173,7 +1173,7 @@
       "이수"
     ],
     "must_not_include": [
-      "25시간"
+      "교육봉사 25시간"
     ],
     "difficulty": "Medium",
     "category": "교직"

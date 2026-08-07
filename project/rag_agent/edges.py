@@ -1,4 +1,5 @@
 import re
+import time
 from typing import Literal
 from langchain_core.messages import ToolMessage
 from langgraph.types import Send
@@ -10,7 +11,8 @@ from config import MAX_ITERATIONS, MAX_TOOL_CALLS
 # stable error prefixes returned by ToolFactory (see rag_agent/tools.py). Kept as
 # prefix/equality checks mirroring how api/sources.py consumes the same strings.
 _NO_EVIDENCE_MARKERS = frozenset({"NO_RELEVANT_CHUNKS", "NO_PARENT_DOCUMENT", "NO_PARENT_DOCUMENTS"})
-_ERROR_PREFIXES = ("RETRIEVAL_ERROR", "PARENT_RETRIEVAL_ERROR")
+# SEARCH_BUDGET_EXCEEDED (#89) is an instruction to stop searching, not evidence.
+_ERROR_PREFIXES = ("RETRIEVAL_ERROR", "PARENT_RETRIEVAL_ERROR", "SEARCH_BUDGET_EXCEEDED")
 
 # Refusal-class draft detection for CLEAN_SYNTHESIS_MODE=refusal_only. Same family as the
 # #126 forensic classification regex, anchored on the prompts' canonical refusal phrasings
@@ -77,5 +79,14 @@ def route_after_orchestrator_call(state: AgentState) -> Literal["tools", "fallba
 
     if iteration >= MAX_ITERATIONS or tool_count > MAX_TOOL_CALLS:
         return "fallback_response"
+
+    # #89: past the elapsed budget, a further tool request is cut straight to synthesis —
+    # the wall-clock tail becomes exactly one fallback call instead of up to MAX_ITERATIONS
+    # more orchestrator turns. The in-tool marker (tools.py) remains as defense-in-depth for
+    # a budget that crosses mid-ToolNode batch. Final answers above are never affected (#161).
+    if config.TOOL_CALL_SOFT_TIMEOUT_S > 0:
+        started = state.get("loop_started_at") or 0.0
+        if started and time.monotonic() - started > config.TOOL_CALL_SOFT_TIMEOUT_S:
+            return "fallback_response"
 
     return "tools"

@@ -16,7 +16,7 @@ _COHORT_HEADER_RE = re.compile(r"^#{1,6}\s*\d{4}\s*(?:~\s*\d{4})?\s*학번")
 # single constant so the two sites never drift.
 _CAL_EVENT_TAG = "[일정]"
 
-# Docling's export_to_markdown leaves two boilerplate artifacts in every converted page that
+# Docling's export_to_markdown leaves boilerplate artifacts in converted pages that
 # carry no retrievable information but flow into chunks as noise (they polluted ~52% of child
 # chunks on the BUFS corpus, diluting BM25/dense signal):
 #   • image placeholders: "**==> picture [720 x 252] intentionally omitted <==**"
@@ -34,6 +34,21 @@ _PICTURE_PLACEHOLDER_RE = re.compile(r"[ \t]*\*{0,2}==>[^\n]*?intentionally omit
 # collapses them back to adjacent rows (no blank line left behind) — keeping the 학사일정 table
 # contiguous for the forward-fill / [일정] passes.
 _PAGE_MARKER_RE = re.compile(r"(?m)^[ \t]*-{2,}[ \t]*end of page\.page_number=\d+[ \t]*-{2,}[ \t]*\r?\n?")
+# Docling also emits bare "<!-- image -->" HTML comments for images it drops (seen 3× in the
+# 2026-2학기 학사안내 conversion — PR #174 known issue 3). Full-line occurrences consume their
+# newline (like _PAGE_MARKER_RE); inline occurrences are excised in place. Only this exact
+# "image" comment form is stripped — any other HTML comment in source markdown is untouched.
+_IMAGE_COMMENT_LINE_RE = re.compile(r"(?m)^[ \t]*<!--\s*image\s*-->[ \t]*\r?\n?")
+_IMAGE_COMMENT_INLINE_RE = re.compile(r"[ \t]*<!--\s*image\s*-->")
+
+# A child chunk must carry at least one letter/digit-class character to be worth indexing:
+# Hangul(+jamo), Latin, digits, Hanja, fullwidth forms, circled/Roman numerals — all scripts
+# that actually occur in the corpus. Table splitting can shear off punctuation-only fragments
+# (a lone "|" body, separator-row debris) — PR #174 measured 48 such children (9 of them
+# exactly "|") eating top-k evidence slots in the 졸업요건 sections. Content-free text is
+# unretrievable by definition: no query token can match it, so dropping it only frees slots.
+_RETRIEVABLE_CHAR_RE = re.compile(
+    r"[0-9A-Za-z가-힣\u3131-\u318e\u4e00-\u9fff\uff10-\uff5a\u2460-\u24ff\u2160-\u2188]")
 
 
 def strip_conversion_artifacts(text: str) -> str:
@@ -45,6 +60,8 @@ def strip_conversion_artifacts(text: str) -> str:
     """
     text = _PICTURE_PLACEHOLDER_RE.sub("", text)
     text = _PAGE_MARKER_RE.sub("", text)
+    text = _IMAGE_COMMENT_LINE_RE.sub("", text)
+    text = _IMAGE_COMMENT_INLINE_RE.sub("", text)
     # A removed marker that occupied its own line leaves a blank; collapse the runs it creates
     # so spacing stays normal and MarkdownHeaderTextSplitter sees clean section breaks.
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -386,5 +403,15 @@ class DocumentChuncker:
                 else:
                     body_lines.append(ln)
             body = Document(page_content="\n".join(body_lines), metadata=dict(p_chunk.metadata))
-            all_child_chunks.extend(self.__child_splitter.split_documents([body]))
-            all_child_chunks.extend(event_children)
+            # Content-free guard (#130 / PR #174 known issue 2): drop punctuation-only children
+            # AFTER splitting — the parent keeps the full text, so as long as any child survives,
+            # retrieve_parent context is unaffected. A document whose EVERY child is content-free
+            # carries no retrievable text at all and is skipped whole by DocumentManager (correct:
+            # it could never be retrieved anyway).
+            all_child_chunks.extend(
+                c for c in self.__child_splitter.split_documents([body])
+                if _RETRIEVABLE_CHAR_RE.search(c.page_content)
+            )
+            all_child_chunks.extend(
+                c for c in event_children if _RETRIEVABLE_CHAR_RE.search(c.page_content)
+            )

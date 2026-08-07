@@ -78,3 +78,31 @@ class UserSlots(BaseModel):
         if isinstance(value, (list, tuple)):
             return [str(v).strip() for v in value if v is not None and str(v).strip()]
         return value
+
+
+class SelfCheckVerdict(BaseModel):
+    """답변 전 자가검사 판정 (#176 = #145 처방 4).
+
+    최종 답변 초안을 근거(검색된 답변들)와 대조한 JUDGE 출력. ok=True면 초안이
+    바이트 그대로 유지되므로, 확실하지 않을 때만 False로 판정해야 한다 —
+    과잉 지적은 불필요한 재작성(정답 열화 위험)으로 직결된다.
+    """
+    ok: bool = Field(description="초안의 모든 단정이 근거에 있고, 조건에 따라 달라지는 규정을 무조건 단정하지 않았으면 True.")
+    unsupported_claims: List[str] = Field(default_factory=list, description="근거에 없는데 단정한 주장 목록 (초안 원문 표현 그대로). ok=True면 빈 목록.")
+    missing_conditions: List[str] = Field(default_factory=list, description="답이 달라지게 만드는데 질문에 없는 조건 이름 목록 (예: '휴학 유형'). ok=True면 빈 목록.")
+
+    # UserSlots와 같은 이유(41c8f2a 실측: 필드 하나의 타입 불일치가 객체 전체를 폐기)로
+    # 모델-작성 JSON의 흔한 형태 불일치를 흡수한다. 판정 폐기 = 레버 조용한 무효화.
+    @field_validator("unsupported_claims", "missing_conditions", mode="before")
+    @classmethod
+    def _coerce_list(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            text = value.strip()
+            return [text] if text else []
+        if isinstance(value, dict):
+            return [_model_dict_to_text(value)] if value else []
+        if isinstance(value, (list, tuple)):
+            return [str(v).strip() for v in value if v is not None and str(v).strip()]
+        return value

@@ -1,6 +1,6 @@
 import json
 import re
-from langchain_core.messages import HumanMessage, AIMessageChunk, ToolMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 
 SILENT_NODES = {"rewrite_query"}
 SYSTEM_NODES = {"summarize_history", "rewrite_query"}
@@ -128,12 +128,29 @@ class ChatInterface:
             response_messages  = []
             active_tool_calls  = {}
             system_node_buffer = {}
+            answer_streamed    = False
 
             for chunk, metadata in self.rag_system.agent_graph.stream(stream_input, config=config, stream_mode="messages"):
                 node = metadata.get("langgraph_node", "")
 
+                # #176: self-check JUDGE tokens/tool-calls are internal — never render
+                # them (checked first so the structured call's tool_calls don't produce
+                # a bogus "SelfCheckVerdict" tool bubble below).
+                if "selfcheck_judge" in (metadata.get("tags") or []):
+                    continue
+
                 if node in SYSTEM_NODES and isinstance(chunk, AIMessageChunk) and chunk.content:
                     self._handle_system_node(chunk, node, response_messages, system_node_buffer)
+
+                elif node == "self_check" and isinstance(chunk, AIMessageChunk) and chunk.content:
+                    # #176: the rewrite REPLACES the aggregated answer — render it as its
+                    # own labeled message so the dev UI shows draft and correction apart.
+                    idx = find_msg_idx(response_messages, "self_check")
+                    if idx is None:
+                        response_messages.append(make_message(
+                            chunk.content, title="🔍 자가검사 재작성 (최종 답변)", node="self_check"))
+                    else:
+                        response_messages[idx]["content"] += chunk.content
 
                 elif hasattr(chunk, "tool_calls") and chunk.tool_calls:
                     self._handle_tool_call(chunk, response_messages, active_tool_calls)
@@ -143,8 +160,21 @@ class ChatInterface:
 
                 elif isinstance(chunk, AIMessageChunk) and chunk.content and node not in SILENT_NODES:
                     self._handle_llm_token(chunk, node, response_messages)
+                    if node == "aggregate_answers":
+                        answer_streamed = True
 
                 yield response_messages
+
+            # Answer adopted without an LLM call (#177 clean-synthesis bypass) emits no
+            # chunks — read it from the completed graph state so the UI still shows it.
+            if not answer_streamed:
+                final_state = self.rag_system.agent_graph.get_state(config)
+                if not final_state.next:
+                    for msg in reversed(final_state.values.get("messages", [])):
+                        if isinstance(msg, AIMessage) and msg.content:
+                            response_messages.append(str(msg.content))
+                            yield response_messages
+                            break
 
         except Exception as e:
             yield f"❌ Error: {str(e)}"
