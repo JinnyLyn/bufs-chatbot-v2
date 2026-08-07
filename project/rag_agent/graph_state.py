@@ -31,3 +31,6 @@ class AgentState(MessagesState):
     agent_answers: List[dict] = []
     tool_call_count: Annotated[int, operator.add] = 0
     iteration_count: Annotated[int, operator.add] = 0
+    # #89: monotonic timestamp of the subgraph's first orchestrator turn — the reference
+    # point for the TOOL_CALL_SOFT_TIMEOUT_S elapsed check. 0.0 = not armed (lever off).
+    loop_started_at: float = 0.0

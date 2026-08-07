@@ -286,6 +286,17 @@ PARENT_EXPANSION_MAX_CHARS = int(os.environ.get("PARENT_EXPANSION_MAX_CHARS", "9
 # without a code change. Defaults are the original repo values.
 MAX_TOOL_CALLS = int(os.environ.get("MAX_TOOL_CALLS", "8"))
 MAX_ITERATIONS = int(os.environ.get("MAX_ITERATIONS", "10"))
+# Latency guardrail (#89 option B): elapsed-time soft cap checked inside search_child_chunks.
+# When > 0 and the agent subgraph has been running longer than this many seconds, further
+# searches are refused with a SEARCH_BUDGET_EXCEEDED marker telling the orchestrator to answer
+# from the context it already collected — cutting the 190s tail measured at cap8 without
+# lowering MAX_TOOL_CALLS (quality tradeoff of option A). Orthogonal backstop: MAX_TOOL_CALLS/
+# MAX_ITERATIONS still bound the loop if the model ignores the marker, but every post-budget
+# search returns instantly, so the tail cost collapses either way.
+# 0 = disabled (DEFAULT — A/B per #162 before enabling; the issue proposes 90 as the live value).
+TOOL_CALL_SOFT_TIMEOUT_S = float(os.environ.get("TOOL_CALL_SOFT_TIMEOUT_S", "0"))
+if TOOL_CALL_SOFT_TIMEOUT_S < 0:
+    raise ValueError(f"TOOL_CALL_SOFT_TIMEOUT_S must be >= 0, got {TOOL_CALL_SOFT_TIMEOUT_S}")
 GRAPH_RECURSION_LIMIT = 50
 # Context size (tokens) above which the agent runs the expensive compress_context node.
 # At the default 2000 a single 6000-char parent crosses it, so compression fires after
