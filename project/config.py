@@ -271,8 +271,10 @@ if CLEAN_SYNTHESIS_MODE not in ("refusal_only", "always"):
 # The naive simulation (parents REPLACING children) went net +4 (8 recovered − 4 regressed on
 # needle-in-haystack dilution), so this implements the comment's improved design: KEEP the child
 # snippets and APPEND the parent originals (merge, not replace), deduped in first-seen order.
-# Expansion happens only in the synthesis/fallback context assembly — the agent loop, its token
-# budget, and the compression path are untouched. DEFAULT OFF — A/B toggle.
+# Expansion happens only in the synthesis/fallback context assembly — the agent loop and its
+# token budget are untouched. compress_context additionally harvests observed parent ids into
+# state (#177 P2, state-only — its LLM input is unchanged) so expansion still works after
+# compression. DEFAULT OFF — A/B toggle.
 PARENT_EXPANSION_ENABLED = os.environ.get("PARENT_EXPANSION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Caps matching the #126 simulation arms (상한 3개 / 9000자). NOTE: with the default
 # LLM_NUM_CTX=8192 a full 9000-char expansion can push the synthesis prompt past the context
