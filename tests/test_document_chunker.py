@@ -368,3 +368,66 @@ class TestKbExcludeSources:
             """)
         parents, children = chunker.create_chunks_single(md)
         assert len(parents) >= 1 and len(children) >= 1
+
+
+# ---------------------------------------------------------------------------
+# #130 — content-free child guard + <!-- image --> artifact strip (PR #174 후속)
+# ---------------------------------------------------------------------------
+
+class TestContentFreeChildGuard:
+    def test_punctuation_only_children_are_dropped(self, tmp_path):
+        """표 분할 파편(본문이 '|' 한 글자 등)은 인덱스에 못 들어간다.
+
+        공백 없는 초장폭 행은 splitter가 '|' 단독 child를 실제로 만들어내는
+        재현 케이스다(#174의 48건과 동형) — 가드 없인 이 테스트가 실패한다.
+        """
+        from document_chunker import _RETRIEVABLE_CHAR_RE
+        wide_row = "| " + "가" * 600 + " | " + "나" * 600 + " |"
+        content = "# 졸업요건\n\n| 구분 | 학점 |\n|---|---|\n" + wide_row + "\n"
+        md = _write_md(tmp_path, "guard.md", content)
+        _, children = _make_chunker().create_chunks_single(md)
+        assert children, "정상 청크는 살아남아야 한다"
+        for c in children:
+            assert _RETRIEVABLE_CHAR_RE.search(c.page_content), (
+                f"content-free child leaked: {c.page_content!r}")
+
+    def test_hanja_and_symbol_numerals_survive(self, tmp_path):
+        """한자·원문자·로마숫자만 있는 청크는 content-free가 아니다."""
+        from document_chunker import _RETRIEVABLE_CHAR_RE
+        for text in ("大學", "①②③", "Ⅰ Ⅱ Ⅲ"):
+            assert _RETRIEVABLE_CHAR_RE.search(text), text
+
+    def test_parent_keeps_full_text(self, tmp_path):
+        """가드는 child 인덱스만 거른다 — parent 원문(표 구분선 포함)은 그대로."""
+        content = "# 섹션\n\n본문입니다.\n\n|---|---|\n"
+        md = _write_md(tmp_path, "parent_keep.md", content)
+        parents, _ = _make_chunker().create_chunks_single(md)
+        assert any("|---|---|" in p.page_content for _, p in parents)
+
+
+class TestImageCommentStripping:
+    def test_strip_function_removes_image_comment_line(self):
+        from document_chunker import strip_conversion_artifacts
+        text = "앞 문단.\n<!-- image -->\n뒤 문단."
+        out = strip_conversion_artifacts(text)
+        assert "<!--" not in out
+        assert "앞 문단." in out and "뒤 문단." in out
+
+    def test_strip_function_removes_inline_image_comment(self):
+        from document_chunker import strip_conversion_artifacts
+        out = strip_conversion_artifacts("역량지수표 <!-- image --> 참조")
+        assert out == "역량지수표 참조"
+
+    def test_other_html_comments_preserved(self):
+        from document_chunker import strip_conversion_artifacts
+        text = "<!-- note: 사람이 남긴 주석 -->\n본문"
+        assert "<!-- note:" in strip_conversion_artifacts(text)
+
+    def test_image_comment_absent_from_generated_chunks(self, tmp_path):
+        content = "# 비교과 역량지수\n\n<!-- image -->\n\n역량지수는 졸업요건이다. " + "내용 " * 50
+        md = _write_md(tmp_path, "img.md", content)
+        parents, children = _make_chunker().create_chunks_single(md)
+        for _, p in parents:
+            assert "<!-- image -->" not in p.page_content
+        for c in children:
+            assert "<!-- image -->" not in c.page_content
