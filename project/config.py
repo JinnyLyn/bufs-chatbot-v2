@@ -184,8 +184,9 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
 # source slots split 166 2학기 / 166 1학기 / 63 neutral — HALF the retrieval budget goes to the
 # wrong semester, and three answers quoted 1학기 dates verbatim (ids 3, 17, 32).
 # When ON, rag_agent.semester decides the question's target semester (explicit "N학기" marker,
-# else today's semester) and DEMOTES other-semester chunks below the rest — never deletes them,
-# so evidence that genuinely lives in the other semester's guide is still reachable.
+# else today's semester) and DEMOTES other-semester chunks below the rest — never deletes
+# those that clear SEARCH_SCORE_THRESHOLD, so evidence that genuinely lives in the other
+# semester's guide is still reachable (below-threshold ones are excluded either way; #178).
 # DEFAULT OFF — A/B toggle.
 SEMESTER_FILTER_ENABLED = os.environ.get("SEMESTER_FILTER_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Demotion only helps if the pool is deeper than `limit` — otherwise there is nothing to

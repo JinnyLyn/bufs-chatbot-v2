@@ -57,6 +57,38 @@ def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_
     return docs
 
 
+def _apply_semester_scope_scored(scored_docs: list, question: str, limit: int) -> list:
+    """Threshold-aware variant of _apply_semester_scope for the rerank-OFF paths (#178).
+
+    ``scored_docs`` is ``[(doc, score)]`` fetched at score_threshold=0.0 so demotion has
+    a real pool to work with; SEARCH_SCORE_THRESHOLD is enforced at selection time inside
+    ``select_semester_scoped`` instead of at fetch time.
+    """
+    import datetime as _dt
+
+    from rag_agent import semester as _sem
+
+    try:
+        today = _dt.date.fromisoformat(config.SEMESTER_TODAY) if config.SEMESTER_TODAY else None
+        target = _sem.target_semester(question, today)
+        selected = _sem.select_semester_scoped(
+            scored_docs, target, limit, config.SEARCH_SCORE_THRESHOLD)
+        logger.debug("semester scope(scored): target=%d pool=%d -> limit=%d",
+                     target, len(scored_docs), limit)
+        return selected
+    except Exception:
+        # Same never-raise contract as _apply_semester_scope: fall back to what the
+        # un-scoped path would have returned (threshold at fetch, top-limit). The
+        # fallback itself unpacks scored_docs again, so it gets its own guard — a
+        # malformed pool must degrade to NO_RELEVANT_CHUNKS, not RETRIEVAL_ERROR.
+        logger.exception("semester scoping failed; falling back to thresholded top-%d", limit)
+        try:
+            return [d for d, s in scored_docs if s >= config.SEARCH_SCORE_THRESHOLD][:limit]
+        except Exception:
+            logger.exception("thresholded fallback failed on malformed pool")
+            return []
+
+
 def _apply_semester_scope(docs: list, question: str, limit: int) -> list:
     """Demote wrong-semester chunks, then cut to `limit`. Never raises into the search path.
 
@@ -171,15 +203,29 @@ class ToolFactory:
                     )
                 results = reranker.rerank(original, pool, fetch_k,
                                           rrf_scores=rrf_scores, blend_alpha=config.RERANK_BLEND_ALPHA)
+                if config.SEMESTER_FILTER_ENABLED:
+                    results = _apply_semester_scope(results, original, limit)
+            elif config.SEMESTER_FILTER_ENABLED:
+                # #178: fetching at SEARCH_SCORE_THRESHOLD pre-cuts the pool to a
+                # handful of docs, so the deep fetch_k never materializes and demotion
+                # has nothing to promote. Follow the rerank path's precedent: fetch
+                # deep at threshold 0.0 WITH scores, and enforce the threshold at
+                # final selection instead (see select_semester_scoped).
+                if config.SPLIT_PATH_ENABLED:
+                    pts, docs = _split_hybrid_search_raw(
+                        self.collection, dense_query=query, sparse_query=original,
+                        k=fetch_k, score_threshold=0.0)
+                    scored = list(zip(docs, (p.score for p in pts), strict=True))
+                else:
+                    scored = self.collection.similarity_search_with_score(
+                        query, k=fetch_k, score_threshold=0.0)
+                results = _apply_semester_scope_scored(scored, original, limit)
             elif config.SPLIT_PATH_ENABLED:
                 results = _split_hybrid_search(
                     self.collection, dense_query=query, sparse_query=original,
-                    k=fetch_k, score_threshold=config.SEARCH_SCORE_THRESHOLD)
+                    k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)
             else:
-                results = self.collection.similarity_search(query, k=fetch_k, score_threshold=config.SEARCH_SCORE_THRESHOLD)
-
-            if config.SEMESTER_FILTER_ENABLED:
-                results = _apply_semester_scope(results, original, limit)
+                results = self.collection.similarity_search(query, k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)
 
             if not results:
                 return "NO_RELEVANT_CHUNKS"

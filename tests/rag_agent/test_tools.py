@@ -200,3 +200,105 @@ class TestBudgetHelperAndParentGate:
                                   "state": {"loop_started_at": _time.monotonic() - 120}})
         assert result.startswith("SEARCH_BUDGET_EXCEEDED")
         assert retrieve.invoke({"parent_id": "p0", "state": {}}).find("부모 내용") >= 0
+
+
+# ---------------------------------------------------------------------------
+# semester lever wiring (#178) — rerank-OFF paths fetch deep at 0.0 with scores
+# ---------------------------------------------------------------------------
+
+class TestSemesterLeverWiring:
+    def _make_doc(self, source, parent_id="p0"):
+        doc = MagicMock()
+        doc.page_content = "content"
+        doc.metadata = {"parent_id": parent_id, "source": source}
+        return doc
+
+    def test_lever_on_plain_path_fetches_deep_at_zero_threshold(
+            self, tmp_path, env_isolated, monkeypatch):
+        monkeypatch.setenv("SEMESTER_FILTER_ENABLED", "true")
+        monkeypatch.setenv("SEMESTER_TODAY", "2026-08-03")  # 2학기
+        col = MagicMock()
+        col.similarity_search_with_score.return_value = [
+            (self._make_doc("2026학년도2학기학사안내.md", "s2a"), 0.5),
+            (self._make_doc("2026학년도1학기학사안내.pdf", "s1a"), 0.45),
+            (self._make_doc("2026학년도2학기학사안내.md", "s2b"), 0.25),  # threshold 미달
+        ]
+        factory = _make_tool_factory(tmp_path, col)
+        search = next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+        result = search.invoke({"query": "2학기 개강일", "limit": 2})
+
+        col.similarity_search_with_score.assert_called_once_with(
+            "2학기 개강일", k=6, score_threshold=0.0)  # limit 2 × POOL_FACTOR 3
+        col.similarity_search.assert_not_called()
+        # 강등 1건(s1a)이 비운 슬롯을 threshold 미달 같은-학기(s2b)가 채운다
+        assert "s2a" in result and "s2b" in result and "s1a" not in result
+
+    def test_lever_on_returns_no_relevant_chunks_for_offtopic(
+            self, tmp_path, env_isolated, monkeypatch):
+        """강등 0건이면 승격도 0건 — 거부 라우팅용 NO_RELEVANT_CHUNKS 보존 (#178)."""
+        monkeypatch.setenv("SEMESTER_FILTER_ENABLED", "true")
+        monkeypatch.setenv("SEMESTER_TODAY", "2026-08-03")
+        col = MagicMock()
+        col.similarity_search_with_score.return_value = [
+            (self._make_doc("2026학년도2학기학사안내.md"), 0.15),
+            (self._make_doc("공인결석 신청 매뉴얼.pdf"), 0.10),
+        ]
+        factory = _make_tool_factory(tmp_path, col)
+        search = next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+        assert search.invoke({"query": "오늘 점심 메뉴", "limit": 5}) == "NO_RELEVANT_CHUNKS"
+
+    def test_lever_on_split_path_uses_raw_search_with_scores(
+            self, tmp_path, env_isolated, monkeypatch):
+        monkeypatch.setenv("SEMESTER_FILTER_ENABLED", "true")
+        monkeypatch.setenv("SPLIT_PATH_ENABLED", "true")
+        monkeypatch.setenv("SEMESTER_TODAY", "2026-08-03")
+        factory = _make_tool_factory(tmp_path, MagicMock())
+        import rag_agent.tools as tools_mod
+        raw = MagicMock(return_value=(
+            [MagicMock(score=0.5)], [self._make_doc("2026학년도2학기학사안내.md", "s2a")]))
+        monkeypatch.setattr(tools_mod, "_split_hybrid_search_raw", raw)
+        search = next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+        result = search.invoke({"query": "2학기 개강일", "limit": 5})
+
+        assert raw.call_args.kwargs["k"] == 15  # limit 5 × POOL_FACTOR 3
+        assert raw.call_args.kwargs["score_threshold"] == 0.0
+        assert "s2a" in result
+
+    def test_lever_off_plain_path_is_unchanged(self, tmp_path, env_isolated):
+        docs = [self._make_doc("2026학년도1학기학사안내.pdf")]
+        col = _make_fake_collection(docs)
+        factory = _make_tool_factory(tmp_path, col)
+        search = next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+        search.invoke({"query": "개강일", "limit": 5})
+
+        col.similarity_search.assert_called_once_with("개강일", k=5, score_threshold=0.3)
+        col.similarity_search_with_score.assert_not_called()
+
+    def test_lever_off_split_path_fetches_at_limit(self, tmp_path, env_isolated, monkeypatch):
+        monkeypatch.setenv("SPLIT_PATH_ENABLED", "true")
+        factory = _make_tool_factory(tmp_path, MagicMock())
+        import rag_agent.tools as tools_mod
+        split = MagicMock(return_value=[self._make_doc("glossary.md")])
+        monkeypatch.setattr(tools_mod, "_split_hybrid_search", split)
+        search = next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+        search.invoke({"query": "개강일", "limit": 5})
+
+        assert split.call_args.kwargs["k"] == 5
+        assert split.call_args.kwargs["score_threshold"] == 0.3
+
+    def test_lever_on_scoping_failure_falls_back_to_thresholded_topk(
+            self, tmp_path, env_isolated, monkeypatch):
+        monkeypatch.setenv("SEMESTER_FILTER_ENABLED", "true")
+        monkeypatch.setenv("SEMESTER_TODAY", "2026-08-03")
+        col = MagicMock()
+        col.similarity_search_with_score.return_value = [
+            (self._make_doc("2026학년도2학기학사안내.md", "keep"), 0.5),
+            (self._make_doc("2026학년도2학기학사안내.md", "cut"), 0.1),
+        ]
+        factory = _make_tool_factory(tmp_path, col)
+        search = next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+        from rag_agent import semester as sem_mod
+        monkeypatch.setattr(sem_mod, "target_semester",
+                            MagicMock(side_effect=RuntimeError("boom")))
+        result = search.invoke({"query": "개강일", "limit": 5})
+        assert "keep" in result and "cut" not in result

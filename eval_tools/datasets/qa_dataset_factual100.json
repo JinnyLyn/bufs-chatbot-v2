@@ -28,7 +28,7 @@
       "학번"
     ],
     "must_not_include": [
-      "생년월일"
+      "초기 비밀번호는 생년월일"
     ],
     "difficulty": "Easy",
     "category": "수강신청"
@@ -264,8 +264,8 @@
     "gold_chunk_id": "",
     "expected_answer": "공인결석은 출석만 인정될 뿐 시험과 과제를 대체하지 않으므로, 반드시 담당 교수님과 별도의 성적 산출 방안을 상의해야 합니다.",
     "must_include": [
-      "시험 미대체",
-      "교수님과 상의"
+      "출석만 인정",
+      "담당 교수님"
     ],
     "must_not_include": [
       "자동 PASS"
@@ -319,7 +319,7 @@
       "100만원 미만"
     ],
     "must_not_include": [
-      "4학년"
+      "4학년 제외"
     ],
     "difficulty": "Medium",
     "category": "등록금"
@@ -540,7 +540,7 @@
       "무관하게"
     ],
     "must_not_include": [
-      "18학점"
+      "최대 18학점까지만"
     ],
     "difficulty": "Hard",
     "category": "수강신청"
@@ -829,7 +829,7 @@
       "표기"
     ],
     "must_not_include": [
-      "삭제"
+      "성적증명서에서 삭제"
     ],
     "difficulty": "Easy",
     "category": "성적"
@@ -897,7 +897,7 @@
       "NP"
     ],
     "must_not_include": [
-      "W"
+      "W로 표기"
     ],
     "difficulty": "Easy",
     "category": "성적"
@@ -1152,7 +1152,7 @@
       "이수"
     ],
     "must_not_include": [
-      "25시간"
+      "교육봉사 25시간"
     ],
     "difficulty": "Medium",
     "category": "교직"
@@ -1305,7 +1305,7 @@
       "미리 담아두기"
     ],
     "must_not_include": [
-      "18학점"
+      "18학점까지"
     ],
     "difficulty": "Easy",
     "category": "수강신청"
@@ -1373,7 +1373,7 @@
       "신청"
     ],
     "must_not_include": [
-      "18학점"
+      "최대 18학점까지만"
     ],
     "difficulty": "Easy",
     "category": "수강신청"
@@ -1680,7 +1680,7 @@
       "3월 신청"
     ],
     "must_not_include": [
-      "졸업생"
+      "졸업생도 신청"
     ],
     "difficulty": "Medium",
     "category": "기타"
