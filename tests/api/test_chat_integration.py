@@ -152,3 +152,34 @@ class TestChatRouterLive:
         )
         assert resp.status_code == 200
         assert len(resp.text) > 0
+
+
+# ---------------------------------------------------------------------------
+# #177 P1 — answers adopted without an LLM call must still reach the client
+# ---------------------------------------------------------------------------
+
+class TestFinalAnswerFromState:
+    def _state(self, next_=(), messages=None):
+        from langchain_core.messages import AIMessage, HumanMessage
+        st = MagicMock()
+        st.next = tuple(next_)
+        st.values = {"messages": messages if messages is not None else [
+            HumanMessage(content="질문"),
+            AIMessage(content="클린 답변"),
+        ]}
+        return st
+
+    def test_completed_run_surfaces_last_ai_message(self):
+        from api.agent_stream import _final_answer_from_state
+        assert _final_answer_from_state(self._state()) == "클린 답변"
+
+    def test_pending_run_returns_none(self):
+        """state.next 비어있지 않으면 clarification 경로의 소관 — 여기선 손대지 않는다."""
+        from api.agent_stream import _final_answer_from_state
+        assert _final_answer_from_state(self._state(next_=("clarification",))) is None
+
+    def test_no_ai_message_returns_none(self):
+        from langchain_core.messages import HumanMessage
+        from api.agent_stream import _final_answer_from_state
+        st = self._state(messages=[HumanMessage(content="질문")])
+        assert _final_answer_from_state(st) is None

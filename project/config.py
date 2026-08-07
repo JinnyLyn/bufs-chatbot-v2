@@ -184,8 +184,9 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
 # source slots split 166 2학기 / 166 1학기 / 63 neutral — HALF the retrieval budget goes to the
 # wrong semester, and three answers quoted 1학기 dates verbatim (ids 3, 17, 32).
 # When ON, rag_agent.semester decides the question's target semester (explicit "N학기" marker,
-# else today's semester) and DEMOTES other-semester chunks below the rest — never deletes them,
-# so evidence that genuinely lives in the other semester's guide is still reachable.
+# else today's semester) and DEMOTES other-semester chunks below the rest — never deletes
+# those that clear SEARCH_SCORE_THRESHOLD, so evidence that genuinely lives in the other
+# semester's guide is still reachable (below-threshold ones are excluded either way; #178).
 # DEFAULT OFF — A/B toggle.
 SEMESTER_FILTER_ENABLED = os.environ.get("SEMESTER_FILTER_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Demotion only helps if the pool is deeper than `limit` — otherwise there is nothing to
@@ -270,8 +271,10 @@ if CLEAN_SYNTHESIS_MODE not in ("refusal_only", "always"):
 # The naive simulation (parents REPLACING children) went net +4 (8 recovered − 4 regressed on
 # needle-in-haystack dilution), so this implements the comment's improved design: KEEP the child
 # snippets and APPEND the parent originals (merge, not replace), deduped in first-seen order.
-# Expansion happens only in the synthesis/fallback context assembly — the agent loop, its token
-# budget, and the compression path are untouched. DEFAULT OFF — A/B toggle.
+# Expansion happens only in the synthesis/fallback context assembly — the agent loop and its
+# token budget are untouched. compress_context additionally harvests observed parent ids into
+# state (#177 P2, state-only — its LLM input is unchanged) so expansion still works after
+# compression. DEFAULT OFF — A/B toggle.
 PARENT_EXPANSION_ENABLED = os.environ.get("PARENT_EXPANSION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Caps matching the #126 simulation arms (상한 3개 / 9000자). NOTE: with the default
 # LLM_NUM_CTX=8192 a full 9000-char expansion can push the synthesis prompt past the context
@@ -300,6 +303,17 @@ SELF_CHECK_ENABLED = os.environ.get("SELF_CHECK_ENABLED", "false").lower() in ("
 # without a code change. Defaults are the original repo values.
 MAX_TOOL_CALLS = int(os.environ.get("MAX_TOOL_CALLS", "8"))
 MAX_ITERATIONS = int(os.environ.get("MAX_ITERATIONS", "10"))
+# Latency guardrail (#89 option B): elapsed-time soft cap checked inside search_child_chunks.
+# When > 0 and the agent subgraph has been running longer than this many seconds, further
+# searches are refused with a SEARCH_BUDGET_EXCEEDED marker telling the orchestrator to answer
+# from the context it already collected — cutting the 190s tail measured at cap8 without
+# lowering MAX_TOOL_CALLS (quality tradeoff of option A). Orthogonal backstop: MAX_TOOL_CALLS/
+# MAX_ITERATIONS still bound the loop if the model ignores the marker, but every post-budget
+# search returns instantly, so the tail cost collapses either way.
+# 0 = disabled (DEFAULT — A/B per #162 before enabling; the issue proposes 90 as the live value).
+TOOL_CALL_SOFT_TIMEOUT_S = float(os.environ.get("TOOL_CALL_SOFT_TIMEOUT_S", "0"))
+if TOOL_CALL_SOFT_TIMEOUT_S < 0:
+    raise ValueError(f"TOOL_CALL_SOFT_TIMEOUT_S must be >= 0, got {TOOL_CALL_SOFT_TIMEOUT_S}")
 GRAPH_RECURSION_LIMIT = 50
 # Context size (tokens) above which the agent runs the expensive compress_context node.
 # At the default 2000 a single 6000-char parent crosses it, so compression fires after

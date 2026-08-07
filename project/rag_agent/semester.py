@@ -17,7 +17,10 @@ Design decisions, each driven by a case that would otherwise regress:
 1. **Demote, never delete.** Non-matching-semester chunks are pushed to the end of the
    candidate list rather than dropped. With a deep enough pool the wrong semester falls
    out of the top-k naturally, but a question whose evidence genuinely lives in the other
-   semester's guide still finds it instead of hitting NO_RELEVANT_CHUNKS.
+   semester's guide still finds it instead of hitting NO_RELEVANT_CHUNKS. (Qualified by
+   #178: this holds for chunks clearing SEARCH_SCORE_THRESHOLD — wrong-semester chunks
+   below it are excluded, as they already were by the old fetch-time cut. See
+   ``select_semester_scoped``.)
 
 2. **Semester-neutral documents always rank with the match.** 공인결석 매뉴얼, 등록금 안내,
    모바일 학생증 안내 … carry no semester and answer 63 of the measured source slots.
@@ -105,6 +108,41 @@ def source_semester(source: str) -> Optional[int]:
         return None
     m = _SEM_IN_SOURCE.search(source) or _SEM_IN_SOURCE_DASH.search(source)
     return int(m.group(1)) if m else None
+
+
+def select_semester_scoped(scored_docs: list, target: int, limit: int,
+                           score_threshold: float) -> list:
+    """Final selection over a deep pool fetched WITHOUT a score cutoff (#178).
+
+    Applying the score threshold at fetch time shrank the pool to a handful of docs,
+    so demotion had nothing left to promote. Here the threshold instead becomes part
+    of the selection, preserving its original contract (exclude low-quality noise):
+
+    - target/neutral docs that clear the threshold are kept, in retriever order;
+    - wrong-semester docs must clear the threshold too, and only ever backfill
+      (below-threshold wrong-semester docs never entered the pool on the old
+      fetch-time cut either, so dropping them is not a behavior change);
+    - a *sub-threshold* target/neutral doc is admitted only to stand in for a
+      demoted wrong-semester doc — one admission per demotion. With no demotion
+      there is no vacancy, so an off-topic question where nothing clears the
+      threshold still returns [] and the NO_RELEVANT_CHUNKS → refusal routing
+      (edges.py) keeps working exactly as it does with the lever OFF.
+
+    ``scored_docs`` is a ranked list of ``(doc, score)`` pairs.
+    """
+    keep, demote, standby = [], [], []
+    for doc, score in scored_docs:
+        src = (getattr(doc, "metadata", None) or {}).get("source", "")
+        sem = source_semester(src)
+        if sem is not None and sem != target:
+            if score >= score_threshold:
+                demote.append(doc)
+        elif score >= score_threshold:
+            keep.append(doc)
+        else:
+            standby.append(doc)
+    keep += standby[:len(demote)]
+    return (keep + demote)[:limit]
 
 
 def demote_other_semesters(docs: list, target: int) -> list:

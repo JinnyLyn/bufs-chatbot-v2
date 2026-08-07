@@ -65,8 +65,11 @@ def _extract_clarification(state) -> str | None:
 
 
 def _final_answer_from_state(state) -> str | None:
-    """On a COMPLETED run the last outer AIMessage is the graph's final answer — the
-    source of truth when the token stream and state can disagree (#176 rewrite paths)."""
+    """Answer adopted without an LLM call (e.g. the #177 clean-synthesis bypass, or
+    aggregate's no-answers message) emits no AIMessageChunk, so the token loop collects
+    nothing. On a COMPLETED run the last outer AIMessage is the graph's final answer —
+    the source of truth when the token stream and state can disagree (#176 rewrite
+    paths, #177 bypass)."""
     if state.next:
         return None
     for msg in reversed(state.values.get("messages", [])):
@@ -120,6 +123,10 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
             last_ts = now
 
             if isinstance(chunk, ToolMessage):
+                # #89: a budget-refused call is not an executed search — counting it would
+                # distort the tool_calls metric exactly in the runs the lever fires on.
+                if str(chunk.content or "").startswith("SEARCH_BUDGET_EXCEEDED"):
+                    continue
                 tool_call_count += 1
                 if chunk.content:
                     tool_contents.append(str(chunk.content))
@@ -157,9 +164,13 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
                 yield ("clear", None)
                 yield ("token", answer)
 
-        # No aggregated answer means the graph interrupted to ask for clarification.
+        # No streamed answer: either the graph interrupted to ask for clarification,
+        # or the final answer was adopted without an LLM call and never hit the
+        # token stream (#177 bypass) — read it from the final state before giving up.
         if not answer:
-            answer = _extract_clarification(final_state) or _FALLBACK_KO
+            answer = (_extract_clarification(final_state)
+                      or _final_answer_from_state(final_state)
+                      or _FALLBACK_KO)
             yield ("token", answer)
 
         # Language fallback: if a Korean question still receives a mostly non-Korean

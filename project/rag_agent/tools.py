@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Annotated, List
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
@@ -56,6 +57,38 @@ def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_
     return docs
 
 
+def _apply_semester_scope_scored(scored_docs: list, question: str, limit: int) -> list:
+    """Threshold-aware variant of _apply_semester_scope for the rerank-OFF paths (#178).
+
+    ``scored_docs`` is ``[(doc, score)]`` fetched at score_threshold=0.0 so demotion has
+    a real pool to work with; SEARCH_SCORE_THRESHOLD is enforced at selection time inside
+    ``select_semester_scoped`` instead of at fetch time.
+    """
+    import datetime as _dt
+
+    from rag_agent import semester as _sem
+
+    try:
+        today = _dt.date.fromisoformat(config.SEMESTER_TODAY) if config.SEMESTER_TODAY else None
+        target = _sem.target_semester(question, today)
+        selected = _sem.select_semester_scoped(
+            scored_docs, target, limit, config.SEARCH_SCORE_THRESHOLD)
+        logger.debug("semester scope(scored): target=%d pool=%d -> limit=%d",
+                     target, len(scored_docs), limit)
+        return selected
+    except Exception:
+        # Same never-raise contract as _apply_semester_scope: fall back to what the
+        # un-scoped path would have returned (threshold at fetch, top-limit). The
+        # fallback itself unpacks scored_docs again, so it gets its own guard — a
+        # malformed pool must degrade to NO_RELEVANT_CHUNKS, not RETRIEVAL_ERROR.
+        logger.exception("semester scoping failed; falling back to thresholded top-%d", limit)
+        try:
+            return [d for d, s in scored_docs if s >= config.SEARCH_SCORE_THRESHOLD][:limit]
+        except Exception:
+            logger.exception("thresholded fallback failed on malformed pool")
+            return []
+
+
 def _apply_semester_scope(docs: list, question: str, limit: int) -> list:
     """Demote wrong-semester chunks, then cut to `limit`. Never raises into the search path.
 
@@ -79,6 +112,31 @@ def _apply_semester_scope(docs: list, question: str, limit: int) -> list:
         return docs[:limit]
 
 
+def _budget_exceeded(state: dict) -> bool:
+    """#89 elapsed-budget check shared by both retrieval tools. Never raises.
+
+    loop_started_at is a time.monotonic() reference armed by the orchestrator's first
+    turn (in-process InMemorySaver — monotonic is valid across the fan-out threads).
+    A negative elapsed means the reference came from another boot/process (a durable-
+    checkpointer future); fail OPEN with a warning rather than refusing every search.
+    """
+    if config.TOOL_CALL_SOFT_TIMEOUT_S <= 0:
+        return False
+    started = (state or {}).get("loop_started_at") or 0.0
+    if not started:
+        return False
+    elapsed = time.monotonic() - started
+    if elapsed < 0:
+        logger.warning("loop_started_at is from another clock domain (elapsed=%.1fs) — "
+                       "budget check disabled for this call", elapsed)
+        return False
+    if elapsed > config.TOOL_CALL_SOFT_TIMEOUT_S:
+        logger.info("search budget exceeded (%.1fs > %.0fs) — refusing retrieval",
+                    elapsed, config.TOOL_CALL_SOFT_TIMEOUT_S)
+        return True
+    return False
+
+
 class ToolFactory:
 
     def __init__(self, collection):
@@ -94,6 +152,17 @@ class ToolFactory:
             limit: Maximum number of results to return
         """
         try:
+            # Latency guardrail (#89): past the elapsed budget, refuse further searches —
+            # the marker tells the orchestrator to answer from what it already collected.
+            # Defense-in-depth behind the edges-level cut (route_after_orchestrator_call
+            # forces fallback_response on the next tool request): this fires when the
+            # budget crosses mid-ToolNode batch. The marker is never evidence
+            # (edges._has_tool_evidence), never a source (api/sources), and never enters
+            # the synthesis/compression prompts (nodes.py filters).
+            if _budget_exceeded(state):
+                return ("SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다. "
+                        "추가 검색 없이 현재까지 수집된 컨텍스트로 답하세요.")
+
             # Split-path retrieval (issue #66): route the user's ORIGINAL question to the
             # surface-sensitive sparse leg and the agent's query to the dense leg. The agent
             # subgraph's AgentState carries the original (pre-agent-paraphrase) question as
@@ -134,15 +203,29 @@ class ToolFactory:
                     )
                 results = reranker.rerank(original, pool, fetch_k,
                                           rrf_scores=rrf_scores, blend_alpha=config.RERANK_BLEND_ALPHA)
+                if config.SEMESTER_FILTER_ENABLED:
+                    results = _apply_semester_scope(results, original, limit)
+            elif config.SEMESTER_FILTER_ENABLED:
+                # #178: fetching at SEARCH_SCORE_THRESHOLD pre-cuts the pool to a
+                # handful of docs, so the deep fetch_k never materializes and demotion
+                # has nothing to promote. Follow the rerank path's precedent: fetch
+                # deep at threshold 0.0 WITH scores, and enforce the threshold at
+                # final selection instead (see select_semester_scoped).
+                if config.SPLIT_PATH_ENABLED:
+                    pts, docs = _split_hybrid_search_raw(
+                        self.collection, dense_query=query, sparse_query=original,
+                        k=fetch_k, score_threshold=0.0)
+                    scored = list(zip(docs, (p.score for p in pts), strict=True))
+                else:
+                    scored = self.collection.similarity_search_with_score(
+                        query, k=fetch_k, score_threshold=0.0)
+                results = _apply_semester_scope_scored(scored, original, limit)
             elif config.SPLIT_PATH_ENABLED:
                 results = _split_hybrid_search(
                     self.collection, dense_query=query, sparse_query=original,
-                    k=fetch_k, score_threshold=config.SEARCH_SCORE_THRESHOLD)
+                    k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)
             else:
-                results = self.collection.similarity_search(query, k=fetch_k, score_threshold=config.SEARCH_SCORE_THRESHOLD)
-
-            if config.SEMESTER_FILTER_ENABLED:
-                results = _apply_semester_scope(results, original, limit)
+                results = self.collection.similarity_search(query, k=limit, score_threshold=config.SEARCH_SCORE_THRESHOLD)
 
             if not results:
                 return "NO_RELEVANT_CHUNKS"
@@ -188,13 +271,20 @@ class ToolFactory:
             logger.exception("retrieve_many_parent_chunks failed")
             return "PARENT_RETRIEVAL_ERROR: retrieval failed, see server log"
 
-    def _retrieve_parent_chunks(self, parent_id: str) -> str:
+    def _retrieve_parent_chunks(self, parent_id: str,
+                                state: Annotated[dict, InjectedState] = None) -> str:
         """Retrieve full parent chunks by their IDs.
-    
+
         Args:
             parent_id: Parent chunk ID to retrieve
         """
         try:
+            # #89: parent pulls are budget-gated too — post-budget parents inflate the
+            # context and trigger the expensive compress_context node, the exact tail
+            # the lever exists to cut.
+            if _budget_exceeded(state):
+                return ("SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다. "
+                        "추가 검색 없이 현재까지 수집된 컨텍스트로 답하세요.")
             parent = self.parent_store_manager.load_content(parent_id)
             if not parent:
                 return "NO_PARENT_DOCUMENT"

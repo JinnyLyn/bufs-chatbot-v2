@@ -48,7 +48,8 @@ def parse_tool_results(tool_contents: list[str], max_items: int = 10):
 
     for content in tool_contents:
         content = (content or "").strip()
-        if not content or content in _EMPTY_MARKERS or content.startswith(("RETRIEVAL_ERROR", "PARENT_RETRIEVAL_ERROR")):
+        if not content or content in _EMPTY_MARKERS or content.startswith(
+                ("RETRIEVAL_ERROR", "PARENT_RETRIEVAL_ERROR", "SEARCH_BUDGET_EXCEEDED")):
             continue
 
         # Each retrieved chunk starts with "Parent ID:". Split on that boundary.

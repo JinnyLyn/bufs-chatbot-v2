@@ -158,3 +158,64 @@ class TestRouteAfterOrchestratorCall:
         state = self._make_state(tool_calls=None)
         state["messages"][-1].tool_calls = None
         assert edges.route_after_orchestrator_call(state) == "collect_answer"
+
+
+def test_search_budget_marker_is_not_evidence():
+    """#89: SEARCH_BUDGET_EXCEEDED는 검색 중단 지시이지 근거가 아니다."""
+    from langchain_core.messages import ToolMessage
+    from rag_agent import edges
+    state = {"messages": [ToolMessage(
+        content="SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다.", tool_call_id="t0")]}
+    assert edges._has_tool_evidence(state) is False
+
+
+def test_orchestrator_arms_budget_reference_only_when_lever_on(monkeypatch):
+    """#89: 첫 턴에 loop_started_at 장전 — 레버 OFF면 state 불변."""
+    from langchain_core.messages import AIMessage
+    import config as cfg
+    from rag_agent import nodes
+
+    class _LLM:
+        def invoke(self, messages, **kwargs):
+            return AIMessage(content="답")
+
+    monkeypatch.setattr(cfg, "TOOL_CALL_SOFT_TIMEOUT_S", 90.0)
+    on = nodes.orchestrator({"question": "q", "messages": []}, _LLM())
+    assert on.get("loop_started_at", 0) > 0
+
+    monkeypatch.setattr(cfg, "TOOL_CALL_SOFT_TIMEOUT_S", 0.0)
+    off = nodes.orchestrator({"question": "q", "messages": []}, _LLM())
+    assert "loop_started_at" not in off
+
+
+def test_budget_exceeded_routes_tool_request_to_fallback(monkeypatch):
+    """#89: 예산 초과 후의 도구 요청은 fallback_response로 직행 — tail = 합성 1회."""
+    import time as _time
+    from langchain_core.messages import AIMessage
+    import config as cfg
+    from rag_agent import edges
+
+    monkeypatch.setattr(cfg, "TOOL_CALL_SOFT_TIMEOUT_S", 90.0)
+    msg = AIMessage(content="")
+    msg.tool_calls = [{"name": "search_child_chunks", "args": {}, "id": "t1"}]
+    state = {"iteration_count": 2, "tool_call_count": 2, "messages": [msg],
+             "loop_started_at": _time.monotonic() - 120}
+    assert edges.route_after_orchestrator_call(state) == "fallback_response"
+
+    state["loop_started_at"] = _time.monotonic() - 1
+    assert edges.route_after_orchestrator_call(state) == "tools"
+
+
+def test_budget_final_answer_still_adopted_past_budget(monkeypatch):
+    """#161 계약 유지: 예산이 지나도 이미 나온 최종 답변은 폐기되지 않는다."""
+    import time as _time
+    from langchain_core.messages import AIMessage
+    import config as cfg
+    from rag_agent import edges
+
+    monkeypatch.setattr(cfg, "TOOL_CALL_SOFT_TIMEOUT_S", 90.0)
+    monkeypatch.setattr(cfg, "CLEAN_SYNTHESIS_ENABLED", False)
+    state = {"iteration_count": 2, "tool_call_count": 2,
+             "messages": [AIMessage(content="최종 답변")],
+             "loop_started_at": _time.monotonic() - 120}
+    assert edges.route_after_orchestrator_call(state) == "collect_answer"

@@ -163,3 +163,77 @@ def test_doc_without_metadata_is_treated_as_neutral():
     docs = [_Doc("2026학년도1학기학사안내.pdf"), Bare()]
     out = sem.demote_other_semesters(docs, target=2)
     assert isinstance(out[0], Bare)  # neutral outranks the wrong semester
+
+
+# --- select_semester_scoped (#178) -------------------------------------------
+
+SEM1 = "2026학년도1학기학사안내.pdf"
+SEM2 = "2026학년도2학기학사안내.md"
+NEUT = "공인결석 신청 매뉴얼.pdf"
+
+
+def _scored(*pairs):
+    return [(_Doc(src), score) for src, score in pairs]
+
+
+def test_probe_reproduction_deep_pool_promotes_same_semester():
+    """#178 재현 케이스: threshold 선컷이면 pool=[2,2,1,1]에서 승격 불가였던 상황.
+
+    깊은 pool(0.0 fetch)에는 threshold 미달 2학기 후보가 살아 있고, 강등 1건당
+    1건씩 승격되므로 top-5가 같은-학기 우선으로 재구성된다. 강등분(threshold
+    통과 1학기)은 삭제가 아니라 뒤로 밀려 백필된다.
+    """
+    pool = _scored(
+        (SEM2, 0.50), (SEM1, 0.45), (SEM2, 0.40), (SEM1, 0.35),   # ← 기존 pool 전부
+        (SEM2, 0.25), (SEM2, 0.20), (NEUT, 0.15), (SEM2, 0.10),   # ← threshold 미달 잔여
+    )
+    out = sem.select_semester_scoped(pool, target=2, limit=5, score_threshold=0.3)
+    srcs = [d.metadata["source"] for d in out]
+    # 강등 2건 → 승격 2건: [S2 .5, S2 .4, S2 .25, S2 .2] + 백필 [S1 .45]
+    assert srcs == [SEM2, SEM2, SEM2, SEM2, SEM1]
+
+
+def test_no_demotion_means_no_subthreshold_admission():
+    """#178 핵심 가드: 강등 0건이면 threshold 미달 승격도 0건.
+
+    범위 밖 질문(아무것도 threshold를 못 넘는)은 레버 ON에서도 빈 결과 →
+    NO_RELEVANT_CHUNKS → 거부 라우팅(edges.py)이 그대로 동작해야 한다.
+    """
+    pool = _scored((SEM2, 0.25), (NEUT, 0.15), (SEM2, 0.10))
+    assert sem.select_semester_scoped(pool, target=2, limit=5, score_threshold=0.3) == []
+
+
+def test_subthreshold_admissions_capped_by_demotion_count():
+    """승격은 강등 1건당 1건 — 빈 슬롯 없이 저품질 청크가 밀려들지 않는다."""
+    pool = _scored((SEM2, 0.50), (SEM1, 0.45),
+                   (SEM2, 0.25), (SEM2, 0.20), (SEM2, 0.10))
+    out = sem.select_semester_scoped(pool, target=2, limit=5, score_threshold=0.3)
+    srcs = [d.metadata["source"] for d in out]
+    # 강등 1건 → 승격 1건(S2 .25)만. 나머지 미달분은 미채용.
+    assert srcs == [SEM2, SEM2, SEM1]
+
+
+def test_wrong_semester_below_threshold_is_dropped():
+    """다른-학기 + threshold 미달 = 이중 실격 — 백필로도 등장하지 않는다."""
+    pool = _scored((SEM2, 0.50), (SEM1, 0.20), (SEM1, 0.10))
+    out = sem.select_semester_scoped(pool, target=2, limit=5, score_threshold=0.3)
+    assert len(out) == 1
+    assert out[0].metadata["source"] == SEM2
+
+
+def test_wrong_semester_above_threshold_backfills():
+    """강등이지 삭제가 아니다 — keep 그룹이 limit 미만이면 threshold 통과분이 백필."""
+    pool = _scored((SEM2, 0.50), (SEM1, 0.45), (SEM1, 0.40))
+    out = sem.select_semester_scoped(pool, target=2, limit=3, score_threshold=0.3)
+    assert [d.metadata["source"] for d in out] == [SEM2, SEM1, SEM1]
+
+
+def test_selection_preserves_retriever_order_across_groups():
+    pool = _scored((SEM2, 0.50), (NEUT, 0.35), (SEM1, 0.40), (SEM2, 0.25))
+    out = sem.select_semester_scoped(pool, target=2, limit=4, score_threshold=0.3)
+    # keep(threshold 통과, 랭킹 순) → 승격분(강등 1건 → 1건) → 백필
+    assert [d.metadata["source"] for d in out] == [SEM2, NEUT, SEM2, SEM1]
+
+
+def test_selection_empty_pool_is_safe():
+    assert sem.select_semester_scoped([], target=2, limit=5, score_threshold=0.3) == []

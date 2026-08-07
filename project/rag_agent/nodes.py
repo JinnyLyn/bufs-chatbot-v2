@@ -1,6 +1,7 @@
 import logging
 import re
-from typing import List, Literal, Set
+import time
+from typing import List, Literal, Optional, Set
 from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage, AIMessage, ToolMessage
 from langgraph.types import Command
 from .graph_state import State, AgentState
@@ -244,10 +245,17 @@ def orchestrator(state: AgentState, llm_with_tools):
     # applied at aggregate_answers only (see below), which by construction cannot touch
     # retrieval or the agent trajectory.
     if not state.get("messages"):
+        # #89: arm the elapsed-budget reference BEFORE the first LLM turn so that turn's
+        # latency counts against the budget. State-only and gated, so the lever-off path's
+        # state stays byte-identical.
+        started_at = time.monotonic() if config.TOOL_CALL_SOFT_TIMEOUT_S > 0 else None
         human_msg = HumanMessage(content=state["question"])
         force_search = HumanMessage(content=get_force_search_instruction())
         response = llm_with_tools.invoke([sys_msg] + summary_injection + [human_msg, force_search])
-        return {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
+        update = {"messages": [human_msg, response], "tool_call_count": len(response.tool_calls or []), "iteration_count": 1}
+        if started_at is not None:
+            update["loop_started_at"] = started_at
+        return update
 
     response = llm_with_tools.invoke([sys_msg] + summary_injection + state["messages"])
     tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
@@ -259,6 +267,10 @@ def _collect_unique_tool_contents(state: AgentState) -> List[str]:
     unique_contents = []
     for m in state["messages"]:
         if isinstance(m, ToolMessage) and m.content not in seen:
+            # #89: the budget marker is an instruction to the orchestrator, not evidence —
+            # rendering it under "## 검색된 데이터" would leak it into the answer prompt.
+            if str(m.content or "").startswith("SEARCH_BUDGET_EXCEEDED"):
+                continue
             unique_contents.append(m.content)
             seen.add(m.content)
     return unique_contents
@@ -269,23 +281,35 @@ def _collect_unique_tool_contents(state: AgentState) -> List[str]:
 _PARENT_ID_LINE = re.compile(r"(?m)^Parent ID:\s*(.+?)\s*$")
 
 
-def _expand_parent_context(unique_contents: List[str]) -> List[str]:
+def _expand_parent_context(unique_contents: List[str],
+                           prior_ids: Optional[List[str]] = None) -> List[str]:
     """Auto parent expansion (issue #126): load the parent originals for the child chunks
     the agent actually saw.
 
-    Returns formatted parent blocks, deduped by parent_id in first-seen order (매칭:
-    #126 시뮬레이션의 "본 순서 dedup"), capped at PARENT_EXPANSION_MAX_PARENTS /
-    PARENT_EXPANSION_MAX_CHARS. Any failure degrades to fewer (or zero) blocks — the
-    answer path must never die on an expansion error, but every failure is logged
-    with the offending parent_id so it stays traceable.
+    ``prior_ids`` (#177 P2) carries parent ids observed in iterations whose ToolMessages
+    compress_context has since deleted. They rank AFTER the current-iteration ids: the
+    chunks actually present in the prompt keep budget priority (the #126 measured arm),
+    and compressed-away parents only fill whatever the MAX_PARENTS/MAX_CHARS caps have
+    left. Returns formatted parent blocks, deduped by parent_id ("n/a" placeholders
+    skipped), capped at PARENT_EXPANSION_MAX_PARENTS / PARENT_EXPANSION_MAX_CHARS.
+    Any failure degrades to fewer (or zero) blocks — the answer path must never die on
+    an expansion error, but every failure is logged with the offending parent_id so it
+    stays traceable.
     """
     ordered_ids: List[str] = []
     seen_ids = set()
+
+    def _admit(pid: str) -> None:
+        # "n/a" is the tools' placeholder for a parentless block — not a loadable id.
+        if pid and pid != "n/a" and pid not in seen_ids:
+            seen_ids.add(pid)
+            ordered_ids.append(pid)
+
     for content in unique_contents:
-        for pid in _PARENT_ID_LINE.findall(content or ""):
-            if pid and pid not in seen_ids:
-                seen_ids.add(pid)
-                ordered_ids.append(pid)
+        for pid in _PARENT_ID_LINE.findall(str(content or "")):
+            _admit(pid)
+    for pid in prior_ids or []:
+        _admit(pid)
 
     if not ordered_ids:
         return []
@@ -344,12 +368,17 @@ def _build_synthesis_prompt_content(state: AgentState) -> str:
             "\n\n".join(f"--- 데이터 출처 {i} ---\n{content}" for i, content in enumerate(unique_contents, 1))
         )
 
-    if config.PARENT_EXPANSION_ENABLED and unique_contents:
-        parent_blocks = _expand_parent_context(unique_contents)
-        if parent_blocks:
-            context_parts.append(
-                "## 원문 맥락 (검색된 조각의 상위 문단 전체)\n\n" + "\n\n".join(parent_blocks)
-            )
+    if config.PARENT_EXPANSION_ENABLED:
+        # #177 P2: after compress_context the current-iteration ToolMessages may be empty
+        # or missing earlier evidence — observed_parent_ids preserves those candidates,
+        # so the compressed multi-turn population (the lever's target) still expands.
+        prior_ids = state.get("observed_parent_ids") or []
+        if unique_contents or prior_ids:
+            parent_blocks = _expand_parent_context(unique_contents, prior_ids)
+            if parent_blocks:
+                context_parts.append(
+                    "## 원문 맥락 (검색된 조각의 상위 문단 전체)\n\n" + "\n\n".join(parent_blocks)
+                )
 
     context_text = "\n\n".join(context_parts) if context_parts else "문서에서 검색된 데이터가 없습니다."
 
@@ -379,7 +408,9 @@ def clean_synthesis(state: AgentState, llm):
     """
     prompt_content = _build_synthesis_prompt_content(state)
     response = llm.invoke([SystemMessage(content=get_fallback_response_prompt()), HumanMessage(content=prompt_content)])
-    return {"messages": [response]}
+    # #177 P1: mark the answer as an already-final synthesis so aggregate_answers can
+    # skip the degrading LLM re-pass when it would add no information.
+    return {"messages": [response], "clean_synthesized": True}
 
 def should_compress_context(state: AgentState) -> Command[Literal["compress_context", "orchestrator"]]:
     messages = state["messages"]
@@ -431,6 +462,10 @@ def compress_context(state: AgentState, llm):
                 tool_calls_info = f" | 도구 호출: {calls}"
             conversation_text += f"[어시스턴트{tool_calls_info}]\n{msg.content or '(도구 호출만 있음)'}\n\n"
         elif isinstance(msg, ToolMessage):
+            # #89: keep the budget marker out of the compression LLM — it would be baked
+            # into context_summary as a "search failure" and re-injected every later turn.
+            if str(msg.content or "").startswith("SEARCH_BUDGET_EXCEEDED"):
+                continue
             tool_name = getattr(msg, "name", "tool")
             conversation_text += f"[도구 결과 - {tool_name}]\n{msg.content}\n\n"
 
@@ -449,7 +484,25 @@ def compress_context(state: AgentState, llm):
             block += "이미 실행한 검색 쿼리:\n" + "\n".join(f"- {q}" for q in search_queries) + "\n"
         new_summary += block
 
-    return {"context_summary": new_summary, "messages": [RemoveMessage(id=m.id) for m in messages[1:]]}
+    updates = {"context_summary": new_summary,
+               "messages": [RemoveMessage(id=m.id) for m in messages[1:]]}
+
+    # #177 P2: the ToolMessages being removed are the only carrier of "Parent ID:" lines.
+    # Harvest them (first-seen order, deduped against earlier harvests) so parent expansion
+    # at synthesis time still knows what the agent saw. State-only: no prompt input changes;
+    # gated so the OFF path's state stays byte-identical too.
+    if config.PARENT_EXPANSION_ENABLED:
+        observed = list(state.get("observed_parent_ids") or [])
+        seen_pids = set(observed)
+        for msg in messages[1:]:
+            if isinstance(msg, ToolMessage):
+                for pid in _PARENT_ID_LINE.findall(str(msg.content or "")):
+                    if pid and pid != "n/a" and pid not in seen_pids:
+                        seen_pids.add(pid)
+                        observed.append(pid)
+        updates["observed_parent_ids"] = observed
+
+    return updates
 
 def collect_answer(state: AgentState):
     last_message = state["messages"][-1]
@@ -457,7 +510,9 @@ def collect_answer(state: AgentState):
     answer = last_message.content if is_valid else "답변을 생성하지 못했습니다."
     return {
         "final_answer": answer,
-        "agent_answers": [{"index": state["question_index"], "question": state["question"], "answer": answer}]
+        "agent_answers": [{"index": state["question_index"], "question": state["question"], "answer": answer,
+                           # #177 P1: only a VALID clean-synthesis answer earns the bypass.
+                           "clean": bool(state.get("clean_synthesized") and is_valid)}]
     }
 # --- End of Agent Nodes---
 
@@ -477,6 +532,17 @@ def aggregate_answers(state: State, llm, collection=None):
     # so slot-free questions aggregate on byte-identical input.
     slots = state.get("userSlots") or {}
     slot_text = format_user_slots(slots) if config.SLOT_EXTRACTION_ENABLED else ""
+
+    # Codex P1 (#177): a clean_synthesis answer is already a final single-shot synthesis
+    # over the full collected evidence — re-passing it through the aggregation LLM can
+    # only degrade it (the same degradation class refusal_only mode exists to prevent:
+    # PR #144 measured −13 on re-synthesized already-correct drafts). Bypass when the
+    # re-pass would add no information: single answer, no slot lever active. Multi-question
+    # merging and every slot/clarify/supplement injection still aggregate as before.
+    if (len(sorted_answers) == 1 and sorted_answers[0].get("clean")
+            and not config.SLOT_EXTRACTION_ENABLED):
+        return {"messages": [AIMessage(content=sorted_answers[0]["answer"])]}
+
     if slot_text:
         # v2 wording: the v1 "없으면 그 사실을 명시하세요" clause invited refusal-style
         # hedging (S1 A/B refusals +17) — keep only the condition-application instruction.
