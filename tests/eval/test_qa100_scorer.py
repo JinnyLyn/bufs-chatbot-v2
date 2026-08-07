@@ -16,7 +16,8 @@ pytestmark = pytest.mark.unit
 _DATASETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                              "eval_tools", "datasets")
 # Every shipped golden set must be schema-valid and gold-self-consistent, not just the default.
-_ALL_DATASETS = ["qa_dataset.json", "qa_dataset_factual100.json", "qa_dataset_factual100_variants.json"]
+_ALL_DATASETS = ["qa_dataset.json", "qa_dataset_factual100.json", "qa_dataset_factual100_variants.json",
+                 "qa_dataset_procedural40.json"]
 
 
 # --------------------------------------------------------------------------- dataset
