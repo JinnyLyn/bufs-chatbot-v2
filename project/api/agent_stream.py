@@ -35,7 +35,12 @@ logger = logging.getLogger(__name__)
 
 # Node whose streamed tokens are the user-facing answer.
 ANSWER_NODE = "aggregate_answers"
-_OUTER_NODES = {"summarize_history", "rewrite_query", "aggregate_answers"}
+# #176: the self_check REWRITE (when the lever is on and the judge fails the draft)
+# REPLACES the aggregated answer — its tokens re-stream after a "clear". Judge-call
+# tokens are internal and carry this tag so they are never surfaced.
+SELF_CHECK_NODE = "self_check"
+_SELF_CHECK_JUDGE_TAG = "selfcheck_judge"
+_OUTER_NODES = {"summarize_history", "rewrite_query", "aggregate_answers", "self_check"}
 
 _FALLBACK_KO = "죄송합니다. 답변을 생성하지 못했습니다. 다시 시도해 주세요."
 
@@ -59,6 +64,20 @@ def _extract_clarification(state) -> str | None:
     return None
 
 
+def _final_answer_from_state(state) -> str | None:
+    """Answer adopted without an LLM call (e.g. the #177 clean-synthesis bypass, or
+    aggregate's no-answers message) emits no AIMessageChunk, so the token loop collects
+    nothing. On a COMPLETED run the last outer AIMessage is the graph's final answer —
+    the source of truth when the token stream and state can disagree (#176 rewrite
+    paths, #177 bypass)."""
+    if state.next:
+        return None
+    for msg in reversed(state.values.get("messages", [])):
+        if isinstance(msg, AIMessage) and msg.content:
+            return str(msg.content)
+    return None
+
+
 def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
     # ContextVars don't cross thread boundaries — re-bind the trace id inside this
     # worker thread so any logging here carries the request's id.
@@ -71,6 +90,9 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
 
     timing = {"summarize_history": 0.0, "rewrite_query": 0.0, "agent": 0.0,
               "aggregate_answers": 0.0, "other": 0.0}
+    if config.SELF_CHECK_ENABLED:
+        # Keyed only when the node exists so the OFF payload stays byte-identical.
+        timing["self_check"] = 0.0
     tool_call_count = 0
 
     try:
@@ -84,6 +106,7 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
 
         answer_parts: list[str] = []
         tool_contents: list[str] = []
+        rewrite_started = False
         last_ts = time.monotonic()
 
         # subgraphs=True so the agent subgraph's ToolMessages are surfaced (and captured
@@ -100,11 +123,25 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
             last_ts = now
 
             if isinstance(chunk, ToolMessage):
+                # #89: a budget-refused call is not an executed search — counting it would
+                # distort the tool_calls metric exactly in the runs the lever fires on.
+                if str(chunk.content or "").startswith("SEARCH_BUDGET_EXCEEDED"):
+                    continue
                 tool_call_count += 1
                 if chunk.content:
                     tool_contents.append(str(chunk.content))
 
             elif node == ANSWER_NODE and isinstance(chunk, AIMessageChunk) and chunk.content:
+                answer_parts.append(chunk.content)
+                yield ("token", chunk.content)
+
+            elif (node == SELF_CHECK_NODE and isinstance(chunk, AIMessageChunk)
+                  and chunk.content and _SELF_CHECK_JUDGE_TAG not in (metadata.get("tags") or [])):
+                # Rewrite tokens: wipe the streamed draft once, then stream the replacement.
+                if not rewrite_started:
+                    rewrite_started = True
+                    answer_parts = []
+                    yield ("clear", None)
                 answer_parts.append(chunk.content)
                 yield ("token", chunk.content)
 
@@ -117,9 +154,23 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
 
         answer = "".join(answer_parts).strip()
 
-        # No aggregated answer means the graph interrupted to ask for clarification.
+        # #176: a self-check rewrite replaced the draft mid-stream. If the rewrite call
+        # died after partial tokens or produced only whitespace, the node kept the draft
+        # in STATE — reconcile so the shipped answer always matches the graph's answer.
+        if rewrite_started:
+            state_answer = (_final_answer_from_state(final_state) or "").strip()
+            if state_answer and state_answer != answer:
+                answer = state_answer
+                yield ("clear", None)
+                yield ("token", answer)
+
+        # No streamed answer: either the graph interrupted to ask for clarification,
+        # or the final answer was adopted without an LLM call and never hit the
+        # token stream (#177 bypass) — read it from the final state before giving up.
         if not answer:
-            answer = _extract_clarification(final_state) or _FALLBACK_KO
+            answer = (_extract_clarification(final_state)
+                      or _final_answer_from_state(final_state)
+                      or _FALLBACK_KO)
             yield ("token", answer)
 
         # Language fallback: if a Korean question still receives a mostly non-Korean

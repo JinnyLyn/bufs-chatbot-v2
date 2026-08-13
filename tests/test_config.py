@@ -58,6 +58,29 @@ class TestDefaults:
         cfg = _reload_config(monkeypatch)
         assert isinstance(cfg.SEARCH_SCORE_THRESHOLD, float)
 
+    def test_semester_today_defaults_to_empty(self, env_isolated, monkeypatch):
+        cfg = _reload_config(monkeypatch)
+        assert cfg.SEMESTER_TODAY == ""
+
+
+# ---------------------------------------------------------------------------
+# SEMESTER_TODAY validation (fail fast — the runtime consumer swallows exceptions)
+# ---------------------------------------------------------------------------
+
+class TestSemesterToday:
+    def test_valid_iso_date_accepted(self, env_isolated, monkeypatch):
+        cfg = _reload_config(monkeypatch, SEMESTER_TODAY="2026-08-03")
+        assert cfg.SEMESTER_TODAY == "2026-08-03"
+
+    @pytest.mark.parametrize("bad", ["2026-13-01", "not-a-date", "08/03/2026"])
+    def test_malformed_date_fails_at_import(self, env_isolated, monkeypatch, bad):
+        with pytest.raises(ValueError, match="SEMESTER_TODAY"):
+            _reload_config(monkeypatch, SEMESTER_TODAY=bad)
+        # A failed reload leaves config partially executed — restore a fully
+        # initialized module so later tests don't see torn state.
+        monkeypatch.delenv("SEMESTER_TODAY")
+        _reload_config(monkeypatch)
+
 
 # ---------------------------------------------------------------------------
 # Env overrides

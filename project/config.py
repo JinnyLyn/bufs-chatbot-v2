@@ -1,4 +1,5 @@
 import os
+from datetime import date as _date
 
 # The Ollama *client* must dial a real address. When OLLAMA_HOST is a bind-all
 # address (0.0.0.0 — set so the Ollama *server* listens on every interface), the
@@ -65,17 +66,17 @@ SPARSE_IDF = os.environ.get("SPARSE_IDF", "true").lower() in ("1", "true", "yes"
 # (query embedding is a single short forward pass — fast enough on CPU). Set
 # EMBEDDING_DEVICE=cuda to use the GPU instead.
 EMBEDDING_DEVICE = os.environ.get("EMBEDDING_DEVICE", "cpu")
-# Ollama model for the agent. Must support tool-calling. The default is a small,
-# fast, *non-thinking* instruct model that fits a 12 GB local GPU; override with
-# LLM_MODEL to use one you have pulled. Prod / README / .env.example run
-# "qwen3.5:9b" via the env var — the small default here is intentional for local
-# dev, not the deployed model. Avoid "thinking" models — their reasoning tokens
-# leak into the streamed answer.
+# Ollama model for the agent. Must support tool-calling. The default is the model we
+# actually deploy and evaluate against ("qwen3.5:9b", matching README / .env.example),
+# so a bare run reproduces the reported numbers instead of silently measuring a smaller
+# dev model. It fits a 12 GB GPU at LLM_NUM_CTX=8192. On a smaller GPU (or when you want
+# a faster local loop) override with LLM_MODEL — e.g. "qwen3:4b-instruct-2507-q4_K_M".
+# Avoid "thinking" models — their reasoning tokens leak into the streamed answer.
 # Explicit Ollama server URL for the LLM client (overrides OLLAMA_HOST). Point this at a
 # LOCAL Ollama (e.g. http://127.0.0.1:11435) instead of an OLLAMA_HOST that SSH-tunnels to
 # a remote box. Empty = use OLLAMA_HOST / default.
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "").strip()
-LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3:4b-instruct-2507-q4_K_M")
+LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3.5:9b")
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0"))
 # Disable "thinking" mode by default: on Qwen3-family models the reasoning tokens
 # otherwise leak into the streamed answer and slow generation down. Set
@@ -176,6 +177,36 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
         "Values outside this range invert RRF-dominant chunk rankings."
     )
 
+# --- Retrieval-side lever: 학기 스코프 (학기 교차 오염) ---
+# The KB holds one 학사안내 per semester, describing the same fact *kinds* with different
+# values, so a 2학기 question retrieves lexically near-identical 1학기 chunks. Measured on the
+# sem2 100-Q set (qwen3.5:9b, 2026-07-29): across the 97 questions that say "2학기", retrieved
+# source slots split 166 2학기 / 166 1학기 / 63 neutral — HALF the retrieval budget goes to the
+# wrong semester, and three answers quoted 1학기 dates verbatim (ids 3, 17, 32).
+# When ON, rag_agent.semester decides the question's target semester (explicit "N학기" marker,
+# else today's semester) and DEMOTES other-semester chunks below the rest — never deletes
+# those that clear SEARCH_SCORE_THRESHOLD, so evidence that genuinely lives in the other
+# semester's guide is still reachable (below-threshold ones are excluded either way; #178).
+# DEFAULT OFF — A/B toggle.
+SEMESTER_FILTER_ENABLED = os.environ.get("SEMESTER_FILTER_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Demotion only helps if the pool is deeper than `limit` — otherwise there is nothing to
+# promote in place of the demoted chunks. Pool depth = limit * factor.
+SEMESTER_POOL_FACTOR = int(os.environ.get("SEMESTER_POOL_FACTOR", "3"))
+if SEMESTER_POOL_FACTOR < 1:
+    raise ValueError(f"SEMESTER_POOL_FACTOR must be >= 1, got {SEMESTER_POOL_FACTOR}")
+# Freeze "today" for reproducible evals / tests (ISO date, e.g. 2026-08-03). Empty = real clock.
+# A live A/B run months later must reproduce the semester the run was scored under.
+SEMESTER_TODAY = os.environ.get("SEMESTER_TODAY", "").strip()
+if SEMESTER_TODAY:
+    # Fail fast at import: the consumer (_apply_semester_scope) swallows runtime exceptions
+    # by design, so a typo here would silently disable scoping and invalidate an A/B arm.
+    try:
+        _date.fromisoformat(SEMESTER_TODAY)
+    except ValueError:
+        raise ValueError(
+            f"SEMESTER_TODAY must be an ISO date (YYYY-MM-DD) or empty, got {SEMESTER_TODAY!r}"
+        ) from None
+
 # --- Generation-side lever (issue #145 처방 1: 시나리오형 필수 슬롯 추출) ---
 # The 2026-07-20 baseline split (factual100 F1 0.835 vs qa100 F1 0.349, doc_recall 0.792 vs
 # answer Recall 0.316) shows scenario questions fail at CONDITION APPLICATION, not just search:
@@ -240,8 +271,10 @@ if CLEAN_SYNTHESIS_MODE not in ("refusal_only", "always"):
 # The naive simulation (parents REPLACING children) went net +4 (8 recovered − 4 regressed on
 # needle-in-haystack dilution), so this implements the comment's improved design: KEEP the child
 # snippets and APPEND the parent originals (merge, not replace), deduped in first-seen order.
-# Expansion happens only in the synthesis/fallback context assembly — the agent loop, its token
-# budget, and the compression path are untouched. DEFAULT OFF — A/B toggle.
+# Expansion happens only in the synthesis/fallback context assembly — the agent loop and its
+# token budget are untouched. compress_context additionally harvests observed parent ids into
+# state (#177 P2, state-only — its LLM input is unchanged) so expansion still works after
+# compression. DEFAULT OFF — A/B toggle.
 PARENT_EXPANSION_ENABLED = os.environ.get("PARENT_EXPANSION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Caps matching the #126 simulation arms (상한 3개 / 9000자). NOTE: with the default
 # LLM_NUM_CTX=8192 a full 9000-char expansion can push the synthesis prompt past the context
@@ -249,12 +282,38 @@ PARENT_EXPANSION_ENABLED = os.environ.get("PARENT_EXPANSION_ENABLED", "false").l
 PARENT_EXPANSION_MAX_PARENTS = int(os.environ.get("PARENT_EXPANSION_MAX_PARENTS", "3"))
 PARENT_EXPANSION_MAX_CHARS = int(os.environ.get("PARENT_EXPANSION_MAX_CHARS", "9000"))
 
+# --- Generation-side lever: 답변 전 자가검사 (#176 = #145 처방 4) ---
+# qa100 guard 위반 10/100 — 확신이 낮거나 필수 조건이 빠진 상태에서 단정하는 답변.
+# When ON, a post-aggregation JUDGE call (structured verdict; evidence = the per-question
+# answers plus the slot-supplement block aggregation fed the draft) checks the draft for (a) assertions
+# unsupported by the evidence and (b) condition-dependent rules stated unconditionally.
+# PASS ⇒ the aggregated answer is kept BYTE-IDENTICAL — no re-synthesis (the PR #144
+# "always" arm measured re-synthesis degrading already-correct answers −13). FAIL ⇒ one
+# scoped REWRITE call converts only the flagged parts into conditional phrasing plus a
+# single closing clarify sentence (#51: never a hard stop-and-ask; PR #146 wording
+# precedent), preserving content. Judge failure/exception degrades to keeping the draft.
+# Aggregation-after intervention only — the agent loop and its prompts are untouched
+# (#111 / #145 처방 1 ablation: in-loop injections regress regardless of wording).
+# DEFAULT OFF — A/B per #162 before enabling.
+SELF_CHECK_ENABLED = os.environ.get("SELF_CHECK_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+
 # --- Agent Configuration ---
 # Caps on the orchestrator loop. Lower = faster (fewer sequential LLM calls) but the
 # agent searches less thoroughly. env-overridable so they can be tuned / rolled back
 # without a code change. Defaults are the original repo values.
 MAX_TOOL_CALLS = int(os.environ.get("MAX_TOOL_CALLS", "8"))
 MAX_ITERATIONS = int(os.environ.get("MAX_ITERATIONS", "10"))
+# Latency guardrail (#89 option B): elapsed-time soft cap checked inside search_child_chunks.
+# When > 0 and the agent subgraph has been running longer than this many seconds, further
+# searches are refused with a SEARCH_BUDGET_EXCEEDED marker telling the orchestrator to answer
+# from the context it already collected — cutting the 190s tail measured at cap8 without
+# lowering MAX_TOOL_CALLS (quality tradeoff of option A). Orthogonal backstop: MAX_TOOL_CALLS/
+# MAX_ITERATIONS still bound the loop if the model ignores the marker, but every post-budget
+# search returns instantly, so the tail cost collapses either way.
+# 0 = disabled (DEFAULT — A/B per #162 before enabling; the issue proposes 90 as the live value).
+TOOL_CALL_SOFT_TIMEOUT_S = float(os.environ.get("TOOL_CALL_SOFT_TIMEOUT_S", "0"))
+if TOOL_CALL_SOFT_TIMEOUT_S < 0:
+    raise ValueError(f"TOOL_CALL_SOFT_TIMEOUT_S must be >= 0, got {TOOL_CALL_SOFT_TIMEOUT_S}")
 GRAPH_RECURSION_LIMIT = 50
 # Context size (tokens) above which the agent runs the expensive compress_context node.
 # At the default 2000 a single 6000-char parent crosses it, so compression fires after

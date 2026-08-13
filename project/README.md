@@ -451,6 +451,7 @@ TOKEN_GROWTH_FACTOR = 0.9       # Multiplier applied after each compression
 |-----------|--------|
 | `MAX_TOOL_CALLS` | Increase for complex queries, decrease to speed up simple ones |
 | `MAX_ITERATIONS` | Controls how many reasoning loops the agent can run |
+| `TOOL_CALL_SOFT_TIMEOUT_S` | Elapsed-time soft cap on agent retrieval (#89); `0` = off (default), e.g. `90` stops new searches after 90s and answers from collected context |
 | `GRAPH_RECURSION_LIMIT` | Increase for complex [graphs](https://docs.langchain.com/oss/python/langgraph/errors/GRAPH_RECURSION_LIMIT) |
 | `BASE_TOKEN_THRESHOLD` | Delay compression by increasing this value |
 | `TOKEN_GROWTH_FACTOR` | Lower values compress more aggressively |

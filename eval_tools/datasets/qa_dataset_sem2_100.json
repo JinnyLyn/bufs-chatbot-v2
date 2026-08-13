@@ -1,0 +1,1705 @@
+[
+  {
+    "id": 1,
+    "question": "2026학년도 2학기 개강일은 정확히 언제인가요?",
+    "gold_intent": "2학기 개강일 안내",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "7",
+    "expected_answer": "2026학년도 2학기 개강 및 수업 시작일은 8월 31일(월)입니다.",
+    "must_include": [
+      "8월 31일",
+      "개강"
+    ],
+    "must_not_include": [
+      "9월 1일"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 2,
+    "question": "2학기 수강신청 장바구니 신청 기간을 알려주세요.",
+    "gold_intent": "2학기 장바구니 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "9",
+    "expected_answer": "2학기 장바구니 신청은 8월 3일(월) 10:00부터 8월 7일(금) 16:00까지 가능합니다.",
+    "must_include": [
+      "8월 3일",
+      "8월 7일"
+    ],
+    "must_not_include": [
+      "정정 기간"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 3,
+    "question": "2학년 학생의 2학기 본 수강신청 날짜는 언제인가요?",
+    "gold_intent": "학년별 수강신청일",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "10",
+    "expected_answer": "2학년(2~3학기 이수자)의 수강신청일은 8월 19일(수) 10:00부터 15:20까지입니다.",
+    "must_include": [
+      "8월 19일",
+      "2학년"
+    ],
+    "must_not_include": [
+      "1학년"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 4,
+    "question": "2학기 수강신청 확인 및 정정 기간은 언제인가요?",
+    "gold_intent": "수강정정 기간 안내",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "9, 11",
+    "expected_answer": "9월 2일(수)부터 9월 4일(금) 10:00~15:20 사이에 수강신청 내역을 확인하고 정정할 수 있습니다.",
+    "must_include": [
+      "9월 2일",
+      "9월 4일"
+    ],
+    "must_not_include": [
+      "장바구니"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 5,
+    "question": "2학기에 군 복무 중 취득한 OCU 학점인정 신청은 언제 하나요?",
+    "gold_intent": "군 OCU 학점 신청",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "7",
+    "expected_answer": "9월 7일(월)부터 9월 11일(금)까지 군 복무 중 OCU 학점인정 신청이 가능합니다.",
+    "must_include": [
+      "9월 7일",
+      "9월 11일"
+    ],
+    "must_not_include": [
+      "일반 OCU"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 6,
+    "question": "2학기 중간고사 기간은 어떻게 되나요?",
+    "gold_intent": "중간고사 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "7",
+    "expected_answer": "2학기 중간고사는 10월 19일(월)부터 10월 23일(금)까지 진행됩니다.",
+    "must_include": [
+      "10월 19일",
+      "10월 23일"
+    ],
+    "must_not_include": [
+      "기말고사"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 7,
+    "question": "2026년 2학기 조기졸업 신청은 언제 할 수 있나요?",
+    "gold_intent": "조기졸업 신청 기간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "조기졸업 신청 기간은 11월 18일(수)부터 11월 24일(화)까지입니다.",
+    "must_include": [
+      "11월 18일",
+      "11월 24일"
+    ],
+    "must_not_include": [
+      "졸업유예"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 8,
+    "question": "2학기 기말고사 종료 후 성적 확인 및 정정 기간은 언제인가요?",
+    "gold_intent": "성적 확인 기간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "12월 14일(월)부터 12월 18일(금)까지 성적 확인 및 정정이 가능합니다.",
+    "must_include": [
+      "12월 14일",
+      "12월 18일"
+    ],
+    "must_not_include": [
+      "중간고사"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 9,
+    "question": "2027학년도 1학기를 위한 온라인 휴학 및 복학 신청은 언제 시작하나요?",
+    "gold_intent": "차학기 휴복학 신청",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "2027년 1월 11일(월)부터 2월 28일(일)까지 온라인으로 휴학 및 복학 신청을 받습니다.",
+    "must_include": [
+      "1월 11일",
+      "2월 28일"
+    ],
+    "must_not_include": [
+      "당해 학기"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 10,
+    "question": "2학기 수강신청 시 '취소-신청 지연제' 운영 시간은 몇 시인가요?",
+    "gold_intent": "취소신청지연제 시간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "9, 14",
+    "expected_answer": "취소-신청 지연 과목의 신청 가능 시간은 매일 15:30~16:00입니다.",
+    "must_include": [
+      "15:30",
+      "16:00"
+    ],
+    "must_not_include": [
+      "오전 10시"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 11,
+    "question": "2026년 2학기 신입생은 전공탐색 과목을 반드시 들어야 하나요?",
+    "gold_intent": "신입생 전공탐색 의무",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "25, 51",
+    "expected_answer": "아니요, 2026-2학기부터 전공탐색 교과목 이수 의무가 폐지되어 희망 전공의 선이수 교과목을 자유롭게 수강하면 됩니다.",
+    "must_include": [
+      "이수 의무 폐지",
+      "삭제"
+    ],
+    "must_not_include": [
+      "필수 이수"
+    ],
+    "difficulty": "Hard",
+    "category": "수강신청"
+  },
+  {
+    "id": 12,
+    "question": "신입생PSC세미나 분반은 어떻게 결정되나요?",
+    "gold_intent": "PSC세미나 분반 배정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "26",
+    "expected_answer": "1학기에 실시한 희망전공 신청 결과(제1전공 기준)를 반영하여 분반이 자동 배정됩니다.",
+    "must_include": [
+      "희망전공 신청 결과",
+      "자동 배정"
+    ],
+    "must_not_include": [
+      "수동 신청"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 13,
+    "question": "2학기에 채플 수업을 직접 신청해야 하나요, 아니면 자동 배정되나요?",
+    "gold_intent": "채플 신청 방식 변경",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "26",
+    "expected_answer": "기존 자동 배정 방식에서 변경되어, 학생이 직접 희망하는 분반을 수강신청해야 합니다.",
+    "must_include": [
+      "직접 수강신청",
+      "변경"
+    ],
+    "must_not_include": [
+      "신청 불필요"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 14,
+    "question": "2026-2학기 신입생 영어 레벨테스트(2차) 결과는 언제 나오나요?",
+    "gold_intent": "레벨테스트 결과 조회",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "28",
+    "expected_answer": "8월 10일부터 13일까지 진행된 2차 레벨테스트 결과는 8월 14일(금) 오후에 조회 가능합니다.",
+    "must_include": [
+      "8월 14일",
+      "오후"
+    ],
+    "must_not_include": [
+      "결과는 8월 10일"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 15,
+    "question": "2022학번 이전 학생이 2학기 최대로 이월할 수 있는 학점은?",
+    "gold_intent": "학점이월제 규정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "17",
+    "expected_answer": "직전 학기 미달 학점을 최대 3학점(0.5학점 단위)까지 이월할 수 있습니다.",
+    "must_include": [
+      "최대 3학점",
+      "이월"
+    ],
+    "must_not_include": [
+      "전체 학생"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 16,
+    "question": "2학기 수강신청을 취소할 수 있는 최종 마감 시한은 언제인가요?",
+    "gold_intent": "수강취소 마감일",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "11, 18, 97",
+    "expected_answer": "수업일수 1/4선인 2026년 9월 24일(목) 17:00까지입니다.",
+    "must_include": [
+      "9월 24일",
+      "17:00"
+    ],
+    "must_not_include": [
+      "개강일"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 17,
+    "question": "2학기 재수강 시 이전 성적이 취소되는 정확한 날짜는?",
+    "gold_intent": "재수강 성적 취소일",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8, 18",
+    "expected_answer": "수업일수 3/4선 시점인 2026년 11월 17일(화)에 이전 성적이 취소됩니다.",
+    "must_include": [
+      "11월 17일",
+      "3/4선"
+    ],
+    "must_not_include": [
+      "5월 19일"
+    ],
+    "difficulty": "Hard",
+    "category": "성적"
+  },
+  {
+    "id": 18,
+    "question": "2026년 2학기 전부(과) 신청 대상은 누구인가요?",
+    "gold_intent": "2학기 전과 대상",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "2023학번 이전 학번 재학생 및 복학 예정자를 대상으로 합니다.",
+    "must_include": [
+      "2023이전 학번",
+      "신청"
+    ],
+    "must_not_include": [
+      "신입생"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 19,
+    "question": "2학기 성적평가 선택제(P/NP) 신청 기간은 언제인가요?",
+    "gold_intent": "P/NP 신청 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8, 93",
+    "expected_answer": "11월 18일(수)부터 11월 25일(수)까지 학생포털을 통해 신청 가능합니다.",
+    "must_include": [
+      "11월 18일",
+      "11월 25일"
+    ],
+    "must_not_include": [
+      "정정 기간"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 20,
+    "question": "2학기에 개설되는 '자기경영학습법 II'는 누가 수강할 수 있나요?",
+    "gold_intent": "자기경영학습법 대상",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "48, 49",
+    "expected_answer": "학사경고자 학생에 한하여 수강할 수 있는 정규 교과목입니다.",
+    "must_include": [
+      "학사경고자",
+      "전용"
+    ],
+    "must_not_include": [
+      "전체 학생"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 21,
+    "question": "OCU 2학기 시스템 사용료 납부 기간은 언제인가요?",
+    "gold_intent": "OCU 사용료 납부",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "42",
+    "expected_answer": "8월 24일(월)부터 9월 17일(목)까지 총 24일간입니다.",
+    "must_include": [
+      "8월 24일",
+      "9월 17일"
+    ],
+    "must_not_include": [
+      "수강신청 기간"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 22,
+    "question": "2학기 집중이수 OCU 과목의 성적 이의신청 기간은?",
+    "gold_intent": "OCU 집중이수 성적",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "47",
+    "expected_answer": "10월 28일(수)부터 11월 1일(일)까지 5일간 진행됩니다.",
+    "must_include": [
+      "10월 28일",
+      "11월 1일"
+    ],
+    "must_not_include": [
+      "일반 교과"
+    ],
+    "difficulty": "Hard",
+    "category": "성적"
+  },
+  {
+    "id": 23,
+    "question": "2학기 사회봉사 교과목의 자원봉사 완료 마감일은?",
+    "gold_intent": "사회봉사 이수 마감",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "34, 112",
+    "expected_answer": "해당 학기 종강 1주 전까지 25시간을 완료해야 합니다.",
+    "must_include": [
+      "종강 1주 전",
+      "25시간"
+    ],
+    "must_not_include": [
+      "기말고사 종료"
+    ],
+    "difficulty": "Medium",
+    "category": "비교과"
+  },
+  {
+    "id": 24,
+    "question": "2학기에 부분적 성적포기를 신청할 수 있는 기간은 언제인가요?",
+    "gold_intent": "성적포기 신청 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8, 95",
+    "expected_answer": "11월 5일(목)부터 11월 17일(화)까지 신청이 가능합니다.",
+    "must_include": [
+      "11월 5일",
+      "11월 17일"
+    ],
+    "must_not_include": [
+      "수강취소"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 25,
+    "question": "2학기 개강 후 이수구분 변경 신청은 언제 할 수 있나요?",
+    "gold_intent": "이수구분 변경 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "9, 87",
+    "expected_answer": "2학기 종료 후인 2027년 2월 15일(월)부터 2월 19일(금)까지 신청합니다.",
+    "must_include": [
+      "2월 15일",
+      "2월 19일"
+    ],
+    "must_not_include": [
+      "9월 중"
+    ],
+    "difficulty": "Hard",
+    "category": "성적"
+  },
+  {
+    "id": 26,
+    "question": "2학기 기말 수업평가를 하지 않으면 어떤 불이익이 있나요?",
+    "gold_intent": "수업평가 미실시",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "정해진 기간에 수업평가를 하지 않으면 성적 열람이 불가능합니다.",
+    "must_include": [
+      "성적 열람 불가",
+      "불이익"
+    ],
+    "must_not_include": [
+      "F 처리"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 27,
+    "question": "2026학년도 전기 학위수여식(졸업식) 날짜는?",
+    "gold_intent": "2026 전기 졸업식",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "9",
+    "expected_answer": "2027년 2월 19일(금)에 거행될 예정입니다.",
+    "must_include": [
+      "2027년 2월 19일",
+      "졸업식"
+    ],
+    "must_not_include": [
+      "8월 14일"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 28,
+    "question": "2학기 등록금 정규 납부 기간은 언제인가요?",
+    "gold_intent": "2학기 등록금 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "9",
+    "expected_answer": "8월 24일(월)부터 8월 26일(수)까지입니다.",
+    "must_include": [
+      "8월 24일",
+      "8월 26일"
+    ],
+    "must_not_include": [
+      "3월 중"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 29,
+    "question": "2학기 중 전공졸업시험이나 논문 제출은 언제 하나요?",
+    "gold_intent": "졸업시험 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "7",
+    "expected_answer": "10월 6일(화)부터 11월 13일(금) 사이에 진행되며, 상세 사항은 학과 사무실에 문의해야 합니다.",
+    "must_include": [
+      "10월 6일",
+      "11월 13일"
+    ],
+    "must_not_include": [
+      "12월 중"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 30,
+    "question": "추석 공휴일로 인해 2학기 수업이 없는 날은?",
+    "gold_intent": "2학기 추석 연휴",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "7",
+    "expected_answer": "9월 24일(목)과 9월 25일(금)은 추석 공휴일로 수업이 없습니다.",
+    "must_include": [
+      "9월 24일",
+      "9월 25일"
+    ],
+    "must_not_include": [
+      "개천절"
+    ],
+    "difficulty": "Easy",
+    "category": "학사일정"
+  },
+  {
+    "id": 31,
+    "question": "2학기 수강신청 장바구니 로그인 확인 가능 기간은?",
+    "gold_intent": "장바구니 확인 기간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "9",
+    "expected_answer": "8월 8일(토)부터 8월 17일(월)까지는 신청 내역 확인만 가능한 로그인 기간입니다.",
+    "must_include": [
+      "8월 8일",
+      "8월 17일"
+    ],
+    "must_not_include": [
+      "신청 기간"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 32,
+    "question": "1학년 신입생이 2학기에 제2전공을 신청하는 기간은?",
+    "gold_intent": "1학년 제2전공 신청",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "29",
+    "expected_answer": "1학년 2학기 중 10월에서 11월 사이에 제1전공과 제2전공을 정식 신청하게 됩니다.",
+    "must_include": [
+      "10월~11월",
+      "전공 신청"
+    ],
+    "must_not_include": [
+      "1학기"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 33,
+    "question": "2학기 동계 계절학기 수강신청은 언제 하나요?",
+    "gold_intent": "동계 계절학기 신청",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "11월 23일(월)부터 11월 25일(수)까지 신청을 받습니다.",
+    "must_include": [
+      "11월 23일",
+      "11월 25일"
+    ],
+    "must_not_include": [
+      "하계 계절학기"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 34,
+    "question": "2학기 성적 이관 및 학점 인정 결과는 언제 반영되나요?",
+    "gold_intent": "성적 이관 일정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "2027년 1월 4일(월)에 2학기 성적 이관 처리가 완료됩니다.",
+    "must_include": [
+      "1월 4일",
+      "성적 이관"
+    ],
+    "must_not_include": [
+      "12월 11일"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 35,
+    "question": "2학기 수강정정 기간에도 '취소신청지연제'가 적용되나요?",
+    "gold_intent": "정정 기간 지연제",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "14",
+    "expected_answer": "네, 수강신청 기간과 마찬가지로 정정 기간에도 매일 적용됩니다.",
+    "must_include": [
+      "매일 적용",
+      "정정 기간"
+    ],
+    "must_not_include": [
+      "본 신청만"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 36,
+    "question": "2학기에 개설되는 OCU '맞춤법과 표준어'는 집중이수 과목인가요?",
+    "gold_intent": "OCU 특정 과목 유형",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "188",
+    "expected_answer": "네, 부록의 목록에 따르면 (집중이수) 과목으로 분류되어 있습니다.",
+    "must_include": [
+      "집중이수",
+      "맞춤법과 표준어"
+    ],
+    "must_not_include": [
+      "일반 교과"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 37,
+    "question": "2학기 OCU 수강생의 비밀번호는 언제 초기화되나요?",
+    "gold_intent": "OCU 비밀번호 정책",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "43",
+    "expected_answer": "지난 학기 수강 여부와 관계없이 매 학기 초기화되므로 최초 로그인 시 반드시 변경해야 합니다.",
+    "must_include": [
+      "매 학기 초기화",
+      "변경"
+    ],
+    "must_not_include": [
+      "유지"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 38,
+    "question": "2학기 사회봉사 기본교육에 불참하면 어떻게 되나요?",
+    "gold_intent": "사회봉사 교육 불참",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "117",
+    "expected_answer": "기본, 중간, 기말교육 중 한 번이라도 불참하면 성적이 NP 처리됩니다.",
+    "must_include": [
+      "불참 시 NP",
+      "필수"
+    ],
+    "must_not_include": [
+      "부분 인정"
+    ],
+    "difficulty": "Easy",
+    "category": "비교과"
+  },
+  {
+    "id": 39,
+    "question": "2학기 PSC세미나II의 비교과 프로그램 이수 시간 요건은?",
+    "gold_intent": "PSC세미나II 시간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "99, 100",
+    "expected_answer": "2학기에는 3시간 이상의 비교과 프로그램을 필수 이수해야 합니다.",
+    "must_include": [
+      "3시간 이상",
+      "필수"
+    ],
+    "must_not_include": [
+      "1시간"
+    ],
+    "difficulty": "Hard",
+    "category": "비교과"
+  },
+  {
+    "id": 40,
+    "question": "2학기 채플 수업 장소가 '만오오디토리움'인 분반은 어디인가요?",
+    "gold_intent": "채플 대그룹 장소",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "102",
+    "expected_answer": "대그룹 특강이 진행되는 G203(만오오디토리움)에서 수업을 받는 분반들이 해당됩니다.",
+    "must_include": [
+      "G203",
+      "만오오디토리움"
+    ],
+    "must_not_include": [
+      "운동장"
+    ],
+    "difficulty": "Easy",
+    "category": "교과과정"
+  },
+  {
+    "id": 41,
+    "question": "2학기 중 취업커뮤니티 면제 신청은 가능한가요?",
+    "gold_intent": "취업커뮤니티 면제",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "106",
+    "expected_answer": "2학기부터 취업커뮤니티 이수 의무가 폐지되어 별도의 면제 신청이 불필요합니다.",
+    "must_include": [
+      "이수 의무 폐지",
+      "불필요"
+    ],
+    "must_not_include": [
+      "신청 기간"
+    ],
+    "difficulty": "Hard",
+    "category": "졸업"
+  },
+  {
+    "id": 42,
+    "question": "2학년 2학기 학생이 필수적으로 이수해야 하는 진로 과목은?",
+    "gold_intent": "2학년 2학기 진로",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "51, 108",
+    "expected_answer": "'진로설정(0.5학점)' 과목을 반드시 이수해야 합니다.",
+    "must_include": [
+      "진로설정",
+      "0.5학점"
+    ],
+    "must_not_include": [
+      "진로탐색"
+    ],
+    "difficulty": "Easy",
+    "category": "교과과정"
+  },
+  {
+    "id": 43,
+    "question": "2학기 커리어빌드업I 과목의 성적 산정 기준은?",
+    "gold_intent": "커리어빌드업I 성적",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "109",
+    "expected_answer": "과제 제출, 비교과 6시간 이상 이수, 교수상담 2회 충족 시 P/NP로 평가됩니다.",
+    "must_include": [
+      "6시간 이상",
+      "상담 2회",
+      "P/NP"
+    ],
+    "must_not_include": [
+      "시험 100%"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 44,
+    "question": "2학기에 'K-culture관광융합전공'을 새로 신청할 수 있나요?",
+    "gold_intent": "융합전공 신규 신청",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "129",
+    "expected_answer": "해당 전공은 신규 진입이 불가한 것으로 안내되어 있습니다.",
+    "must_include": [
+      "신규 진입 불가",
+      "K-culture"
+    ],
+    "must_not_include": [
+      "신청 가능"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 45,
+    "question": "2학기 신설 마이크로전공 중 'AI인문서사전공'의 특징은?",
+    "gold_intent": "신설 마이크로전공",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "134, 153",
+    "expected_answer": "비공학 계열 학생들이 AI를 인문학적 관점에서 활용할 수 있도록 설계된 전공입니다.",
+    "must_include": [
+      "비공학 계열",
+      "AI 활용"
+    ],
+    "must_not_include": [
+      "코딩 전문가"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 46,
+    "question": "2학기 동계방학 중 해외 현지 조사를 나가는 사회봉사 과목은?",
+    "gold_intent": "사회봉사 해외 조사",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "146",
+    "expected_answer": "글로컬마케터융합전공의 '해외현지조사' 과목이 방학 중 파견 형식으로 운영됩니다.",
+    "must_include": [
+      "글로컬마케터",
+      "해외현지조사"
+    ],
+    "must_not_include": [
+      "온라인 봉사"
+    ],
+    "difficulty": "Hard",
+    "category": "비교과"
+  },
+  {
+    "id": 47,
+    "question": "2학기에 학생설계융합전공(2유형)을 신청하려면 몇 학기 이수해야 하나요?",
+    "gold_intent": "학생설계 신청 자격",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "131",
+    "expected_answer": "2학기 이상 이수한 2학년부터 신청이 가능합니다.",
+    "must_include": [
+      "2학기 이수",
+      "2학년"
+    ],
+    "must_not_include": [
+      "1학년"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 48,
+    "question": "2학기 교직과정 이수 예정자 선발은 언제 공지되나요?",
+    "gold_intent": "교직 선발 공지",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "173",
+    "expected_answer": "2학기 중 별도로 공지되며, 1학년 2학기 수료자를 대상으로 선발합니다.",
+    "must_include": [
+      "2학기 중 공지",
+      "별도"
+    ],
+    "must_not_include": [
+      "3월"
+    ],
+    "difficulty": "Easy",
+    "category": "교직"
+  },
+  {
+    "id": 49,
+    "question": "2학기 수강신청 시 매크로 방지를 위한 보안문자는 언제 뜨나요?",
+    "gold_intent": "보안문자 입력 기준",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "14",
+    "expected_answer": "수강신청 페이지에서 1일 200회 이상 클릭할 경우 보안문자를 입력해야 합니다.",
+    "must_include": [
+      "1일 200회",
+      "클릭"
+    ],
+    "must_not_include": [
+      "500회"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 50,
+    "question": "2학기 등록금 분할납부를 5회로 나누어 낼 때 마지막 5차 납부 기간은?",
+    "gold_intent": "분납 5차 기간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "391, 395",
+    "expected_answer": "5월 21일(목)부터 5월 22일(금)까지가 최종 5차 납부 기간입니다.",
+    "must_include": [
+      "5월 21일",
+      "5월 22일"
+    ],
+    "must_not_include": [
+      "2월 말"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 51,
+    "question": "2학기 휴학 시 이미 낸 등록금은 어떻게 처리되나요?",
+    "gold_intent": "2학기 휴학 등록금",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "397",
+    "expected_answer": "등록금은 반환되지 않으며, 복학 시 등록 인정(이월) 처리됩니다.",
+    "must_include": [
+      "반환 불가",
+      "등록 인정"
+    ],
+    "must_not_include": [
+      "통장 환불"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 52,
+    "question": "2학기 수업연한초과자의 고지서 출력은 언제부터 가능한가요?",
+    "gold_intent": "수업초과자 고지서",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "393, 396",
+    "expected_answer": "3월 9일(월) 10:00 이후부터 출력이 가능합니다.",
+    "must_include": [
+      "3월 9일",
+      "10:00"
+    ],
+    "must_not_include": [
+      "2월 6일"
+    ],
+    "difficulty": "Medium",
+    "category": "등록금"
+  },
+  {
+    "id": 53,
+    "question": "2학기 수강신청 시 학점당 등록금을 내는 경우는 몇 학점 기준인가요?",
+    "gold_intent": "학점별 등록금 기준",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "393",
+    "expected_answer": "9학기 이상 등록자 기준, 9학점 초과 시에는 등록금 전액을 납부해야 합니다.",
+    "must_include": [
+      "9학점 초과",
+      "전액"
+    ],
+    "must_not_include": [
+      "18학점"
+    ],
+    "difficulty": "Medium",
+    "category": "등록금"
+  },
+  {
+    "id": 54,
+    "question": "2026-2학기에 캄보디아어 부전공을 하려면 몇 학점을 따야 하나요?",
+    "gold_intent": "캄보디아어 학점",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "134, 161",
+    "expected_answer": "부전공 기준인 21학점 이상(2017 이후 학번은 18학점)을 취득해야 합니다.",
+    "must_include": [
+      "18학점 이상",
+      "21학점"
+    ],
+    "must_not_include": [
+      "36학점"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 55,
+    "question": "2학기 공인결석 신청 시 증빙서류 파일이 여러 개면 어떻게 하나요?",
+    "gold_intent": "공인결석 파일 첨부",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
+    "gold_chunk_id": "383",
+    "expected_answer": "파일이 2개 이상일 경우 반드시 압축파일로 첨부하여 제출해야 합니다.",
+    "must_include": [
+      "압축파일",
+      "첨부"
+    ],
+    "must_not_include": [
+      "개별 업로드"
+    ],
+    "difficulty": "Easy",
+    "category": "공인결석"
+  },
+  {
+    "id": 56,
+    "question": "2학기 중 코로나19 확진으로 결석할 때 공인결석 사유는 무엇인가요?",
+    "gold_intent": "코로나 공인결석",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
+    "gold_chunk_id": "384",
+    "expected_answer": "격리 의무가 없으므로, 증상이 있을 경우 외래진료(최대 2일) 사유로 신청 가능합니다.",
+    "must_include": [
+      "외래진료",
+      "최대 2일"
+    ],
+    "must_not_include": [
+      "격리 의무가 있"
+    ],
+    "difficulty": "Hard",
+    "category": "공인결석"
+  },
+  {
+    "id": 57,
+    "question": "2학기 조기취업 공인결석 승인 후 기말에 제출해야 하는 서류는?",
+    "gold_intent": "조기취업 최종 서류",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
+    "gold_chunk_id": "386",
+    "expected_answer": "학기 말에 재직증빙서류를 최종 제출하여 실제 재직 여부를 확인받아야 합니다.",
+    "must_include": [
+      "재직증빙서류",
+      "학기 말"
+    ],
+    "must_not_include": [
+      "졸업증명서"
+    ],
+    "difficulty": "Medium",
+    "category": "공인결석"
+  },
+  {
+    "id": 58,
+    "question": "2학기 OCU 수업도 공인결석 신청이 가능한가요?",
+    "gold_intent": "OCU 공인결석 여부",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
+    "gold_chunk_id": "383",
+    "expected_answer": "OCU와 같이 VOD가 업로드되는 수업은 공인결석 신청 대신 기한 내 동영상을 시청해야 출석 인정됩니다.",
+    "must_include": [
+      "동영상 시청",
+      "인정 불가"
+    ],
+    "must_not_include": [
+      "온라인 신청"
+    ],
+    "difficulty": "Medium",
+    "category": "공인결석"
+  },
+  {
+    "id": 59,
+    "question": "2학기 공인결석 '승인'이 나면 바로 출석으로 처리되나요?",
+    "gold_intent": "공인결석 처리 권한",
+    "gold_document": "[학생] 공인결석 신청 매뉴얼",
+    "gold_chunk_id": "384",
+    "expected_answer": "아닙니다. 승인 후 수업 담당 교수님이 최종적으로 출결 인정 처리를 해야 완료됩니다.",
+    "must_include": [
+      "교수님 권한",
+      "최종 처리"
+    ],
+    "must_not_include": [
+      "자동 처리"
+    ],
+    "difficulty": "Medium",
+    "category": "공인결석"
+  },
+  {
+    "id": 60,
+    "question": "2학기 전부(과) 승인 결과는 언제 확인할 수 있나요?",
+    "gold_intent": "전과 결과 확인",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "22",
+    "expected_answer": "신청한 학기의 다음 학기인 4월 또는 10월에 학생포털에서 확인 가능합니다.",
+    "must_include": [
+      "4월",
+      "10월"
+    ],
+    "must_not_include": [
+      "신청 즉시"
+    ],
+    "difficulty": "Easy",
+    "category": "학적"
+  },
+  {
+    "id": 61,
+    "question": "2학기 수강신청 시 타인이 내 내역을 변경하지 못하게 하려면?",
+    "gold_intent": "수강신청 보안",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "19",
+    "expected_answer": "불이익을 방지하기 위해 비밀번호를 사전에 반드시 변경해야 합니다.",
+    "must_include": [
+      "비밀번호 변경",
+      "사전"
+    ],
+    "must_not_include": [
+      "학과 문의"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 62,
+    "question": "2학기 복학생의 수강신청은 어디서 도와주나요?",
+    "gold_intent": "복학생 수강 지원",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "19",
+    "expected_answer": "정정 기간 이후 복학하는 경우 학사지원팀에서 수강신청을 지원받을 수 있습니다.",
+    "must_include": [
+      "학사지원팀",
+      "지원"
+    ],
+    "must_not_include": [
+      "학과 사무실"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 63,
+    "question": "2학기에 '글로벌소통역량' 교과목을 1학기 레벨 1에서 2로 바꾸어 신청해야 하나요?",
+    "gold_intent": "글로벌소통 신청 방법",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "90",
+    "expected_answer": "네, 1학기 레벨의 '2' 교과목(A1→A2 등)으로 이어서 신청해야 합니다.",
+    "must_include": [
+      "레벨 2",
+      "변경 신청"
+    ],
+    "must_not_include": [
+      "레벨 1 유지"
+    ],
+    "difficulty": "Medium",
+    "category": "수강신청"
+  },
+  {
+    "id": 64,
+    "question": "2학기 성적평가 선택제(P/NP)로 바꿀 수 없는 과목은?",
+    "gold_intent": "P/NP 신청 불가 과목",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "93",
+    "expected_answer": "OCU, 교직, 자유선택(G/YB), 기존 P/NP 과목은 신청이 불가능합니다.",
+    "must_include": [
+      "OCU",
+      "교직",
+      "자유선택"
+    ],
+    "must_not_include": [
+      "전공 과목"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 65,
+    "question": "2학기 부분적 성적포기 후 성적증명서에는 어떻게 표시되나요?",
+    "gold_intent": "성적포기 표기 방식",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "97",
+    "expected_answer": "해당 교과목은 삭제되지 않고 성적증명서 상에 'W'로 표기됩니다.",
+    "must_include": [
+      "'W'",
+      "표기"
+    ],
+    "must_not_include": [
+      "성적증명서에서 삭제"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  },
+  {
+    "id": 66,
+    "question": "2학기 중 휴학을 하면 성적포기 신청은 어떻게 되나요?",
+    "gold_intent": "성적포기 자동 취소",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "95, 97",
+    "expected_answer": "성적포기 신청 후 휴학이나 자퇴 등 학적변동 발생 시 신청 내역은 자동 취소됩니다.",
+    "must_include": [
+      "자동 취소",
+      "학적 변동"
+    ],
+    "must_not_include": [
+      "승인 유지"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 67,
+    "question": "2학기 신입생PSC세미나의 수업 평가 합격 점수는?",
+    "gold_intent": "PSC세미나 합격 점수",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "99",
+    "expected_answer": "수업 활동에 대한 평가에서 70점 이상을 획득해야 필수 요건을 충족합니다.",
+    "must_include": [
+      "70점 이상",
+      "획득"
+    ],
+    "must_not_include": [
+      "60점"
+    ],
+    "difficulty": "Medium",
+    "category": "교과과정"
+  },
+  {
+    "id": 68,
+    "question": "2학기 채플 53분반(수요일)의 수업 장소는 어디인가요?",
+    "gold_intent": "채플 53분반 장소",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "103",
+    "expected_answer": "수요일 8b, 9a교시에 대학교회(J301)에서 통합 수업이 진행됩니다.",
+    "must_include": [
+      "대학교회",
+      "J301"
+    ],
+    "must_not_include": [
+      "만오오디토리움"
+    ],
+    "difficulty": "Easy",
+    "category": "교과과정"
+  },
+  {
+    "id": 69,
+    "question": "2학기 취업커뮤니티 대체과목으로 '해외취업성공전략'을 들을 수 있나요?",
+    "gold_intent": "취업커뮤니티 대체",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "105, 106",
+    "expected_answer": "네, 낙제(NP)를 받은 경우 해외취업성공전략(2.0학점) 등을 대체과목으로 수강할 수 있습니다.",
+    "must_include": [
+      "해외취업성공전략",
+      "대체과목"
+    ],
+    "must_not_include": [
+      "필수 면제"
+    ],
+    "difficulty": "Medium",
+    "category": "졸업"
+  },
+  {
+    "id": 70,
+    "question": "2학기 '커리어트리' 과목의 주요 학습 도구는 무엇인가요?",
+    "gold_intent": "커리어트리 학습 도구",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "124",
+    "expected_answer": "오리엔테이션 영상 시청 및 자기주도적 진로활동계획서 제출을 통해 진행됩니다.",
+    "must_include": [
+      "OT 영상",
+      "진로활동계획서"
+    ],
+    "must_not_include": [
+      "교과서"
+    ],
+    "difficulty": "Easy",
+    "category": "교과과정"
+  },
+  {
+    "id": 71,
+    "question": "2학기 현장실습 학기제에 참여하는 4학년의 주의사항은?",
+    "gold_intent": "현장실습 4학년 주의",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "119",
+    "expected_answer": "졸업사정 기간 전에 성적평가 처리가 반드시 완료되어야 졸업이 가능합니다.",
+    "must_include": [
+      "졸업사정 기간 전",
+      "성적 완료"
+    ],
+    "must_not_include": [
+      "계절학기 참여"
+    ],
+    "difficulty": "Hard",
+    "category": "수강신청"
+  },
+  {
+    "id": 72,
+    "question": "2학기 취업역량학기제(K-Move)의 성적 NP 기준은?",
+    "gold_intent": "취업역량학기제 NP",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "122",
+    "expected_answer": "월 출석률 80% 미만이거나 연수과정 중도 탈락 시 NP 처리됩니다.",
+    "must_include": [
+      "출석률 80% 미만",
+      "NP"
+    ],
+    "must_not_include": [
+      "시험 낙제"
+    ],
+    "difficulty": "Medium",
+    "category": "성적"
+  },
+  {
+    "id": 73,
+    "question": "2학기 '커리어블라썸' 참여 시 받을 수 있는 장학금 액수는?",
+    "gold_intent": "커리어블라썸 장학금",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "126",
+    "expected_answer": "이수 시 1학점당 10만원의 활동지원장학금이 지급됩니다.",
+    "must_include": [
+      "1학점당 10만원",
+      "장학금"
+    ],
+    "must_not_include": [
+      "등록금 감면"
+    ],
+    "difficulty": "Easy",
+    "category": "장학"
+  },
+  {
+    "id": 74,
+    "question": "2학기 '마이크로전공'은 최소 몇 학점을 따야 인정되나요?",
+    "gold_intent": "마이크로전공 인정",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "128, 132",
+    "expected_answer": "해당 과목 중 9학점 이상을 취득하면 이수가 인정됩니다.",
+    "must_include": [
+      "9학점 이상",
+      "취득"
+    ],
+    "must_not_include": [
+      "18학점"
+    ],
+    "difficulty": "Easy",
+    "category": "학적"
+  },
+  {
+    "id": 75,
+    "question": "2학기 학생설계융합전공(1유형)으로 받을 수 있는 학위명은?",
+    "gold_intent": "학생설계 학위명",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "130",
+    "expected_answer": "Global Business&Technology전공(글로벌인재융합학사) 학위를 취득하게 됩니다.",
+    "must_include": [
+      "글로벌인재융합학사",
+      "학위"
+    ],
+    "must_not_include": [
+      "경영학사"
+    ],
+    "difficulty": "Hard",
+    "category": "졸업"
+  },
+  {
+    "id": 76,
+    "question": "2학기에 개설되는 마이크로전공 'K-뷰티 전공'은 누가 듣나요?",
+    "gold_intent": "K-뷰티 전공 대상",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "133, 141",
+    "expected_answer": "외국인 재학생을 대상으로 취업에 필요한 이론과 기술을 교육합니다.",
+    "must_include": [
+      "외국인 재학생",
+      "대상"
+    ],
+    "must_not_include": [
+      "내국인 학생"
+    ],
+    "difficulty": "Easy",
+    "category": "학적"
+  },
+  {
+    "id": 77,
+    "question": "2학기 '박물관·미술관학예사전공'의 교육 목표는?",
+    "gold_intent": "학예사 전공 목표",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "143",
+    "expected_answer": "문화유산 관련 큐레이터 양성 및 자격증 취득을 목표로 합니다.",
+    "must_include": [
+      "큐레이터 양성",
+      "자격증"
+    ],
+    "must_not_include": [
+      "화가 지망"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 78,
+    "question": "2학기 신설 'AI부동산빅데이터전공'에서 배우는 주요 내용은?",
+    "gold_intent": "AI부동산 교육내용",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "145",
+    "expected_answer": "AI 및 빅데이터 기술을 융합하여 부동산 자산 가치를 관리하고 예측하는 법을 배웁니다.",
+    "must_include": [
+      "가치 관리",
+      "예측"
+    ],
+    "must_not_include": [
+      "건축 설계"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 79,
+    "question": "2학기에 9학점 이수 시 수여되는 자격증이 있는 마이크로전공은?",
+    "gold_intent": "마스터 자격증",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "146",
+    "expected_answer": "글로컬마케터융합전공 이수 시 '마케터 마스터' 자격증이 부여됩니다.",
+    "must_include": [
+      "마케터 마스터",
+      "자격증"
+    ],
+    "must_not_include": [
+      "사회복지사"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 80,
+    "question": "2학기 '글로벌호텔서비스전공'의 코드쉐어 과목은 무엇인가요?",
+    "gold_intent": "호텔서비스 코드쉐어",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "147, 148",
+    "expected_answer": "호스피탈리티경영론(HCM221), 글로벌소믈리에·바리스타실무(HCM215) 등이 있습니다.",
+    "must_include": [
+      "HCM221",
+      "HCM215"
+    ],
+    "must_not_include": [
+      "COM140"
+    ],
+    "difficulty": "Hard",
+    "category": "학적"
+  },
+  {
+    "id": 81,
+    "question": "2학기 'AI언어데이터융합전공'의 캡스톤디자인 과목명은?",
+    "gold_intent": "언어데이터 캡스톤",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "149",
+    "expected_answer": "'캡스톤디자인(언어AI및데이터)'입니다.",
+    "must_include": [
+      "캡스톤디자인",
+      "언어AI및데이터"
+    ],
+    "must_not_include": [
+      "로봇 캡스톤"
+    ],
+    "difficulty": "Easy",
+    "category": "학적"
+  },
+  {
+    "id": 82,
+    "question": "2학기 '티베트어전공'의 주요 수업 구성은?",
+    "gold_intent": "티베트어 수업 구성",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "161",
+    "expected_answer": "기초 문법, 일상 회화, 청취 능력력을 중점적으로 학습합니다.",
+    "must_include": [
+      "기초 문법",
+      "회화",
+      "청취"
+    ],
+    "must_not_include": [
+      "경제 분석"
+    ],
+    "difficulty": "Medium",
+    "category": "학적"
+  },
+  {
+    "id": 83,
+    "question": "2학기 라오스어 전공의 문의처와 전화번호는?",
+    "gold_intent": "라오스어 문의처",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "135, 164",
+    "expected_answer": "특수외국어사업단(051-509-5363)입니다.",
+    "must_include": [
+      "특수외국어사업단",
+      "5363"
+    ],
+    "must_not_include": [
+      "학사지원팀"
+    ],
+    "difficulty": "Easy",
+    "category": "기타"
+  },
+  {
+    "id": 84,
+    "question": "2학기 중 플립러닝1 유형의 온라인 동영상 시청 인정 기준은?",
+    "gold_intent": "플립러닝 인정 기준",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "168",
+    "expected_answer": "동영상을 95% 이상 시청해야 온라인 수업을 이수한 것으로 인정됩니다.",
+    "must_include": [
+      "95% 이상",
+      "시청"
+    ],
+    "must_not_include": [
+      "50% 이상"
+    ],
+    "difficulty": "Medium",
+    "category": "교과과정"
+  },
+  {
+    "id": 85,
+    "question": "2학기에 하이플렉스(HyFlex) 수업 방식을 선택하는 주체는?",
+    "gold_intent": "하이플렉스 참여자",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "171",
+    "expected_answer": "학습자(학생)가 대면 또는 비대면 수업 참여를 직접 선택할 수 있습니다.",
+    "must_include": [
+      "학습자 선택",
+      "대면/비대면"
+    ],
+    "must_not_include": [
+      "교수 지정"
+    ],
+    "difficulty": "Easy",
+    "category": "교과과정"
+  },
+  {
+    "id": 86,
+    "question": "2학기 '글로벌서비스러닝' 참여 시 몇 시간 활동해야 학점이 나오나요?",
+    "gold_intent": "서비스러닝 시간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "172, 173",
+    "expected_answer": "총 30시간 이상 활동 시 봉사 1학점 이수가 가능합니다.",
+    "must_include": [
+      "30시간 이상",
+      "봉사 1학점"
+    ],
+    "must_not_include": [
+      "10시간"
+    ],
+    "difficulty": "Medium",
+    "category": "비교과"
+  },
+  {
+    "id": 87,
+    "question": "2학기 교직과정 무시험 검정 신청 시 필수 검사항목은?",
+    "gold_intent": "교직 마약 검사",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "174, 176",
+    "expected_answer": "마약, 대마, 향정신성의약품 중독 검사 결과 이상 없음 판정을 받아야 합니다.",
+    "must_include": [
+      "마약류 검사",
+      "이상 없음"
+    ],
+    "must_not_include": [
+      "혈액형 검사"
+    ],
+    "difficulty": "Medium",
+    "category": "교직"
+  },
+  {
+    "id": 88,
+    "question": "2학기 중 4학년 학생이 교육실습을 나가는 시기는?",
+    "gold_intent": "교직 교육실습 시기",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "175",
+    "expected_answer": "학교현장실습은 원칙적으로 4학년 1학기에 실시하므로 2학기에는 해당되지 않습니다.",
+    "must_include": [
+      "4학년 1학기",
+      "2학기 아님"
+    ],
+    "must_not_include": [
+      "2학기 중"
+    ],
+    "difficulty": "Hard",
+    "category": "교직"
+  },
+  {
+    "id": 89,
+    "question": "2학기 교직 적성·인성 검사는 재학 중 총 몇 번 합격해야 하나요?",
+    "gold_intent": "교직 인적성 합격",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "174, 175",
+    "expected_answer": "재학 기간 중 적격 판정을 2회 이상 받아야 자격증 취득이 가능합니다.",
+    "must_include": [
+      "적격 판정",
+      "2회 이상"
+    ],
+    "must_not_include": [
+      "1회"
+    ],
+    "difficulty": "Medium",
+    "category": "교직"
+  },
+  {
+    "id": 90,
+    "question": "2학기 '유럽지역통상전공' 사무실 전화번호와 위치는?",
+    "gold_intent": "학과 사무실 안내",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "185, 186",
+    "expected_answer": "전화번호는 051-509-5681이며, 실번호는 D595입니다.",
+    "must_include": [
+      "5681",
+      "D595"
+    ],
+    "must_not_include": [
+      "F102"
+    ],
+    "difficulty": "Easy",
+    "category": "기타"
+  },
+  {
+    "id": 91,
+    "question": "2학기 수강신청 사이트 주소는 무엇인가요?",
+    "gold_intent": "수강신청 사이트",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "11, 390",
+    "expected_answer": "http://sugang.bufs.ac.kr입니다.",
+    "must_include": [
+      "sugang.bufs.ac.kr",
+      "접속"
+    ],
+    "must_not_include": [
+      "m.bufs.ac.kr"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 92,
+    "question": "2학기에 '여행으로 배우는 중국어' OCU 과목을 가르치는 교수님은?",
+    "gold_intent": "OCU 담당 교수",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "188",
+    "expected_answer": "부산외국어대학교의 조소군 교수님입니다.",
+    "must_include": [
+      "조소군",
+      "교수님"
+    ],
+    "must_not_include": [
+      "김원 교수"
+    ],
+    "difficulty": "Easy",
+    "category": "수강신청"
+  },
+  {
+    "id": 93,
+    "question": "2학기 동계 계절학기 운영 기간은 정확히 언제인가요?",
+    "gold_intent": "동계 계절학기 기간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "8",
+    "expected_answer": "2026년 12월 21일(월)부터 2027년 1월 12일(화)까지입니다.",
+    "must_include": [
+      "12월 21일",
+      "1월 12일"
+    ],
+    "must_not_include": [
+      "2월까지"
+    ],
+    "difficulty": "Medium",
+    "category": "학사일정"
+  },
+  {
+    "id": 94,
+    "question": "2학기 중 국가근로장학생 모집은 몇 차까지 진행되나요?",
+    "gold_intent": "국가근로 모집 차수",
+    "gold_document": "장학공지",
+    "gold_chunk_id": "388, 416",
+    "expected_answer": "현재 공지된 바에 따르면 3차 모집까지 안내되어 있습니다.",
+    "must_include": [
+      "3차 모집",
+      "안내"
+    ],
+    "must_not_include": [
+      "1차로 종료"
+    ],
+    "difficulty": "Easy",
+    "category": "장학"
+  },
+  {
+    "id": 95,
+    "question": "2학기 모바일 학생증으로 셔틀버스를 탈 수 있나요?",
+    "gold_intent": "모바일 학생증 버스",
+    "gold_document": "학사공지",
+    "gold_chunk_id": "425",
+    "expected_answer": "네, 셔틀버스 이용 시 모바일 학생증이 반드시 필요합니다.",
+    "must_include": [
+      "셔틀버스",
+      "모바일 학생증"
+    ],
+    "must_not_include": [
+      "실물 카드 전용"
+    ],
+    "difficulty": "Easy",
+    "category": "기타"
+  },
+  {
+    "id": 96,
+    "question": "2학기에 'AI 시대의 혁신적 글쓰기' 과목을 들을 수 있나요?",
+    "gold_intent": "혁신적 글쓰기 시범",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "35",
+    "expected_answer": "네, 해당 과목은 시범 운영 중이므로 수강이 가능합니다.",
+    "must_include": [
+      "AI 시대",
+      "혁신적 글쓰기"
+    ],
+    "must_not_include": [
+      "전공 과목"
+    ],
+    "difficulty": "Medium",
+    "category": "교과과정"
+  },
+  {
+    "id": 97,
+    "question": "2학기 '국제문화관광전공' 사무실은 어디에 있나요?",
+    "gold_intent": "학과 사무실 위치",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "187",
+    "expected_answer": "실번호 D502-1에 위치하고 있습니다.",
+    "must_include": [
+      "D502-1",
+      "위치"
+    ],
+    "must_not_include": [
+      "B204"
+    ],
+    "difficulty": "Easy",
+    "category": "기타"
+  },
+  {
+    "id": 98,
+    "question": "2학기 등록금 가상계좌 납부 가능 시간은?",
+    "gold_intent": "등록금 납부 시간",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "396",
+    "expected_answer": "09:00부터 17:00까지 입금이 가능합니다.",
+    "must_include": [
+      "09:00",
+      "17:00"
+    ],
+    "must_not_include": [
+      "24시간"
+    ],
+    "difficulty": "Easy",
+    "category": "등록금"
+  },
+  {
+    "id": 99,
+    "question": "2학기 중 주민등록번호가 변경되면 어디에 알려야 하나요?",
+    "gold_intent": "인적사항 변경 알림",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "88, 397",
+    "expected_answer": "증빙서류를 지참하여 학사지원팀(051-509-5182)으로 문의하여 수정해야 합니다.",
+    "must_include": [
+      "학사지원팀",
+      "수정"
+    ],
+    "must_not_include": [
+      "학과 사무실"
+    ],
+    "difficulty": "Easy",
+    "category": "학적"
+  },
+  {
+    "id": 100,
+    "question": "2학기 수업평가를 해야 하는 이유는 무엇인가요?",
+    "gold_intent": "수업평가 목적",
+    "gold_document": "2026학년도 2학기 학사안내",
+    "gold_chunk_id": "44",
+    "expected_answer": "학생들의 만족도를 조사하여 수업 운영 및 강의 내용의 질적 향상을 위한 자료로 활용하기 위함입니다.",
+    "must_include": [
+      "만족도 조사",
+      "질적 향상"
+    ],
+    "must_not_include": [
+      "교수님 평가"
+    ],
+    "difficulty": "Easy",
+    "category": "성적"
+  }
+]
