@@ -13,7 +13,7 @@ langchain-text-splitters==1.1.2
 langfuse==4.14.4
 langgraph==1.2.11
 docling==2.120.1
-pymupdf==1.28.0        # text-layer fallback for pages Docling drops on std::bad_alloc
+pymupdf==1.28.2        # text-layer fallback for pages Docling drops on std::bad_alloc
 python-dotenv==1.2.2
 sentence-transformers==5.7.0
 tiktoken==0.13.0
