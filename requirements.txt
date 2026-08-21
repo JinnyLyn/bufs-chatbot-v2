@@ -16,7 +16,7 @@ docling==2.120.1
 pymupdf==1.28.2        # text-layer fallback for pages Docling drops on std::bad_alloc
 python-dotenv==1.2.2
 sentence-transformers==5.7.0
-tiktoken==0.13.0
+tiktoken==0.14.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
 requests>=2.34.2          # debug/status.py, debug/langfuse_client.py
 qdrant-client>=1.18,<2  # debug/repro.py (needs 1.18.0+); <2 pins the 1.x query_points/SparseVector/FusionQuery API that tools._split_hybrid_search mirrors
