@@ -3,7 +3,7 @@ uvicorn[standard]>=0.52.1
 sse-starlette>=3.4.6
 fastembed==0.8.0
 kiwipiepy==0.23.2         # Korean morphological tokenizer for the BM25 sparse leg (SPARSE_MODEL=kiwi)
-gradio==6.22.0
+gradio==6.25.0
 ipykernel==7.3.0
 langchain>=1.3.16,<2
 langchain-huggingface==1.2.2
