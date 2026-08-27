@@ -5,7 +5,7 @@ pytest-cov>=7.1.0
 pydantic
 langgraph==1.2.11
 langchain-text-splitters==1.1.2
-tiktoken==0.13.0
+tiktoken==0.14.0
 
 # debug/ toolkit import-time deps (needed to collect tests/debug/*; the heavier
 # deps — langfuse, qdrant-client, torch — are imported lazily and stay optional)
