@@ -10,10 +10,21 @@
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
-echo "▶ 1/2  main 직접 커밋 차단 훅 켜는 중..."
+echo "▶ 1/3  main 직접 커밋 차단 훅 켜는 중..."
 git config core.hooksPath .claude/githooks
 
-echo "▶ 2/2  줄바꿈(LF) 자동변환 끄는 중 (Windows/Mac 충돌 방지)..."
+# git은 실행 권한이 없는 훅을 "조용히" 건너뛴다(경고는 hint 한 줄뿐).
+# Windows 체크아웃이나 파일 복사 과정에서 실행 비트가 날아가면 main 커밋 차단이
+# 그대로 무력화되므로, 셋업할 때마다 다시 세워 준다.
+echo "▶ 2/3  훅 실행 권한 확인 중..."
+chmod +x .claude/githooks/* 2>/dev/null || true
+if [ ! -x .claude/githooks/pre-commit ]; then
+    echo "  ⚠ .claude/githooks/pre-commit 에 실행 권한을 줄 수 없습니다."
+    echo "    이 상태에서는 main 직접 커밋이 차단되지 않습니다. 수동으로 확인하세요:"
+    echo "      chmod +x .claude/githooks/pre-commit"
+fi
+
+echo "▶ 3/3  줄바꿈(LF) 자동변환 끄는 중 (Windows/Mac 충돌 방지)..."
 git config core.autocrlf false
 
 echo ""
