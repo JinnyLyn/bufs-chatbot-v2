@@ -231,6 +231,22 @@ class TestRateLimit:
             )
         assert len(ratelimit._hits) <= 50  # noqa: SLF001
 
+    def test_client_table_is_bounded_even_when_every_client_is_active(self, monkeypatch):
+        """Pruning idle clients frees nothing when all of them are active, so the cap has
+        to evict regardless — otherwise the table drifts up one entry per new client."""
+        from api import ratelimit
+        monkeypatch.setattr(ratelimit, "RATE_LIMIT_ENABLED", True)
+        monkeypatch.setattr(ratelimit, "_MAX_TRACKED_CLIENTS", 20)
+        monkeypatch.setattr(ratelimit, "RATE_LIMIT_WINDOW_S", 3600)  # nothing goes idle
+        ratelimit.reset_for_tests()
+        client = self._app()
+
+        for i in range(200):
+            client.post(
+                "/api/session", json={"lang": "ko"}, headers={"CF-Connecting-IP": f"203.0.113.{i % 256}"}
+            )
+        assert len(ratelimit._hits) <= 20  # noqa: SLF001
+
 
 class TestClientKey:
     def _request(self, headers: dict, peer: str = "127.0.0.1"):

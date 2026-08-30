@@ -74,7 +74,14 @@ def _is_loopback(request: Request) -> bool:
     ~200 requests from one address and would trip the limit part-way through. Several
     runners do not handle 429 and would record the refusals as answers, silently
     corrupting a baseline. Tunnel traffic always carries CF-Connecting-IP, so requiring
-    its absence keeps this from becoming a bypass for a remote caller.
+    its absence keeps this from becoming a bypass for a *remote* caller.
+
+    The trade-off it does accept: another account on this shared box can call the API
+    over loopback unmetered. That is judged acceptable because a local account already
+    has strictly more capability than the HTTP surface offers — it can read the code and
+    run inference directly — and because loopback traffic is indistinguishable from a
+    legitimate eval run. Set RATE_LIMIT_EXEMPT_LOOPBACK=false to meter it anyway, and
+    disable the limiter for eval runs instead.
     """
     if request.headers.get("CF-Connecting-IP", "").strip():
         return False
@@ -83,9 +90,22 @@ def _is_loopback(request: Request) -> bool:
 
 
 def _prune_locked(now: float) -> None:
-    """Drop clients with no activity in the window. Caller holds `_lock`."""
+    """Enforce the tracked-client cap. Caller holds `_lock`.
+
+    Drops clients idle for a full window first. If that frees nothing — every tracked
+    client is currently active — the oldest are evicted anyway, so the table is bounded
+    unconditionally rather than drifting upward one entry per new client.
+    """
     cutoff = now - RATE_LIMIT_WINDOW_S
     for key in [k for k, hits in _hits.items() if not hits or hits[-1] <= cutoff]:
+        del _hits[key]
+    if len(_hits) < _MAX_TRACKED_CLIENTS:
+        return
+    # Oldest-activity-first. Evicting an active client only refunds its budget; letting
+    # the table grow without bound would recreate the exhaustion this module prevents.
+    for key in sorted(_hits, key=lambda k: _hits[k][-1] if _hits[k] else 0.0)[
+        : len(_hits) - _MAX_TRACKED_CLIENTS + 1
+    ]:
         del _hits[key]
 
 
