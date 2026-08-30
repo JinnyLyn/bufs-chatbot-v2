@@ -2,7 +2,7 @@
   "mcpServers": {
     "langfuse": {
       "command": "uvx",
-      "args": ["langfuse-mcp"],
+      "args": ["langfuse-mcp==0.10.1"],
       "env": {
         "LANGFUSE_PUBLIC_KEY": "${LANGFUSE_PUBLIC_KEY}",
         "LANGFUSE_SECRET_KEY": "${LANGFUSE_SECRET_KEY}",

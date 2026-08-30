@@ -11,6 +11,14 @@ __pycache__/
 .venv/
 venv/
 
+# Agent-local settings and scratch worktrees. settings.local.json holds per-machine
+# env values and has in practice contained live Langfuse keys; this repo is PUBLIC, so
+# it must be ignored by the COMMITTED ruleset, not only by a machine-local
+# .git/info/exclude that no clone or CI checkout ever sees.
+.claude/settings.local.json
+**/.claude/settings.local.json
+**/.claude/worktrees/
+
 # machine-specific CA bundle (Windows trust store export, for TLS-scanning AV)
 win-ca-bundle.pem
 

@@ -1,0 +1,39 @@
+# Docker's build context is the WORKING TREE, not git — .gitignore does not apply here.
+# project/Dockerfile does `COPY --chown=user . .`, so without this file a build would
+# bake the live Langfuse secret, the Q&A transcripts and the whole git history into the
+# image. Layers are immutable, so deleting a file in a later layer does not remove it:
+# `docker history` and layer extraction recover anything that was ever copied in.
+
+# Secrets
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+**/.claude/settings.local.json
+
+# History and agent scratch space
+.git
+.github
+**/.claude/worktrees/
+.omc/
+
+# Real user conversations and runtime logs
+logs/
+pdfs/
+
+# Dependencies and build output (reinstalled inside the image)
+**/node_modules/
+**/.next/
+.venv/
+venv/
+**/__pycache__/
+*.pyc
+
+# Test and tooling artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+eval_tools/runs/
+notebooks/
