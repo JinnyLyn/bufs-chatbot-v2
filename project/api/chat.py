@@ -10,16 +10,19 @@ Each request gets a trace_id (logged on every line via TraceFilter), structured
 import asyncio
 import json
 import logging
+import os
+import secrets
 import threading
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from sse_starlette.sse import EventSourceResponse
 
 import config
 from api.agent_stream import run_agent_stream
 from api.qa_logger import get_qa_logger, set_skip_log
+from api.ratelimit import StreamSlot, check_rate_limit
 from api.runtime import ensure_session
 from api.trace_context import new_trace_id, set_trace_id
 
@@ -59,6 +62,22 @@ def _finalize(tid: str, session_id: str, question: str, payload: dict, t0: float
         logger.warning("Q&A log failed: %s", exc)
 
 
+# Suppressing a request's Q&A record is an audit-trail control, so it must not be
+# something any caller can flip by adding a header. When TEST_MODE_TOKEN is set, the
+# X-Test-Mode header is honoured only if it carries that exact value; leaving it unset
+# keeps the historical behaviour for local test runs. Production should set it.
+_TEST_MODE_TOKEN = os.environ.get("TEST_MODE_TOKEN", "").strip()
+
+
+def _is_test_mode(request: Request) -> bool:
+    header = request.headers.get("X-Test-Mode", "").strip()
+    if not header:
+        return False
+    if _TEST_MODE_TOKEN:
+        return secrets.compare_digest(header, _TEST_MODE_TOKEN)
+    return header.lower() in {"1", "true", "yes", "on"}
+
+
 @router.get("/stream")
 async def chat_stream(
     request: Request,
@@ -71,10 +90,18 @@ async def chat_stream(
     Emits `token` (incremental), `done` (final payload) and `error` events, exactly
     as the frontend `useChat` hook expects. `X-Test-Mode` header skips Q&A logging.
     """
-    ensure_session(session_id)
+    # Order matters: reject cheaply before anything expensive. Rate limit first (a
+    # flood costs nothing to refuse), then validate the id, then claim a GPU slot.
+    check_rate_limit(request)
+    try:
+        ensure_session(session_id)
+    except ValueError:
+        # Reject before any LLM work: an unrecognised id shape is never one we minted.
+        raise HTTPException(status_code=422, detail="session_id must be a UUID.") from None
+    slot = StreamSlot().acquire()
     tid = new_trace_id()
     set_trace_id(tid)
-    is_test = request.headers.get("X-Test-Mode", "").strip().lower() in {"1", "true", "yes", "on"}
+    is_test = _is_test_mode(request)
     t0 = time.monotonic()
     logger.info(
         "[chat-IN] tid=%s sid=%s q_chars=%d q=%r model=%s test=%s",
@@ -99,27 +126,33 @@ async def chat_stream(
 
         threading.Thread(target=producer, daemon=True).start()
 
-        while True:
-            item = await queue.get()
-            if item is None:
-                break
-            kind, payload = item
+        # finally (not a plain trailing release): on client disconnect this generator is
+        # closed and GeneratorExit is raised at the await below, so without it an
+        # abandoned EventSource would hold its concurrency slot forever.
+        try:
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                kind, payload = item
 
-            if kind == "token":
-                yield {"event": "token", "data": json.dumps({"token": payload}, ensure_ascii=False)}
-            elif kind == "clear":
-                yield {"event": "clear", "data": "{}"}
-            elif kind == "done":
-                _finalize(tid, session_id, question, payload, t0)
-                yield {"event": "done", "data": json.dumps(payload, ensure_ascii=False)}
-            elif kind == "error":
-                logger.error("[chat-ERR] tid=%s %s", tid, payload)
-                yield {
-                    "event": "error",
-                    "data": json.dumps(
-                        {"message": "처리 중 오류가 발생했습니다. 다시 시도해 주세요."},
-                        ensure_ascii=False,
-                    ),
-                }
+                if kind == "token":
+                    yield {"event": "token", "data": json.dumps({"token": payload}, ensure_ascii=False)}
+                elif kind == "clear":
+                    yield {"event": "clear", "data": "{}"}
+                elif kind == "done":
+                    _finalize(tid, session_id, question, payload, t0)
+                    yield {"event": "done", "data": json.dumps(payload, ensure_ascii=False)}
+                elif kind == "error":
+                    logger.error("[chat-ERR] tid=%s %s", tid, payload)
+                    yield {
+                        "event": "error",
+                        "data": json.dumps(
+                            {"message": "처리 중 오류가 발생했습니다. 다시 시도해 주세요."},
+                            ensure_ascii=False,
+                        ),
+                    }
+        finally:
+            slot.release()
 
     return EventSourceResponse(event_generator())
