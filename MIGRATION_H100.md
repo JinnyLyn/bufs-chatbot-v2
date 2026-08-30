@@ -197,6 +197,18 @@ chmod +x scripts/*.sh          # 최초 1회
 기록한다. `stop-all.sh`는 **그 PID만** 종료한다 — 공유 서버에서 포트로 kill 하면
 남의 프로세스를 잡을 수 있어서 일부러 그렇게 하지 않았다.
 
+#### `scripts/` 인벤토리 — 서버에서 뭘 쓰고 뭘 쓰면 안 되나
+
+`.ps1`은 전부 Windows 전용이다(`Get-NetTCPConnection`, `cmd.exe`, `-WindowStyle`,
+백슬래시 경로 — pwsh를 깔아도 안 돈다).
+
+| 스크립트 | 서버(Ubuntu)에서 |
+|---|---|
+| `start-all.ps1` / `stop-all.ps1` / `healthcheck.ps1` | → `start-all.sh` / `stop-all.sh` / `healthcheck.sh` 사용 |
+| `register-autostart.ps1` | → systemd `--user` 유닛 (3-6절) |
+| `apply-maruvis-tunnel.ps1` | 옛 maruvis.co.kr 배포용 일회성 — 폐기. 새 배포는 `cloudflared-config.example.yml` |
+| `rollback-tuning.ps1` / `rollback-cohort-fix.ps1` / `rollback-schedule-fix.ps1` | **실행 금지.** 2026-06 인시던트 시점의 스냅샷 복원용 — `project/.env`를 **이전 관리자의 옛 env**(옛 Langfuse 키·Windows SSL 경로·4070 :11435 프로파일)로 덮어쓰고 KB를 커밋본보다 오래된 스냅샷으로 되돌린다. 서버에서 롤백은 git(`qdrant_db`/`parent_store`는 커밋됨) + 3-2절 `.env` 템플릿으로 한다. `backups/` 삭제(2절) 후에는 "No backup found"로 안전하게 실패한다 |
+
 ### 3-5. cloudflared
 
 새 배포는 **새 Cloudflare 프로필 + 새 도메인 `maruvis.kr` + 새 터널**이다
