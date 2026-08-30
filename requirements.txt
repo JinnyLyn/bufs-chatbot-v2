@@ -1,6 +1,6 @@
 fastapi>=0.141.1
 uvicorn[standard]>=0.52.4
-sse-starlette>=3.4.6
+sse-starlette>=3.4.8
 fastembed==0.8.0
 kiwipiepy==0.23.2         # Korean morphological tokenizer for the BM25 sparse leg (SPARSE_MODEL=kiwi)
 gradio==6.25.0
