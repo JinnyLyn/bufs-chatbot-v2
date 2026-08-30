@@ -41,7 +41,7 @@
 | **청킹** | parent/child 계층 + **학번 섹션 인지** + **학사일정 '월' 컬럼 채우기**(`project/document_chunker.py`) |
 | **지식베이스** | 학사문서 23종 → parent 194 / child 1,459 |
 | **관측** | Langfuse Cloud(전 요청 추적) + 회전 파일로그 + Q&A JSONL + `/health` |
-| **배포** | Cloudflare 터널(`maruvis.co.kr` → 프론트 :3000 / `/api/*` → 백엔드 :8000, same-origin) |
+| **배포** | Cloudflare 터널(`maruvis.kr` → 프론트 :3000 / `/api/*` → 백엔드 :8000, same-origin). H100 리눅스 서버, [MIGRATION_H100.md](MIGRATION_H100.md) 참조 |
 
 ## BUFS 특화 개선
 
@@ -104,6 +104,8 @@ npm run dev                   # :3000 (프로덕션: npm run build && npm start)
 → http://localhost:3000
 
 전체 통합·운영 가이드는 [INTEGRATION.md](INTEGRATION.md) 참조.
+**H100 리눅스 서버로의 서빙 이관**(cloudflared 터널 포함)은 [MIGRATION_H100.md](MIGRATION_H100.md) 참조
+— `scripts/start-all.sh` / `stop-all.sh` / `healthcheck.sh`가 기존 `.ps1`들의 리눅스 대응이다.
 
 ## 프로젝트 구조
 
@@ -121,7 +123,7 @@ npm run dev                   # :3000 (프로덕션: npm run build && npm start)
 ├── markdown_docs/            # 학사문서 23종 (KB 소스)
 ├── qdrant_db/ parent_store/  # 벡터DB + parent 청크 (커밋됨)
 ├── eval_tools/               # 평가/분석 하니스 (룰기반·RAGAS·Langfuse)
-├── scripts/                  # 기동/중지/헬스체크/롤백/배포 PowerShell
+├── scripts/                  # 기동/중지/헬스체크(.ps1=Windows, .sh=Linux)/롤백/배포
 ├── REPORT_결과.md / REPORT_vs_BUFS.md   # 평가·비교 보고서
 └── INTEGRATION.md            # 통합·운영 가이드
 ```

@@ -3,7 +3,6 @@ import time
 from typing import Annotated, List
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
-from qdrant_client.http import models as qmodels
 import config
 from db.parent_store_manager import ParentStoreManager
 
@@ -17,6 +16,10 @@ def _split_hybrid_search_raw(vs, dense_query: str, sparse_query: str, k: int, sc
     both legs are embedded from DIFFERENT texts. Returns (points, docs) so callers that need
     RRF scores for CE+RRF blending can use points[i].score alongside docs[i].
     """
+    # Lazy import: qdrant-client is a runtime dep (requirements.txt), not part of the
+    # offline unit suite (requirements-dev.txt) — a module-level import breaks test
+    # collection for anything that imports tools.py (e.g. test_selfcheck's topology test).
+    from qdrant_client.http import models as qmodels
     if getattr(vs, "embeddings", None) is None or getattr(vs, "sparse_embeddings", None) is None:
         raise ValueError(
             "SPLIT_PATH_ENABLED requires a HYBRID collection with both a dense and a sparse "
