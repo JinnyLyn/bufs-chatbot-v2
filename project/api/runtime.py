@@ -5,6 +5,7 @@ session to its own LangGraph *thread* (thread_id == session_id), so a single
 compiled graph serves many independent multi-turn conversations.
 """
 
+import logging
 import os
 import re
 import threading
@@ -16,6 +17,8 @@ from typing import Optional
 
 import config
 from core.rag_system import RAGSystem
+
+logger = logging.getLogger(__name__)
 
 _rag_system: Optional[RAGSystem] = None
 _init_lock = threading.Lock()
@@ -112,18 +115,47 @@ def _session_info(session_id: str, lang: str) -> dict:
     }
 
 
-def _register_locked(session_id: str, info: dict) -> None:
-    """Insert `info` and evict oldest entries past MAX_SESSIONS. Caller holds the lock."""
+def _drop_thread(session_id: str) -> None:
+    """Delete a session's conversation history from the graph checkpointer.
+
+    The checkpointer is a LangGraph InMemorySaver (rag_agent/graph.py), which keeps
+    every thread for the life of the process. Evicting only the metadata registry would
+    bound the small dict and leave the large structure — the actual messages — growing
+    without limit, so eviction has to reach through to the checkpointer as well.
+
+    Never raises: this runs on the request path, and reclaiming memory must not be able
+    to fail a user's request. It is also a no-op before the RAG system is initialised.
+    """
+    try:
+        checkpointer = get_rag_system().agent_graph.checkpointer
+    except Exception:  # noqa: BLE001 — not initialised (tests, startup) or no graph yet
+        return
+    try:
+        checkpointer.delete_thread(session_id)
+    except Exception:  # noqa: BLE001 — unknown thread, or a saver without delete_thread
+        logger.debug("could not drop checkpointer thread for evicted session", exc_info=True)
+
+
+def _register_locked(session_id: str, info: dict) -> list[str]:
+    """Insert `info` and evict oldest entries past MAX_SESSIONS. Caller holds the lock.
+
+    Returns the evicted ids so the caller can drop their checkpointer threads outside
+    the lock — `delete_thread` touches the graph and should not run under `_sessions_lock`.
+    """
     _sessions[session_id] = info
     _sessions.move_to_end(session_id)
+    evicted: list[str] = []
     while len(_sessions) > MAX_SESSIONS:
-        _sessions.popitem(last=False)
+        evicted.append(_sessions.popitem(last=False)[0])
+    return evicted
 
 
 def create_session(lang: str = "ko") -> dict:
     info = _session_info(str(uuid.uuid4()), lang)
     with _sessions_lock:
-        _register_locked(info["session_id"], info)
+        evicted = _register_locked(info["session_id"], info)
+    for sid in evicted:
+        _drop_thread(sid)
     return info
 
 
@@ -148,5 +180,7 @@ def ensure_session(session_id: str, lang: str = "ko") -> dict:
         info = _sessions.get(session_id)
         if info is None:
             info = _session_info(session_id, lang)
-        _register_locked(session_id, info)
-        return info
+        evicted = _register_locked(session_id, info)
+    for sid in evicted:
+        _drop_thread(sid)
+    return info

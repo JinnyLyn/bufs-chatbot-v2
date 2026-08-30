@@ -108,6 +108,51 @@ class TestSessionRegistryBound:
         assert minted[-1] in runtime._sessions  # noqa: SLF001
         assert minted[0] not in runtime._sessions  # noqa: SLF001
 
+    def test_eviction_also_drops_conversation_history(self, monkeypatch):
+        """Capping the metadata dict is pointless if the messages keep accumulating.
+
+        The conversation itself lives in the LangGraph checkpointer keyed by the same
+        id, so eviction must reach through to delete_thread — otherwise the small
+        structure is bounded and the large one still grows without limit.
+        """
+        import uuid
+        from unittest.mock import MagicMock
+
+        from api import runtime
+        monkeypatch.setattr(runtime, "MAX_SESSIONS", 3)
+        with runtime._sessions_lock:  # noqa: SLF001
+            runtime._sessions.clear()
+
+        fake_checkpointer = MagicMock()
+        fake_rag = MagicMock()
+        fake_rag.agent_graph.checkpointer = fake_checkpointer
+        monkeypatch.setattr(runtime, "get_rag_system", lambda: fake_rag)
+
+        minted = [str(uuid.uuid4()) for _ in range(5)]
+        for sid in minted:
+            runtime.ensure_session(sid)
+
+        dropped = [c.args[0] for c in fake_checkpointer.delete_thread.call_args_list]
+        assert dropped == minted[:2]
+
+    def test_eviction_survives_a_checkpointer_that_raises(self, monkeypatch):
+        """Reclaiming memory must never fail the request that triggered it."""
+        import uuid
+        from unittest.mock import MagicMock
+
+        from api import runtime
+        monkeypatch.setattr(runtime, "MAX_SESSIONS", 1)
+        with runtime._sessions_lock:  # noqa: SLF001
+            runtime._sessions.clear()
+
+        fake_rag = MagicMock()
+        fake_rag.agent_graph.checkpointer.delete_thread.side_effect = RuntimeError("boom")
+        monkeypatch.setattr(runtime, "get_rag_system", lambda: fake_rag)
+
+        runtime.ensure_session(str(uuid.uuid4()))
+        runtime.ensure_session(str(uuid.uuid4()))  # must not raise
+        assert len(runtime._sessions) == 1  # noqa: SLF001
+
 
 # ---------------------------------------------------------------------------
 # Rate limiting
