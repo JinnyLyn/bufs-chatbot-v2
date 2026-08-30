@@ -34,6 +34,8 @@ eval_tools/runs/
 logs/h2eval/
 # App log daily rotations (TimedRotatingFileHandler date-suffixed backups)
 logs/backend/app.log.*
+# PIDs of processes started by scripts/start-all.sh (runtime state)
+logs/run/
 
 # test / lint / type-check tooling artifacts (CI-generated, never committed)
 .coverage
