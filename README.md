@@ -41,7 +41,7 @@
 | **청킹** | parent/child 계층 + **학번 섹션 인지** + **학사일정 '월' 컬럼 채우기**(`project/document_chunker.py`) |
 | **지식베이스** | 학사문서 23종 → parent 194 / child 1,459 |
 | **관측** | Langfuse Cloud(전 요청 추적) + 회전 파일로그 + Q&A JSONL + `/health` |
-| **배포** | Cloudflare 터널(`maruvis.co.kr` → 프론트 :3000 / `/api/*` → 백엔드 :8000, same-origin) |
+| **배포** | Cloudflare 터널(`maruvis.kr` → 프론트 :3000 / `/api/*` → 백엔드 :8000, same-origin). H100 리눅스 서버, [MIGRATION_H100.md](MIGRATION_H100.md) 참조 |
 
 ## BUFS 특화 개선
 

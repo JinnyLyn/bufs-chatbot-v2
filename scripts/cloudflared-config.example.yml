@@ -1,11 +1,13 @@
 # cloudflared ingress for the H100 box — Linux port of logs/cf-config-new.yml.
 #
-# Copy to ~/.cloudflared/config.yml on the H100, then fill in the NEW tunnel's UUID
-# (the Windows box used a different tunnel; its credentials JSON lived outside the repo
-# under C:\ProgramData\Cloudflared\ and was NOT part of the zip you scp'd).
+# NEW deployment: domain maruvis.kr, on the NEW team's Cloudflare account/profile
+# (the old maruvis.co.kr tunnel belonged to the previous maintainer's account and its
+# credentials lived outside the repo under C:\ProgramData\Cloudflared\).
+#
+# Copy to ~/.cloudflared/config.yml on the H100 and fill in the new tunnel's UUID:
 #
 #   cloudflared tunnel list                       # find the new tunnel's UUID
-#   cloudflared tunnel route dns <uuid> maruvis.co.kr
+#   cloudflared tunnel route dns <uuid> maruvis.kr
 #   cloudflared tunnel --config ~/.cloudflared/config.yml run <uuid>
 #
 # On the Windows box this ran as a Windows *service* (Restart-Service cloudflared) — that is
@@ -17,10 +19,10 @@ credentials-file: /home/REPLACE-USER/.cloudflared/REPLACE-WITH-NEW-TUNNEL-UUID.j
 
 ingress:
   # API + SSE (chat stream, session) -> FastAPI backend on :8000 (same origin -> no CORS).
-  - hostname: maruvis.co.kr
+  - hostname: maruvis.kr
     path: ^/api/
     service: http://localhost:8000
   # Everything else -> Next.js frontend on :3000.
-  - hostname: maruvis.co.kr
+  - hostname: maruvis.kr
     service: http://localhost:3000
   - service: http_status:404
