@@ -14,7 +14,7 @@ langfuse==4.14.4
 langgraph==1.2.11
 docling==2.123.0
 pymupdf==1.28.2        # text-layer fallback for pages Docling drops on std::bad_alloc
-python-dotenv==1.2.2
+python-dotenv==1.2.3
 sentence-transformers==6.0.0
 tiktoken==0.14.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
