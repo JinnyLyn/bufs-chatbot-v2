@@ -34,6 +34,14 @@ eval_tools/runs/
 logs/h2eval/
 # App log daily rotations (TimedRotatingFileHandler date-suffixed backups)
 logs/backend/app.log.*
+# Runtime logs written by the stack itself / scripts/start-all.sh — never committed
+# (the historical Windows-era copies were untracked in the H100 migration PR; the
+# lines worth keeping are quoted in MIGRATION_H100.md)
+logs/backend/app.log
+logs/backend/server.out
+logs/backend/server.err
+logs/frontend/
+logs/ollama/
 # PIDs of processes started by scripts/start-all.sh (runtime state)
 logs/run/
 

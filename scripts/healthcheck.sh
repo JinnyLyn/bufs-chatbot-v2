@@ -30,23 +30,25 @@ else
     echo "[backend ] DOWN"; ok=1
 fi
 
+# Ollama is a locally-managed core service on the H100 — an unreachable LLM is an
+# outage, so (unlike the .ps1) it fails the check. "no model loaded" stays OK.
 llm="$(curl -fsS --max-time 8 "http://127.0.0.1:$BACKEND_PORT/health/llm" 2>/dev/null)"
 if [ -n "$llm" ]; then
-    echo "$llm" | "$PYTHON" -c '
+    if ! echo "$llm" | "$PYTHON" -c '
 import json, sys
 l = json.load(sys.stdin)
 if l.get("status") != "ok":
     print("[llm/gpu ] ollama unreachable at {}".format(l.get("ollama_base_url")))
-else:
-    models = l.get("loaded_models") or []
-    if not models:
-        print("[llm/gpu ] no model loaded (loads on first query)")
-    for m in models:
-        print("[llm/gpu ] {}  gpu={}%  vram={}MB".format(
-            m.get("name"), m.get("gpu_offload_pct"), m.get("vram_mb")))
-'
+    sys.exit(1)
+models = l.get("loaded_models") or []
+if not models:
+    print("[llm/gpu ] no model loaded (loads on first query)")
+for m in models:
+    print("[llm/gpu ] {}  gpu={}%  vram={}MB".format(
+        m.get("name"), m.get("gpu_offload_pct"), m.get("vram_mb")))
+'; then ok=1; fi
 else
-    echo "[llm/gpu ] n/a"
+    echo "[llm/gpu ] DOWN (no response from /health/llm)"; ok=1
 fi
 
 if port_open "$FRONTEND_PORT"; then

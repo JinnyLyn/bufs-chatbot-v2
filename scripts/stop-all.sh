@@ -3,6 +3,9 @@
 #
 # Stops only the processes start-all.sh recorded in logs/run/*.pid. This box is SHARED:
 # killing by port would risk taking down another user's service, so we never do that.
+# Each recorded PID is also verified against the expected command before any signal is
+# sent — after a reboot PIDs get recycled, and a stale pidfile must never kill an
+# unrelated process.
 #
 #   ./scripts/stop-all.sh              # frontend + backend (leaves Ollama up)
 #   ./scripts/stop-all.sh --with-ollama
@@ -18,6 +21,16 @@ RUN_DIR="$REPO/logs/run"
 targets=(frontend backend)
 if [ "${1:-}" = "--with-ollama" ]; then targets+=(ollama); fi
 
+# What the recorded PID's command line must contain, per service (see start-all.sh):
+#   frontend → node server.js (standalone) or npm run dev; backend → python project/server.py.
+expected_cmd() {
+    case "$1" in
+        frontend) echo 'node|npm|next' ;;
+        backend)  echo 'server\.py|python' ;;
+        ollama)   echo 'ollama' ;;
+    esac
+}
+
 for name in "${targets[@]}"; do
     pidfile="$RUN_DIR/$name.pid"
     if [ ! -f "$pidfile" ]; then
@@ -30,8 +43,18 @@ for name in "${targets[@]}"; do
         rm -f "$pidfile"
         continue
     fi
-    # Terminate the whole process group — `npm run dev` and `ollama serve` both fork children.
-    # Guard: never group-kill our own group (possible if start-all.sh was `source`d).
+    # Identity check: PIDs are recycled — refuse to signal a process that doesn't look
+    # like the service we started.
+    args="$(ps -o args= -p "$pid" 2>/dev/null || true)"
+    if ! grep -qE "$(expected_cmd "$name")" <<<"$args"; then
+        echo "$name: pid $pid is now '${args:-?}' — not ours (recycled PID), dropping pidfile without killing."
+        rm -f "$pidfile"
+        continue
+    fi
+
+    # Terminate the whole process group — `npm run dev` and `ollama serve` both fork
+    # children, and start-all.sh gave each service its own group via setsid.
+    # Guard: never group-kill our own group (possible if start-all.sh ran without setsid).
     pgid="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
     own_pgid="$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ' || true)"
     if [ -n "$pgid" ] && [ "$pgid" != "$own_pgid" ]; then

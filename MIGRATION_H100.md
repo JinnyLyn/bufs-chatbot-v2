@@ -38,7 +38,9 @@ Docker는 어디에도 쓰이지 않았다. **cloudflared가 Windows 서비스�
 | 자동 시작 | `scripts/register-autostart.ps1` | 작업 스케줄러 태스크 `AgenticRAG-Stack`, 로그온 시 `start-all.ps1` |
 | 상태 점검 | `scripts/healthcheck.ps1` | `/health`, `/health/llm`, :3000 |
 
-**마지막 운영 상태**(`logs/backend/server.err`)는 로컬 4070이 아니라 **원격 H100을 쓰고 있었다**:
+**마지막 운영 상태**는 로컬 4070이 아니라 **원격 H100을 쓰고 있었다**
+(출처: Windows 시절 `logs/backend/server.err` — 런타임 로그는 이 PR에서 git 추적을
+해제했으므로 증거는 아래 인용으로 보존):
 
 ```
 runtime={'model': 'qwen3.5:9b', 'ollama_base_url': 'http://127.0.0.1:11434',
@@ -76,7 +78,7 @@ H100에서는 아래 `start-all.sh`가 standalone 빌드가 있으면 그걸 쓰
 | `project/.env` | 따라옴 — 이전 관리자의 Langfuse 키 + Windows 전용 줄 포함 | **새로 작성** (3-2절 템플릿). 특히 `SSL_CERT_FILE`/`REQUESTS_CA_BUNDLE` 줄은 반드시 삭제(리눅스에서 그 경로가 없거나, 있으면 TLS를 되레 깨뜨림). `LANGFUSE_*` 키는 새 팀 프로젝트 키로 |
 | `backups/` (`.env.bak-*`) | 따라옴 — **옛 키의 사본들** | 새 `.env` 확정 후 **삭제**. 옛 키가 여기 남아 돌아다니는 걸 막는다 |
 | `win-ca-bundle.pem` | 따라옴 | **삭제.** Norton AV의 HTTPS 재서명 우회용 Windows 전용 산물 |
-| `frontend/.env.local` | 따라옴 (`NEXT_PUBLIC_API_URL=http://localhost:8000`) | 터널 뒤 same-origin이면 **비워도 된다**(`next.config.ts` rewrite가 `/api/*`를 `:8000`으로 넘김). 남겨도 무방하나 절대 옛 도메인/호스트를 넣지 말 것 |
+| `frontend/.env.local` | 따라옴 (`NEXT_PUBLIC_API_URL=http://localhost:8000`) | **빌드 전에 삭제(또는 해당 줄 제거).** `NEXT_PUBLIC_*`는 빌드 시 클라이언트 번들에 구워진다 — 이 값이 남은 채 빌드하면 **모든 방문자의 브라우저가 자기 자신의 localhost:8000을 호출**해서 배포가 통째로 안 동작한다. 터널 뒤 same-origin에서는 값이 없어야 정상(`next.config.ts` rewrite가 `/api/*`를 백엔드로 넘김) |
 | `frontend/node_modules`, `.next` | 따라옴 — **Windows용 네이티브 바이너리** | 그대로 실행하면 깨진다. `rm -rf node_modules .next && npm ci && npm run build` |
 | `.venv`/`venv` (있다면) | Windows용 | 삭제 후 리눅스에서 재생성 |
 | `qdrant_db/.lock` | 따라왔을 수 있음 | 남아 있으면 삭제 (단일 프로세스 락) |
@@ -180,7 +182,14 @@ LANGFUSE_BASE_URL=https://cloud.langfuse.com
 BACKEND_PORT=8010 FRONTEND_PORT=3010 ./scripts/start-all.sh
 ```
 
-포트를 바꿨다면 **`~/.cloudflared/config.yml`의 ingress도 같이 바꿔야 한다.**
+포트를 바꿨다면 따라오는 것들:
+
+- **`~/.cloudflared/config.yml`의 ingress**를 같은 포트로 수정.
+- **`BACKEND_PORT` 변경 시 프론트 재빌드 필요** — `next.config.ts`의 `/api` rewrite
+  대상은 빌드 시점에 고정된다:
+  `BACKEND_ORIGIN=http://localhost:8010 npm run build`
+- **`OLLAMA_PORT` 변경 시**는 start-all.sh가 백엔드에 `OLLAMA_BASE_URL`을 자동
+  주입한다(명시적으로 설정한 경우에만 — `.env`의 원격 URL 등 의도적 설정은 존중).
 
 ### 3-4. 기동 / 종료 / 점검
 
@@ -242,7 +251,9 @@ mkdir -p ~/.config/systemd/user
 ```ini
 [Unit]
 Description=Agentic RAG stack (Ollama + FastAPI + Next.js)
-After=network-online.target
+# NOTE: user 매니저에는 network-online.target이 없어 네트워크 대기 지시가 사실상
+# 불가능하다. 부팅 직후 네트워크가 늦게 올라와 Langfuse/HF 접속이 실패하면
+# systemctl --user restart agentic-rag 로 재기동하면 된다 (스크립트는 멱등).
 
 [Service]
 Type=oneshot
@@ -272,7 +283,9 @@ systemd를 쓸 수 없으면 `tmux new -d -s rag './scripts/start-all.sh'`로도
 ```
 
 - [ ] `[backend ] ok  ... ollama=http://127.0.0.1:11434` — **터널이 아니라 로컬 Ollama**를 보고 있는가
-- [ ] `kb_docs`가 0이 아닌가 (0이면 `qdrant_db/`가 손상된 것 → `python project/reindex.py`)
+- [ ] `kb_docs`가 0이 아닌가 — `kb_docs`는 **`markdown_docs/`의 문서 수**다(벡터DB 아님).
+      0이면 `markdown_docs/`가 없거나 경로 문제 → `git checkout -- markdown_docs/`로 복원.
+      (벡터DB 손상 의심 — 검색 결과가 비정상 — 일 때만 `python project/reindex.py`)
 - [ ] `[llm/gpu ] ... gpu=100%` — H100에 완전히 올라갔는가 (CPU 스필 없음)
 - [ ] `[frontend] ok :3000` — Windows에서 온 `node_modules`/`.next`를 지우고 리눅스에서 재빌드했는가
 - [ ] `curl -I https://maruvis.kr` → 200, 그리고 브라우저에서 실제 질문 1건 응답
