@@ -48,6 +48,12 @@ jobs:
   # They require a running Ollama + Qdrant instance, which is not available in
   # standard CI runners.  Trigger manually on a self-hosted runner that has
   # OLLAMA_BASE_URL, QDRANT_DB_PATH, and optionally LANGFUSE_* set.
+  #
+  # SECURITY — this repository is PUBLIC and this job runs on the lab's own machine.
+  # workflow_dispatch is the only safe trigger for it, because dispatching requires
+  # write access to the repository. Do NOT add pull_request, issue_comment, or any
+  # other trigger that an outside account can fire: a self-hosted runner is not
+  # ephemeral, so untrusted code reaching it can persist on the machine between jobs.
   integration:
     name: Integration tests (manual trigger only)
     runs-on: self-hosted
