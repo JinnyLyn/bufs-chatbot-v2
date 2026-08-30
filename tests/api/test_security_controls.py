@@ -243,11 +243,6 @@ class TestClientKey:
         from api.ratelimit import client_key
         assert client_key(self._request({"CF-Connecting-IP": "203.0.113.7"})) == "203.0.113.7"
 
-    def test_falls_back_to_forwarded_for_leftmost(self):
-        from api.ratelimit import client_key
-        key = client_key(self._request({"X-Forwarded-For": "203.0.113.7, 70.41.3.18"}))
-        assert key == "203.0.113.7"
-
     def test_falls_back_to_socket_peer(self):
         from api.ratelimit import client_key
         assert client_key(self._request({}, peer="192.0.2.5")) == "192.0.2.5"
@@ -309,10 +304,13 @@ class TestTestModeGating:
         raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
         return Request({"type": "http", "headers": raw, "client": ("127.0.0.1", 1), "method": "GET", "path": "/"})
 
-    def test_header_honoured_when_no_token_configured(self, monkeypatch):
+    def test_header_ignored_when_no_token_configured(self, monkeypatch):
+        """Fails closed. The live deployment sets no token, so honouring a bare
+        "X-Test-Mode: 1" in that case would leave the control inert where it matters."""
         import api.chat as chat
         monkeypatch.setattr(chat, "_TEST_MODE_TOKEN", "")
-        assert chat._is_test_mode(self._request({"X-Test-Mode": "1"})) is True
+        assert chat._is_test_mode(self._request({"X-Test-Mode": "1"})) is False
+        assert chat._is_test_mode(self._request({"X-Test-Mode": "true"})) is False
 
     def test_wrong_token_is_ignored(self, monkeypatch):
         """With a token configured, an attacker cannot suppress their own Q&A record."""
@@ -328,8 +326,107 @@ class TestTestModeGating:
 
     def test_absent_header_is_not_test_mode(self, monkeypatch):
         import api.chat as chat
-        monkeypatch.setattr(chat, "_TEST_MODE_TOKEN", "")
+        monkeypatch.setattr(chat, "_TEST_MODE_TOKEN", "s3cret")
         assert chat._is_test_mode(self._request({})) is False
+
+
+# ---------------------------------------------------------------------------
+# Loopback exemption
+# ---------------------------------------------------------------------------
+
+class TestLoopbackExemption:
+    def _request(self, headers: dict, peer: str):
+        from starlette.requests import Request
+        raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+        return Request({"type": "http", "headers": raw, "client": (peer, 1), "method": "GET", "path": "/"})
+
+    def test_local_eval_traffic_is_exempt(self):
+        """The eval harness issues ~200 requests per run from 127.0.0.1; several runners
+        do not handle 429 and would record refusals as answers."""
+        from api import ratelimit
+        assert ratelimit._is_loopback(self._request({}, "127.0.0.1")) is True  # noqa: SLF001
+
+    def test_tunnel_traffic_claiming_loopback_is_not_exempt(self):
+        """A remote caller must not reach the exemption. Cloudflare connects from
+        127.0.0.1, so the CF header — not the peer address — is what distinguishes them."""
+        from api import ratelimit
+        req = self._request({"CF-Connecting-IP": "203.0.113.7"}, "127.0.0.1")
+        assert ratelimit._is_loopback(req) is False  # noqa: SLF001
+
+    def test_remote_peer_is_not_exempt(self):
+        from api import ratelimit
+        assert ratelimit._is_loopback(self._request({}, "203.0.113.7")) is False  # noqa: SLF001
+
+    def test_exempt_request_is_not_rate_limited(self, monkeypatch):
+        from api import ratelimit
+        monkeypatch.setattr(ratelimit, "RATE_LIMIT_ENABLED", True)
+        monkeypatch.setattr(ratelimit, "RATE_LIMIT_REQUESTS", 1)
+        ratelimit.reset_for_tests()
+        req = self._request({}, "127.0.0.1")
+        for _ in range(10):
+            ratelimit.check_rate_limit(req)  # must not raise
+
+
+class TestClientKeyIgnoresSpoofableHeaders:
+    def _request(self, headers: dict, peer: str = "127.0.0.1"):
+        from starlette.requests import Request
+        raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+        return Request({"type": "http", "headers": raw, "client": (peer, 1), "method": "GET", "path": "/"})
+
+    def test_x_forwarded_for_is_not_trusted(self):
+        """Honouring it would let an attacker mint a fresh budget per request."""
+        from api.ratelimit import client_key
+        assert client_key(self._request({"X-Forwarded-For": "203.0.113.7"}, "198.51.100.1")) == "198.51.100.1"
+
+    def test_true_client_ip_is_not_trusted(self):
+        from api.ratelimit import client_key
+        assert client_key(self._request({"True-Client-IP": "203.0.113.7"}, "198.51.100.1")) == "198.51.100.1"
+
+    def test_cf_connecting_ip_wins_over_spoofed_headers(self):
+        from api.ratelimit import client_key
+        key = client_key(self._request(
+            {"CF-Connecting-IP": "203.0.113.7", "X-Forwarded-For": "1.2.3.4"}, "127.0.0.1"))
+        assert key == "203.0.113.7"
+
+
+# ---------------------------------------------------------------------------
+# The concurrency cap must track GPU work, not the client connection
+# ---------------------------------------------------------------------------
+
+class TestSlotTracksWorkNotConnection:
+    def test_slot_is_released_by_the_producer_not_the_response(self):
+        """Regression guard for the disconnect bypass.
+
+        Releasing the slot in the SSE generator's finally returned it the instant a
+        client disconnected, while the producer thread kept running the pipeline — so
+        connect/disconnect in a loop ran unbounded concurrent generations with
+        active_streams() reading 0. The release must live in producer()'s finally.
+        """
+        import inspect
+
+        import api.chat as chat
+        src = inspect.getsource(chat.chat_stream)
+
+        producer_start = src.index("def producer():")
+        consumer_start = src.index("thread = threading.Thread")
+        producer_body = src[producer_start:consumer_start]
+
+        assert "slot.release()" in producer_body, (
+            "producer() must release the slot so it covers the generation, not the response"
+        )
+        # The consumer signals abandonment; it must not hand the slot back itself.
+        consumer_body = src[consumer_start:]
+        assert "abandoned.set()" in consumer_body
+        assert "slot.release()" not in consumer_body.split("try:")[-1]
+
+    def test_producer_stops_generating_when_the_client_is_gone(self):
+        import inspect
+
+        import api.chat as chat
+        src = inspect.getsource(chat.chat_stream)
+        assert "if abandoned.is_set():" in src, (
+            "an abandoned run must stop issuing further LLM calls, not merely stop being counted"
+        )
 
 
 # ---------------------------------------------------------------------------

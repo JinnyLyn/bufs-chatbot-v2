@@ -32,6 +32,12 @@ RATE_LIMIT_ENABLED = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() in ("1
 # well under this; a scripted abuser hits it within seconds.
 RATE_LIMIT_REQUESTS = int(os.environ.get("RATE_LIMIT_REQUESTS", "20"))
 RATE_LIMIT_WINDOW_S = float(os.environ.get("RATE_LIMIT_WINDOW_S", "60"))
+# Exempt requests that originate on this host AND did not come through the tunnel, so
+# the eval/KPI harnesses are not throttled. See _is_loopback for why this is not a
+# bypass for remote callers.
+RATE_LIMIT_EXEMPT_LOOPBACK = os.environ.get("RATE_LIMIT_EXEMPT_LOOPBACK", "true").lower() in (
+    "1", "true", "yes", "on"
+)
 # Ceiling on chat streams generating at once, across all clients. The GPU serves these
 # sequentially anyway, so admitting more only grows the queue and every user's latency.
 MAX_CONCURRENT_STREAMS = int(os.environ.get("MAX_CONCURRENT_STREAMS", "8"))
@@ -47,20 +53,33 @@ _streams_lock = threading.Lock()
 
 
 def client_key(request: Request) -> str:
-    """Best available identifier for the remote caller.
+    """Identifier for the remote caller.
 
-    Prefers Cloudflare's client-IP headers; falls back to the socket peer, which is
-    only meaningful when the app is reached directly rather than through the tunnel.
+    `CF-Connecting-IP` only, then the socket peer. Deliberately NOT `X-Forwarded-For`
+    or `True-Client-IP`: both are client-settable, so honouring them would let an
+    attacker mint a fresh budget per request just by varying a header. Cloudflare
+    overwrites `CF-Connecting-IP` on every proxied request, and the origin binds
+    loopback, so on the tunnel path it is the caller's real address.
     """
-    for header in ("CF-Connecting-IP", "True-Client-IP"):
-        value = request.headers.get(header, "").strip()
-        if value:
-            return value
-    # X-Forwarded-For is a list; the leftmost entry is the original client.
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded.strip():
-        return forwarded.split(",")[0].strip()
+    value = request.headers.get("CF-Connecting-IP", "").strip()
+    if value:
+        return value
     return request.client.host if request.client else "unknown"
+
+
+def _is_loopback(request: Request) -> bool:
+    """True for requests originating on this host and not proxied by Cloudflare.
+
+    The eval and KPI harnesses mint a session per question, so a 100-question run is
+    ~200 requests from one address and would trip the limit part-way through. Several
+    runners do not handle 429 and would record the refusals as answers, silently
+    corrupting a baseline. Tunnel traffic always carries CF-Connecting-IP, so requiring
+    its absence keeps this from becoming a bypass for a remote caller.
+    """
+    if request.headers.get("CF-Connecting-IP", "").strip():
+        return False
+    host = request.client.host if request.client else ""
+    return host in {"127.0.0.1", "::1", "localhost"}
 
 
 def _prune_locked(now: float) -> None:
@@ -77,6 +96,8 @@ def check_rate_limit(request: Request) -> None:
         HTTPException: 429, carrying Retry-After, when the client is over budget.
     """
     if not RATE_LIMIT_ENABLED:
+        return
+    if RATE_LIMIT_EXEMPT_LOOPBACK and _is_loopback(request):
         return
     key = client_key(request)
     now = time.monotonic()

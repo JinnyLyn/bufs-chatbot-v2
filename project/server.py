@@ -110,4 +110,10 @@ if __name__ == "__main__":
     # already pins HOSTNAME=127.0.0.1 in scripts/start-all.sh; this matches it.
     # Override with HOST=0.0.0.0 only behind a firewall that blocks the port.
     host = os.getenv("HOST", "127.0.0.1")
-    uvicorn.run(app, host=host, port=port)
+    # The chat endpoint carries the user's question in the query string, so uvicorn's
+    # access log would write every student's question — and their IP — to a second
+    # file with different retention and no redaction than the Q&A log. The application
+    # already logs each request as [chat-IN]/[chat-OUT] with a trace id and a truncated
+    # question, which is what debugging actually needs. Set ACCESS_LOG=true to restore.
+    access_log = os.getenv("ACCESS_LOG", "").strip().lower() in {"1", "true", "yes", "on"}
+    uvicorn.run(app, host=host, port=port, access_log=access_log)

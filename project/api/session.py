@@ -24,8 +24,11 @@ async def create(request: Request, req: SessionCreateRequest):
 
 
 @router.get("/{session_id}")
-async def read(session_id: str):
+async def read(request: Request, session_id: str):
     """GET /api/session/{id} — current session info."""
+    # Cheap to serve, but it answers "has this id been used?" (200 vs 404) and is
+    # internet-reachable, so it is a membership oracle if left unmetered.
+    check_rate_limit(request)
     if not is_valid_session_id(session_id):
         raise HTTPException(status_code=422, detail="session_id must be a UUID.")
     info = get_session(session_id)
