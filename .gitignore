@@ -11,6 +11,14 @@ __pycache__/
 .venv/
 venv/
 
+# Agent-local settings and scratch worktrees. settings.local.json holds per-machine
+# env values and has in practice contained live Langfuse keys; this repo is PUBLIC, so
+# it must be ignored by the COMMITTED ruleset, not only by a machine-local
+# .git/info/exclude that no clone or CI checkout ever sees.
+.claude/settings.local.json
+**/.claude/settings.local.json
+**/.claude/worktrees/
+
 # machine-specific CA bundle (Windows trust store export, for TLS-scanning AV)
 win-ca-bundle.pem
 
@@ -32,6 +40,22 @@ eval_tools/runs/
 
 # Eval-run outputs (per-run JSON/logs — ephemeral, rebuild from _qa_blend_sweep.sh)
 logs/h2eval/
+# Q&A transcripts — REAL end-user conversations (this repo is public). Every answered
+# turn is appended verbatim by api/qa_logger.py, so these files carry whatever students
+# type, including names and other personal details. Never commit them; analyse them in
+# place or export a redacted extract.
+logs/qa/
+# Runtime logs from the stack itself. The console/access logs are the WORST of these:
+# because the chat API is GET-based SSE, the question rides in the query string, so
+# uvicorn writes it verbatim next to the client's real public IP and session id. An IP
+# joined to a question is personal information under PIPA — none of this belongs in a
+# public repository. (The app also now runs with access_log off by default.)
+logs/*.log
+logs/*.console.*.log
+logs/*.jsonl
+logs/*.json
+logs/*.marker
+logs/cf-config*.yml
 # App log daily rotations (TimedRotatingFileHandler date-suffixed backups)
 logs/backend/app.log.*
 # Runtime logs written by the stack itself / scripts/start-all.sh — never committed
@@ -42,6 +66,7 @@ logs/backend/server.out
 logs/backend/server.err
 logs/frontend/
 logs/ollama/
+logs/cloudflared/
 # PIDs of processes started by scripts/start-all.sh (runtime state)
 logs/run/
 

@@ -44,35 +44,24 @@ jobs:
             --cov-fail-under=18 \
             -v
 
-  # Integration tests are opt-in (workflow_dispatch only).
-  # They require a running Ollama + Qdrant instance, which is not available in
-  # standard CI runners.  Trigger manually on a self-hosted runner that has
-  # OLLAMA_BASE_URL, QDRANT_DB_PATH, and optionally LANGFUSE_* set.
-  integration:
-    name: Integration tests (manual trigger only)
-    runs-on: self-hosted
-    if: github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.14"
-
-      - name: Install all dependencies
-        run: |
-          pip install -r requirements.txt -r requirements-dev.txt
-
-      - name: Run integration tests
-        env:
-          OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL }}
-          QDRANT_DB_PATH: ${{ vars.QDRANT_DB_PATH }}
-          LANGFUSE_ENABLED: ${{ vars.LANGFUSE_ENABLED }}
-          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
-          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
-          LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
-        run: |
-          pytest -m integration -v
+  # Integration tests deliberately do NOT run in CI any more.
+  #
+  # They need a live Ollama + Qdrant, which only the lab GPU box has, so this job used
+  # to run on a SELF-HOSTED runner gated by `if: github.event_name == 'workflow_dispatch'`.
+  # That guard does not hold on a public repository. A `pull_request` run executes the
+  # workflow file from the PR's MERGE COMMIT — a file the fork author controls — so an
+  # outside contributor can simply delete the guard, or add a brand-new workflow with
+  # `on: pull_request` and `runs-on: self-hosted`, and reach the machine. The repository
+  # setting that stands in the way is "require approval for first-time contributors",
+  # which stops only the FIRST pull request from a given account.
+  #
+  # Self-hosted runners are not ephemeral, so untrusted code that lands on one can
+  # persist there. GitHub's guidance is not to attach them to public repositories at all.
+  #
+  # Run the integration suite locally on the box instead:
+  #
+  #     pytest -m integration -v
+  #
+  # (needs OLLAMA_BASE_URL and QDRANT_DB_PATH set; see MIGRATION_H100.md)
+  #
+  # Do not reintroduce `runs-on: self-hosted` here while this repository is public.

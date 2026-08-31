@@ -24,6 +24,11 @@ pytestmark = pytest.mark.integration
 fastapi = pytest.importorskip("fastapi", reason="fastapi not installed")
 starlette = pytest.importorskip("starlette", reason="starlette not installed")
 
+# /api/chat/stream only accepts the UUID shape the server itself mints, so tests must
+# use a well-formed id rather than a readable label.
+TEST_SESSION_ID = "11111111-2222-4333-8444-555555555555"
+LIVE_SESSION_ID = "99999999-8888-4777-8666-555555555555"
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -91,7 +96,7 @@ class TestChatRouterOffline:
 
         resp = client.get(
             "/api/chat/stream",
-            params={"question": "졸업학점은?", "session_id": "test-sess"},
+            params={"question": "졸업학점은?", "session_id": TEST_SESSION_ID},
             headers={"X-Test-Mode": "1"},
         )
         # 200 or streaming: accept any 2xx — SSE may return 200
@@ -110,7 +115,7 @@ class TestChatRouterOffline:
 
         resp = client.get(
             "/api/chat/stream",
-            params={"question": "테스트", "session_id": "test-sess"},
+            params={"question": "테스트", "session_id": TEST_SESSION_ID},
             headers={"X-Test-Mode": "1"},
         )
         # Both the HTTP status AND the SSE body are required — each covers a
@@ -147,7 +152,7 @@ class TestChatRouterLive:
 
         resp = client.get(
             "/api/chat/stream",
-            params={"question": "안녕하세요", "session_id": "live-test"},
+            params={"question": "안녕하세요", "session_id": LIVE_SESSION_ID},
             headers={"X-Test-Mode": "1"},
         )
         assert resp.status_code == 200

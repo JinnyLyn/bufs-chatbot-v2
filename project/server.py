@@ -61,7 +61,20 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Agentic RAG × CamChat", version="0.1.0", lifespan=lifespan)
+# Interactive API docs are a live request-builder against an unauthenticated API and
+# advertise every route, parameter and schema. They are a development convenience, so
+# they stay off unless explicitly asked for. (The tunnel only forwards ^/api/, so this
+# mainly hardens direct-to-origin access.) Set ENABLE_DOCS=true for local development.
+_docs_enabled = os.getenv("ENABLE_DOCS", "").strip().lower() in {"1", "true", "yes", "on"}
+
+app = FastAPI(
+    title="Agentic RAG × CamChat",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+)
 
 _cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
@@ -79,11 +92,28 @@ app.include_router(health_router.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Agentic RAG × CamChat API", "docs": "/docs"}
+    body = {"message": "Agentic RAG × CamChat API"}
+    if _docs_enabled:
+        body["docs"] = "/docs"
+    return body
 
 
 if __name__ == "__main__":
     import uvicorn
 
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Bind loopback-only by default. Every consumer dials localhost — cloudflared's
+    # ingress (service: http://localhost:8000), scripts/healthcheck.sh and the eval
+    # harness — so the public path is the tunnel and nothing else. Binding 0.0.0.0
+    # additionally published this unauthenticated API (plus /docs and /health) to the
+    # whole LAN subnet, bypassing Cloudflare's TLS, WAF and rate limiting. The frontend
+    # already pins HOSTNAME=127.0.0.1 in scripts/start-all.sh; this matches it.
+    # Override with HOST=0.0.0.0 only behind a firewall that blocks the port.
+    host = os.getenv("HOST", "127.0.0.1")
+    # The chat endpoint carries the user's question in the query string, so uvicorn's
+    # access log would write every student's question — and their IP — to a second
+    # file with different retention and no redaction than the Q&A log. The application
+    # already logs each request as [chat-IN]/[chat-OUT] with a trace id and a truncated
+    # question, which is what debugging actually needs. Set ACCESS_LOG=true to restore.
+    access_log = os.getenv("ACCESS_LOG", "").strip().lower() in {"1", "true", "yes", "on"}
+    uvicorn.run(app, host=host, port=port, access_log=access_log)

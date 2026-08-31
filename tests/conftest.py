@@ -220,3 +220,28 @@ def caplog_info(caplog):
     """Set root logger to INFO for the duration of the test."""
     with caplog.at_level(logging.INFO):
         yield caplog
+
+
+# ---------------------------------------------------------------------------
+# Rate limiter isolation
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Clear api.ratelimit state around every test.
+
+    The limiter keeps per-client counters and a concurrency count in module globals,
+    so without this a test that issues several requests would spend another test's
+    budget and fail it with 429/503 depending only on execution order.
+    """
+    try:
+        from api import ratelimit
+    except Exception:  # fastapi not installed in the minimal offline env
+        yield
+        return
+    original_max = ratelimit.MAX_CONCURRENT_STREAMS
+    ratelimit.reset_for_tests()
+    yield
+    # Restore the cap as well: a test that lowers it to force a 503 must not leave
+    # every later test running against the reduced limit.
+    ratelimit.reset_for_tests(max_concurrent=original_max)

@@ -38,7 +38,24 @@ ollama_port_explicit="${OLLAMA_PORT:+1}"
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
 START_OLLAMA="${START_OLLAMA:-auto}"
 FRONTEND_MODE="${FRONTEND_MODE:-auto}"
+# Prefer the repo's own venv over whatever `python3` happens to resolve to.
+# Bare `python3` on this box resolves to miniconda, which has none of the app's
+# dependencies — so starting the stack from a shell without the venv activated crashed
+# the backend at import with "ModuleNotFoundError: No module named 'fastapi'", while a
+# shell that happened to have it activated worked. That made the failure look
+# intermittent and unrelated to the script. Resolve it here instead of relying on the
+# caller's environment. An explicit PYTHON= still wins.
+if [ -z "${PYTHON:-}" ] && [ -x "$REPO/.venv/bin/python" ]; then
+    PYTHON="$REPO/.venv/bin/python"
+fi
 PYTHON="${PYTHON:-python3}"
+
+# Fail loudly and early rather than launching an interpreter that cannot import the app.
+if ! "$PYTHON" -c 'import fastapi' >/dev/null 2>&1; then
+    echo "[error] '$PYTHON' cannot import fastapi — the backend would crash at startup."
+    echo "        Expected the repo venv at $REPO/.venv (create it, or set PYTHON=...)."
+    exit 1
+fi
 
 # Each service is launched under setsid so it gets its OWN process group/session:
 # stop-all.sh group-kills per service, and without setsid all three would share this
