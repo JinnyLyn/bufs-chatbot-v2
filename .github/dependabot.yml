@@ -1,3 +1,15 @@
+# Dependabot configuration.
+#
+# Updates are GROUPED so a week's worth of bumps arrives as one pull request per
+# ecosystem instead of five or six separate ones. Ungrouped, a routine week produced
+# enough near-identical PRs that reviewing them properly stopped happening — which is
+# the failure mode that matters, because the reviewer fatigue lands on exactly the
+# mechanism meant to keep dependencies current.
+#
+# Majors are deliberately left OUT of the groups: an ungrouped major arrives as its own
+# PR, which is what a breaking change deserves. Security updates are grouped separately
+# from routine version updates so they are not delayed behind, or buried inside, a
+# larger batch.
 version: 2
 updates:
   - package-ecosystem: "pip"
@@ -5,18 +17,42 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      python-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      actions-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      npm-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # project/Dockerfile pins its base image by digest, which is correct for
   # reproducibility but means a security rebuild of that tag is invisible until
@@ -26,3 +62,6 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      docker-all:
+        patterns: ["*"]
