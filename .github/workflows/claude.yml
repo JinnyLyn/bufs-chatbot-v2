@@ -5,8 +5,13 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
+  # `assigned` removed: on that activity the payload's issue.author_association is the
+  # OPENER's standing, not the assigner's, so the gate below would check the wrong
+  # principal. The action happens to no-op on `assigned` today (its body/title trigger
+  # scan is gated to `opened`, and no assignee_trigger is configured), so this was
+  # latent rather than live — but the trigger buys nothing, so it goes.
   issues:
-    types: [opened, assigned]
+    types: [opened]
   pull_request_review:
     types: [submitted]
 
@@ -24,6 +29,13 @@ jobs:
     #    only be used with private repositories: they are not ephemeral by default, so
     #    untrusted code that reaches one can persist between jobs and stay resident on
     #    the machine. Do not move this back to `self-hosted` while the repo is public.
+    #
+    # Scope of gate 1, stated honestly: it protects THIS workflow. It cannot protect the
+    # runner itself, because a `pull_request` run executes the workflow file from the
+    # PR's merge commit, which the fork author controls — so any registered self-hosted
+    # runner stays reachable by adding a new workflow, no matter what this file says.
+    # The durable fix is to deregister the runner (or require approval for ALL outside
+    # contributors, not just first-time ones); see the note in tests.yml.
     # The association is checked against the actor of THAT event, never OR-ed across
     # events: on issue_comment the payload also carries the issue author's association,
     # so a blanket OR would let a stranger's "@claude" comment on a collaborator's issue
