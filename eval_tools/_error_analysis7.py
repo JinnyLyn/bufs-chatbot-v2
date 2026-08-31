@@ -380,6 +380,11 @@ def run_langfuse(n: int | None) -> tuple[list[dict], str]:
 
     def text(v):
         if isinstance(v, dict):
+            # chat-turn root span shape: {"question": ...} / {"answer": ...}
+            if "question" in v:
+                return str(v["question"])
+            if "answer" in v:
+                return str(v["answer"])
             msgs = v.get("messages") or []
             if msgs and isinstance(msgs[-1], dict):
                 return str(msgs[-1].get("content", ""))

@@ -34,7 +34,7 @@ def to_korean(llm, answer: str, callbacks=None) -> str:
         from langchain_core.messages import HumanMessage, SystemMessage
         resp = llm.invoke(
             [SystemMessage(content=get_translation_prompt()), HumanMessage(content=answer)],
-            config={"callbacks": callbacks} if callbacks else None,
+            config={"callbacks": callbacks},
         )
         return (resp.content or "").strip() or answer
     except Exception as exc:  # noqa: BLE001

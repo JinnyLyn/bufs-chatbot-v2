@@ -66,21 +66,22 @@ def get_rag_system() -> RAGSystem:
     return _rag_system
 
 
-def build_config(session_id: str, trace_id: str = "-") -> dict:
+def build_config(session_id: str) -> dict:
     """LangGraph run config for a session. session_id is used as the thread_id.
 
-    `metadata` carries Langfuse trace grouping keys so each turn shows up under its
-    session in the Langfuse dashboard.
+    `langfuse_session_id` groups each turn under its session in the Langfuse
+    dashboard; the app's log trace_id is stamped trace-wide by
+    Observability.chat_turn, so it is not duplicated here.
     """
     rs = get_rag_system()
     cfg = {
         "configurable": {"thread_id": session_id},
         "recursion_limit": rs.recursion_limit,
-        "metadata": {"langfuse_session_id": session_id, "trace_id": trace_id},
+        "metadata": {"langfuse_session_id": session_id},
     }
-    handler = rs.observability.get_handler()
-    if handler:
-        cfg["callbacks"] = [handler]
+    callbacks = rs.observability.langchain_callbacks()
+    if callbacks:
+        cfg["callbacks"] = callbacks
     return cfg
 
 

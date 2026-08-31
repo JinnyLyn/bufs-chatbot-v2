@@ -39,7 +39,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api import chat as chat_router
 from api import health as health_router
 from api import session as session_router
-from api.runtime import get_rag_system, get_runtime_info, init_rag_system
+from api.runtime import get_runtime_info, init_rag_system
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +59,9 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Reranker ready in %.1fs.", _time.perf_counter() - _t0)
     logger.info("🚀 RAG system ready. Serving. runtime=%s", get_runtime_info())
     yield
-    # Drain the Langfuse background queue so traces from the last requests are not
-    # lost on shutdown. No-op when tracing is disabled.
-    try:
-        get_rag_system().observability.flush()
-    except Exception:  # noqa: BLE001 — shutdown must never fail on tracing
-        pass
+    # No explicit Langfuse flush here: the SDK registers its own atexit shutdown
+    # (which flushes), and a flush against an unreachable host would stall
+    # uvicorn's graceful-shutdown window for ~30s.
 
 
 # Interactive API docs are a live request-builder against an unauthenticated API and
