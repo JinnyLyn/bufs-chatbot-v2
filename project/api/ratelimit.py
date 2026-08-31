@@ -190,6 +190,34 @@ class StreamSlot:
         self.release()
 
 
+def reject_if_saturated() -> None:
+    """Refuse with a real 503 when every stream slot is busy, WITHOUT reserving one.
+
+    The authoritative acquire happens inside the SSE generator, because only there is a
+    release guaranteed (the producer thread's finally). Acquiring in the endpoint would
+    strand a slot whenever the generator never runs — a client that disconnects before
+    the response starts, or any exception raised between the acquire and the generator.
+    Those stranded slots never come back, so the cap wedges the service at 503 forever.
+
+    This check is therefore advisory and racy by design: it exists so a saturated server
+    answers with a proper status code instead of opening a stream and failing inside it.
+    The generator's acquire is what actually enforces the cap.
+
+    Raises:
+        HTTPException: 503 when no slot is currently free.
+    """
+    if MAX_CONCURRENT_STREAMS <= 0:
+        return
+    with _streams_lock:
+        saturated = _streams >= MAX_CONCURRENT_STREAMS
+    if saturated:
+        raise HTTPException(
+            status_code=503,
+            detail="지금 처리 중인 질문이 많습니다. 잠시 후 다시 시도해 주세요.",
+            headers={"Retry-After": "10"},
+        )
+
+
 def active_streams() -> int:
     with _streams_lock:
         return _streams

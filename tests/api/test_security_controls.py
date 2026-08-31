@@ -444,6 +444,74 @@ class TestSlotTracksWorkNotConnection:
             "an abandoned run must stop issuing further LLM calls, not merely stop being counted"
         )
 
+    def test_slot_is_acquired_inside_the_generator(self):
+        """Regression guard for the permanent-wedge leak.
+
+        Acquiring in the endpoint strands the slot whenever the generator never runs —
+        a client disconnecting before response start, or any exception raised between
+        the acquire and the generator. Stranded slots are never released, so the cap
+        pins the service at 503 forever. The acquire must sit inside event_generator.
+        """
+        import inspect
+
+        import api.chat as chat
+        src = inspect.getsource(chat.chat_stream)
+        gen_start = src.index("async def event_generator():")
+        assert "StreamSlot().acquire()" not in src[:gen_start], (
+            "the slot must not be acquired before the generator — nothing releases it "
+            "if the generator never runs"
+        )
+        assert "StreamSlot().acquire()" in src[gen_start:]
+
+    def test_endpoint_precheck_does_not_reserve_a_slot(self):
+        """reject_if_saturated must be a read-only check, or it reintroduces the leak."""
+        from api import ratelimit
+        ratelimit.reset_for_tests(max_concurrent=4)
+        before = ratelimit.active_streams()
+        ratelimit.reject_if_saturated()
+        assert ratelimit.active_streams() == before
+
+
+class TestNoSlotLeakOnEarlyFailure:
+    def _request(self, headers: dict):
+        from starlette.requests import Request
+        raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+        return Request({"type": "http", "headers": raw, "client": ("127.0.0.1", 1),
+                        "method": "GET", "path": "/"})
+
+    def test_non_ascii_test_mode_header_does_not_raise(self, monkeypatch):
+        """secrets.compare_digest raises TypeError on non-ASCII str.
+
+        This header is attacker-controlled, so that was an unhandled 500 on a public
+        endpoint — and, while the slot was taken in the endpoint, it raised between the
+        acquire and the generator and stranded a slot on every request.
+        """
+        import api.chat as chat
+        monkeypatch.setattr(chat, "_TEST_MODE_TOKEN", "s3cret")
+        assert chat._is_test_mode(self._request({"X-Test-Mode": "한글"})) is False
+        assert chat._is_test_mode(self._request({"X-Test-Mode": "\U0001f600"})) is False
+
+    def test_matching_token_still_works_after_the_bytes_change(self, monkeypatch):
+        import api.chat as chat
+        monkeypatch.setattr(chat, "_TEST_MODE_TOKEN", "s3cret")
+        assert chat._is_test_mode(self._request({"X-Test-Mode": "s3cret"})) is True
+
+    def test_repeated_saturation_rejections_do_not_consume_slots(self):
+        """The reviewer's reproduction: N rejected requests must not pin the cap."""
+        from fastapi import HTTPException
+
+        from api import ratelimit
+        ratelimit.reset_for_tests(max_concurrent=1)
+        held = ratelimit.StreamSlot().acquire()
+        try:
+            for _ in range(12):
+                with pytest.raises(HTTPException):
+                    ratelimit.reject_if_saturated()
+            assert ratelimit.active_streams() == 1
+        finally:
+            held.release()
+        assert ratelimit.active_streams() == 0
+
 
 # ---------------------------------------------------------------------------
 # Interactive docs are off unless asked for
@@ -480,3 +548,39 @@ class TestDocsGating:
         monkeypatch.delenv("ENABLE_DOCS", raising=False)
         server = self._reload_server(monkeypatch)
         assert server._docs_enabled is False  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# Retrieval limit is model-authored, therefore untrusted
+# ---------------------------------------------------------------------------
+
+class TestSearchLimitClamp:
+    @pytest.mark.parametrize(
+        "proposed,expected",
+        [
+            (100000, 20),      # prompt-injected blow-up
+            (10**12, 20),
+            (0, 1),
+            (-5, 1),
+            (5, 5),            # ordinary value passes through untouched
+            (20, 20),
+            ("7", 7),          # tool-calling models emit strings
+            (7.9, 7),
+            (None, 5),         # bad type degrades to the default, never raises
+            ("abc", 5),
+            ([1, 2], 5),
+        ],
+    )
+    def test_clamped_into_range(self, proposed, expected):
+        from rag_agent.tools import _clamp_limit
+        assert _clamp_limit(proposed) == expected
+
+    def test_clamp_happens_before_the_pool_multiplication(self):
+        """SEMESTER_POOL_FACTOR multiplies limit, so clamping after it would be useless."""
+        import inspect
+
+        from rag_agent.tools import ToolFactory
+        src = inspect.getsource(ToolFactory._search_child_chunks)
+        # Match the multiplication expression, not the bare identifier — the identifier
+        # also appears in the explanatory comment above the clamp.
+        assert src.index("_clamp_limit(limit)") < src.index("limit * config.SEMESTER_POOL_FACTOR")

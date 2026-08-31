@@ -21,7 +21,7 @@ from sse_starlette.sse import EventSourceResponse
 import config
 from api.agent_stream import run_agent_stream
 from api.qa_logger import get_qa_logger, set_skip_log
-from api.ratelimit import StreamSlot, check_rate_limit
+from api.ratelimit import StreamSlot, check_rate_limit, reject_if_saturated
 from api.runtime import ensure_session
 from api.trace_context import new_trace_id, set_trace_id
 
@@ -78,7 +78,14 @@ def _is_test_mode(request: Request) -> bool:
     header = request.headers.get("X-Test-Mode", "").strip()
     if not header or not _TEST_MODE_TOKEN:
         return False
-    return secrets.compare_digest(header, _TEST_MODE_TOKEN)
+    # Compare as bytes: secrets.compare_digest raises TypeError on str containing
+    # non-ASCII, and this header is attacker-controlled — "X-Test-Mode: 한글" would
+    # otherwise be an unhandled 500 on a public endpoint. Encoding sidesteps the
+    # restriction while keeping the comparison constant-time.
+    try:
+        return secrets.compare_digest(header.encode("utf-8"), _TEST_MODE_TOKEN.encode("utf-8"))
+    except Exception:  # noqa: BLE001 — never let audit gating raise into the request
+        return False
 
 
 @router.get("/stream")
@@ -100,7 +107,9 @@ async def chat_stream(
     except ValueError:
         # Reject before any LLM work: an unrecognised id shape is never one we minted.
         raise HTTPException(status_code=422, detail="session_id must be a UUID.") from None
-    slot = StreamSlot().acquire()
+    # Advisory only — see reject_if_saturated. The slot is actually taken inside the
+    # generator, because that is the only place a matching release is guaranteed.
+    reject_if_saturated()
     tid = new_trace_id()
     set_trace_id(tid)
     is_test = _is_test_mode(request)
@@ -121,6 +130,27 @@ async def chat_stream(
         # for nobody. It cannot interrupt the call already in flight — graph.stream() is
         # blocking with no cancellation token — so it takes effect at the next event.
         abandoned = threading.Event()
+
+        # Acquired HERE, not in the endpoint. A slot taken before the generator runs is
+        # stranded whenever the generator never runs at all — a client that disconnects
+        # before the response starts, or any exception between the acquire and this
+        # point. Nothing releases those, so the cap would wedge the service at 503
+        # permanently. Inside the generator every acquire is paired with a release,
+        # either by the producer thread or by the thread-start failure path below.
+        try:
+            slot = StreamSlot().acquire()
+        except HTTPException:
+            # The response has already begun, so a status code is no longer available —
+            # report saturation as a stream error instead.
+            logger.info("[chat-BUSY] tid=%s all stream slots in use", tid)
+            yield {
+                "event": "error",
+                "data": json.dumps(
+                    {"message": "지금 처리 중인 질문이 많습니다. 잠시 후 다시 시도해 주세요."},
+                    ensure_ascii=False,
+                ),
+            }
+            return
 
         def _post(item) -> None:
             """Hand an item to the event loop, tolerating a loop that has already closed."""

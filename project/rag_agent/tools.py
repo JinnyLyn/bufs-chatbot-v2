@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Annotated, List
 from langchain_core.tools import tool
@@ -140,6 +141,29 @@ def _budget_exceeded(state: dict) -> bool:
     return False
 
 
+# Ceiling on the model-authored `limit` for search_child_chunks. The value arrives from
+# the LLM, so a prompt-injected question can propose any number, and it is then
+# multiplied by SEMESTER_POOL_FACTOR before reaching Qdrant. Qdrant caps returns at the
+# collection size (~1.8k points), so this is not an unbounded allocation — the cost is a
+# large string build plus a tiktoken encode of the whole pool — but nothing about that
+# bound is guaranteed by this code, and it grows with the KB. Clamp at the trust
+# boundary, before any arithmetic.
+MAX_SEARCH_LIMIT = int(os.environ.get("MAX_SEARCH_LIMIT", "20"))
+_DEFAULT_SEARCH_LIMIT = 5
+
+
+def _clamp_limit(limit) -> int:
+    """Coerce the model's `limit` into [1, MAX_SEARCH_LIMIT]. Never raises.
+
+    A tool-calling model can emit a string, a float or null here, so a bad type must
+    degrade to the default rather than turning a question into a RETRIEVAL_ERROR.
+    """
+    try:
+        return max(1, min(int(limit), MAX_SEARCH_LIMIT))
+    except (TypeError, ValueError):
+        return _DEFAULT_SEARCH_LIMIT
+
+
 class ToolFactory:
 
     def __init__(self, collection):
@@ -165,6 +189,10 @@ class ToolFactory:
             if _budget_exceeded(state):
                 return ("SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다. "
                         "추가 검색 없이 현재까지 수집된 컨텍스트로 답하세요.")
+
+            # Clamp before the SEMESTER_POOL_FACTOR multiplication below — `limit` is
+            # chosen by the model and is therefore attacker-influenceable via the question.
+            limit = _clamp_limit(limit)
 
             # Split-path retrieval (issue #66): route the user's ORIGINAL question to the
             # surface-sensitive sparse leg and the agent's query to the dense leg. The agent
