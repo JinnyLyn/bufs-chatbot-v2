@@ -24,11 +24,18 @@ def needs_korean_translation(question: str, answer: str) -> bool:
     return lat > 0 and han < lat * 0.5
 
 
-def to_korean(llm, answer: str) -> str:
-    """Translate `answer` to Korean via the shared LLM. Returns the original on failure."""
+def to_korean(llm, answer: str, callbacks=None) -> str:
+    """Translate `answer` to Korean via the shared LLM. Returns the original on failure.
+
+    `callbacks` (e.g. the Langfuse handler) lets the translation LLM call appear in
+    the same trace as the chat turn that triggered it.
+    """
     try:
         from langchain_core.messages import HumanMessage, SystemMessage
-        resp = llm.invoke([SystemMessage(content=get_translation_prompt()), HumanMessage(content=answer)])
+        resp = llm.invoke(
+            [SystemMessage(content=get_translation_prompt()), HumanMessage(content=answer)],
+            config={"callbacks": callbacks},
+        )
         return (resp.content or "").strip() or answer
     except Exception as exc:  # noqa: BLE001
         logger.warning("translation failed, keeping original: %s", exc)

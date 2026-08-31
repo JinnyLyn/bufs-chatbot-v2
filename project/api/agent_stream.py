@@ -84,8 +84,30 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
     set_trace_id(trace_id)
 
     rs = get_rag_system()
+    saw_terminal = False
+    with rs.observability.chat_turn(session_id, question, trace_id) as root:
+        try:
+            for event in _run_turn(rs, session_id, question, trace_id):
+                kind, payload = event
+                if root is not None:
+                    if kind == "done":
+                        root.update(output={"answer": payload["answer"]})
+                    elif kind == "error":
+                        root.update(level="ERROR", status_message=str(payload))
+                if kind in ("done", "error"):
+                    saw_terminal = True
+                yield event
+        finally:
+            # A client that disconnects mid-turn closes this generator
+            # (GeneratorExit), which OTel does not error-mark — without this the
+            # abandoned turn exports as a clean-looking trace with no output.
+            if root is not None and not saw_terminal:
+                root.update(level="WARNING", status_message="client disconnected")
+
+
+def _run_turn(rs, session_id: str, question: str, trace_id: str):
     graph = rs.agent_graph
-    config_ = build_config(session_id, trace_id=trace_id)
+    config_ = build_config(session_id)
     t0 = time.monotonic()
 
     timing = {"summarize_history": 0.0, "rewrite_query": 0.0, "agent": 0.0,
@@ -177,7 +199,7 @@ def run_agent_stream(session_id: str, question: str, trace_id: str = "-"):
         # final answer, replace only the final answer with a Korean translation.
         if needs_korean_translation(question, answer):
             logger.info("answer language mismatch — translating to Korean")
-            translated = to_korean(rs.llm, answer)
+            translated = to_korean(rs.llm, answer, callbacks=rs.observability.langchain_callbacks())
             if translated and translated != answer:
                 answer = translated
                 yield ("clear", None)    # wipe the streamed non-Korean tokens

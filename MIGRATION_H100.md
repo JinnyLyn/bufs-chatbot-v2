@@ -167,6 +167,7 @@ LANGFUSE_ENABLED=true
 LANGFUSE_PUBLIC_KEY=pk-lf-...
 LANGFUSE_SECRET_KEY=sk-lf-...
 LANGFUSE_BASE_URL=https://cloud.langfuse.com
+LANGFUSE_TRACING_ENVIRONMENT=production   # 운영 서버. 개발 머신은 development
 
 # SSL_CERT_FILE / REQUESTS_CA_BUNDLE 은 설정하지 않는다 (Norton 우회용 Windows 전용)
 ```

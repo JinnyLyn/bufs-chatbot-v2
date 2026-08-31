@@ -92,9 +92,12 @@ def _extract_text(val: object, max_chars: int = 200) -> str:
     if isinstance(val, str):
         text = val
     elif isinstance(val, dict):
-        # Common patterns: {"content": "..."}, {"output": "..."}, {"text": "..."}
+        # Common patterns: {"question"/"answer"} (chat-turn root span),
+        # {"content": "..."}, {"output": "..."}, {"text": "..."}
         text = (
-            val.get("content")
+            val.get("question")
+            or val.get("answer")
+            or val.get("content")
             or val.get("output")
             or val.get("text")
             or val.get("result")

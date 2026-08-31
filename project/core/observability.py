@@ -1,4 +1,6 @@
 import logging
+from contextlib import contextmanager, nullcontext
+
 import config
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,36 @@ class Observability:
 
     def get_handler(self):
         return self._handler
+
+    def langchain_callbacks(self):
+        """`callbacks` list for a LangChain/LangGraph config, or None when disabled."""
+        return [self._handler] if self._handler else None
+
+    def chat_turn(self, session_id: str, question: str, trace_id: str):
+        """Context manager: root span for one chat turn (yields None when disabled).
+
+        The root span's input/output become the trace-level input/output in
+        Langfuse (question in, final answer out) instead of raw LangGraph state
+        dicts; LangChain callback runs started inside the block nest beneath it
+        (same thread, active OTel context). `propagate_attributes` stamps the
+        session and the app's log trace_id onto the trace and every span, so
+        `debug/pipeline.py` can keep resolving traces via metadata.trace_id.
+        """
+        if not self._enabled or self._client is None:
+            return nullcontext(None)
+        return self._chat_turn(session_id, question, trace_id)
+
+    @contextmanager
+    def _chat_turn(self, session_id: str, question: str, trace_id: str):
+        from langfuse import propagate_attributes
+
+        with propagate_attributes(
+            session_id=session_id,
+            metadata={"trace_id": trace_id},
+        ), self._client.start_as_current_observation(
+            as_type="span", name="chat-turn", input={"question": question}
+        ) as root:
+            yield root
 
     def flush(self):
         if self._client is not None:

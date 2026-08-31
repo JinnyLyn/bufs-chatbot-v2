@@ -15,6 +15,7 @@ the full SSE stream synchronously. Chunks arrive as text/event-stream lines.
 from __future__ import annotations
 
 import json
+from contextlib import nullcontext
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -49,6 +50,10 @@ def _make_fake_rag_system():
     }
     # agent_stream calls rag_system.stream() — make it yield the done event
     sys.stream.return_value = iter([("done", done_payload)])
+    # Tracing must stay on the DISABLED path here: a bare MagicMock is truthy, so
+    # without this the tests silently exercise the Langfuse-enabled branch.
+    sys.observability.chat_turn.return_value = nullcontext(None)
+    sys.observability.langchain_callbacks.return_value = None
     return sys
 
 

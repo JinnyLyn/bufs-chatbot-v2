@@ -37,6 +37,7 @@ def fetch(path, want, **params):
 
 def qtext(v):
     if isinstance(v, dict):
+        if "question" in v: return str(v["question"])  # chat-turn root span shape
         msgs = v.get("messages") or []
         if msgs and isinstance(msgs[-1], dict): return str(msgs[-1].get("content", ""))
         return str(v.get("output") or v)
@@ -45,6 +46,7 @@ def qtext(v):
 
 def atext(v):
     if isinstance(v, dict):
+        if "answer" in v: return str(v["answer"])  # chat-turn root span shape
         msgs = v.get("messages") or []
         if msgs and isinstance(msgs[-1], dict): return str(msgs[-1].get("content", ""))
         return str(v.get("output") or v)

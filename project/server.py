@@ -59,6 +59,9 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Reranker ready in %.1fs.", _time.perf_counter() - _t0)
     logger.info("🚀 RAG system ready. Serving. runtime=%s", get_runtime_info())
     yield
+    # No explicit Langfuse flush here: the SDK registers its own atexit shutdown
+    # (which flushes), and a flush against an unreachable host would stall
+    # uvicorn's graceful-shutdown window for ~30s.
 
 
 # Interactive API docs are a live request-builder against an unauthenticated API and

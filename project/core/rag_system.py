@@ -61,9 +61,9 @@ class RAGSystem:
 
     def get_config(self):
         cfg = {"configurable": {"thread_id": self.thread_id}, "recursion_limit": self.recursion_limit}
-        handler = self.observability.get_handler()
-        if handler:
-            cfg["callbacks"] = [handler]
+        callbacks = self.observability.langchain_callbacks()
+        if callbacks:
+            cfg["callbacks"] = callbacks
         return cfg
 
     def reset_thread(self):
