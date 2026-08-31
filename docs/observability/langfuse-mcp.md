@@ -19,7 +19,12 @@ LANGFUSE_ENABLED=true
 LANGFUSE_PUBLIC_KEY=<여기에-Public-Key>
 LANGFUSE_SECRET_KEY=<여기에-Secret-Key>
 LANGFUSE_BASE_URL=https://cloud.langfuse.com   # EU. US는 https://us.cloud.langfuse.com
+LANGFUSE_TRACING_ENVIRONMENT=development       # 대시보드 오염 방지: 서버는 production
 ```
+
+> `LANGFUSE_TRACING_ENVIRONMENT`는 SDK가 직접 읽는 트레이스 environment 속성입니다
+> (`production`/`staging`/`development`). 개발 머신과 운영 서버를 다르게 설정해
+> 테스트 트레이스가 운영 대시보드에 섞이지 않게 합니다.
 
 > **중요:** 정확한 변수명은 `LANGFUSE_BASE_URL` — `config.py:107-108`이 이를 SDK가 읽는
 > `LANGFUSE_HOST`로 미러링합니다. 이 변수가 없으면 SDK가 기본 호스트(localhost)로 떨어집니다.

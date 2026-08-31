@@ -37,6 +37,11 @@ class Observability:
             logger.warning("Could not initialize Langfuse: %s", exc)
             self._enabled = False
 
+    @property
+    def client(self):
+        """The Langfuse client, or None when tracing is disabled/unavailable."""
+        return self._client if self._enabled else None
+
     def get_handler(self):
         return self._handler
 
