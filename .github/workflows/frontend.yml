@@ -26,6 +26,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Advisory for now, deliberately. Direct dependencies are pinned in package.json
+      # and Dependabot bumps them, but nothing surfaced TRANSITIVE advisories on a PR —
+      # they were only visible by running npm audit by hand. As of this change the tree
+      # carries three high-rated transitive findings (brace-expansion, js-yaml, nanoid),
+      # all DoS in build/lint tooling with no path from an HTTP request to the deployed
+      # app, so making this blocking today would fail every PR for issues that do not
+      # affect production. Clear that backlog, then drop continue-on-error and let it
+      # gate — same ratchet quality.yml documents for its own checks.
+      - name: npm audit (advisory)
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
       - name: TypeScript type-check
         run: npx tsc --noEmit
 

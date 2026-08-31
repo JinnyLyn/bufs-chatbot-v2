@@ -17,3 +17,12 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+
+  # project/Dockerfile pins its base image by digest, which is correct for
+  # reproducibility but means a security rebuild of that tag is invisible until
+  # someone refreshes the digest by hand. Dependabot does that refresh.
+  - package-ecosystem: "docker"
+    directory: "/project"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
