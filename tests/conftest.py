@@ -245,3 +245,42 @@ def _reset_rate_limiter():
     # Restore the cap as well: a test that lowers it to force a 503 must not leave
     # every later test running against the reduced limit.
     ratelimit.reset_for_tests(max_concurrent=original_max)
+
+
+# ---------------------------------------------------------------------------
+# Keep the test suite out of the production Q&A log
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True, scope="session")
+def _isolate_qa_log(tmp_path_factory):
+    """Point the Q&A logger at a temp directory for the whole test session.
+
+    The HTTP-level tests drive the real chat endpoint, which writes every answered turn
+    through the module-level QALogger singleton into <repo>/logs/qa/. That is the
+    PRODUCTION transcript: it is what the eval and analysis tooling reads, so test
+    fixtures landing in it corrupt real data.
+
+    This used to be handled by the X-Test-Mode header, but that header now fails
+    closed (it is an audit-trail control, and honouring it unauthenticated let any
+    caller suppress their own record). With no TEST_MODE_TOKEN configured the header
+    is correctly ignored — which left the tests writing to the real log.
+
+    Redirecting the directory is the right fix rather than setting CHAT_LOG_DISABLED:
+    that env var short-circuits should_skip_log(), which would make the qa_logger
+    tests vacuous instead of isolating them.
+    """
+    try:
+        from api import qa_logger
+    except Exception:  # fastapi/app deps absent in the minimal offline env
+        yield
+        return
+
+    qa_dir = tmp_path_factory.mktemp("qa_log")
+    original_dir, original_singleton = qa_logger._QA_DIR, qa_logger._qa_logger
+    qa_logger._QA_DIR = qa_dir
+    qa_logger._qa_logger = qa_logger.QALogger(qa_dir)
+    try:
+        yield
+    finally:
+        qa_logger._QA_DIR = original_dir
+        qa_logger._qa_logger = original_singleton
