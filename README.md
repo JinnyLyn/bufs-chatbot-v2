@@ -124,7 +124,7 @@ KB 문서 추가·제거(학기/연도 전환)는 [KB_MANAGEMENT.md](KB_MANAGEME
 ├── markdown_docs/            # 학사문서 (KB 소스; archive/ = 색인 제외 — KB_MANAGEMENT.md)
 ├── qdrant_db/ parent_store/  # 벡터DB + parent 청크 (커밋됨)
 ├── eval_tools/               # 평가/분석 하니스 (룰기반·RAGAS·Langfuse)
-├── scripts/                  # 기동/중지/헬스체크(.ps1=Windows, .sh=Linux)/롤백/배포
+├── scripts/                  # 기동/중지/헬스체크(.ps1=Windows, .sh=Linux)/롤백/배포/KB 문서동기화(doc_sync.sh)
 ├── REPORT_결과.md / REPORT_vs_BUFS.md   # 평가·비교 보고서
 └── INTEGRATION.md            # 통합·운영 가이드
 ```
