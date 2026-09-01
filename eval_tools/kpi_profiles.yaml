@@ -80,3 +80,22 @@ profiles:
       compress_threshold: 2000
       num_ctx: 8192
     thresholds: {}                  # intentionally empty in Phase 1 — no seeded floors
+
+# ── Serving SLO + measured concurrency capacity ─────────────────────────────
+# NOT read by the KPI gate (the loader only consumes `profiles:`). This is the
+# quality spec for LIVE serving and the measured capacity behind it.
+# Method + rerun instructions: docs/CAPACITY.md (harness: eval_tools/_load_test.py).
+slo:
+  ttft_p95_max_s: 20          # time to first visible answer token, p95
+  total_p95_max_s: 30         # full answer completion, p95
+  error_rate_max: 0.01        # non-busy failures (503/busy rejects excluded)
+measured:                     # 2026-09-01, H100 MIG 3g.47gb, qwen3.5:9b Q4_K_M,
+                              # num_ctx 16384, MAX_CONCURRENT_STREAMS=8, ollama 0.22.0
+  quality_concurrency: 3      # largest N meeting SLO (TTFT p95 19.9s @ N=3; 26.7s @ N=4)
+  comfortable_concurrency: 2  # TTFT p95 12.9s — headroom for launch messaging
+  hard_concurrency: 8         # admission cap; graceful queueing to TTFT p95 76.5s, 0 errors
+  overload_behavior: "12-user burst: 16 served / 8 clean busy-rejects / 0 failures"
+  # MAX_CONCURRENT_STREAMS=8 is an ABUSE bound (bounds how long a scripted client can
+  # pin the GPU), NOT a latency control — the SLO breaks at 4 concurrent while the cap
+  # bites at 9. Do not lower the cap to quality_concurrency: that would 503 real
+  # students at 4 concurrent who today just wait a little longer.
