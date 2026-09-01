@@ -61,31 +61,60 @@ def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_
     return docs
 
 
-def _apply_semester_scope_scored(scored_docs: list, question: str, limit: int) -> list:
-    """Threshold-aware variant of _apply_semester_scope for the rerank-OFF paths (#178).
+def _scoping_enabled() -> bool:
+    """True when any retrieval-scoping lever wants the deep pool + demotion pass."""
+    return config.SEMESTER_FILTER_ENABLED or config.OCU_FILTER_ENABLED
 
-    ``scored_docs`` is ``[(doc, score)]`` fetched at score_threshold=0.0 so demotion has
-    a real pool to work with; SEARCH_SCORE_THRESHOLD is enforced at selection time inside
-    ``select_semester_scoped`` instead of at fetch time.
+
+def _demotion_predicate(question: str):
+    """Combined is_demoted(doc) predicate from the enabled scoping levers.
+
+    ONE selection pass with an OR of the enabled levers' criteria — sequential
+    per-lever passes would double-count scoping.select_scoped's "one sub-threshold
+    admission per demotion" bookkeeping. May raise (target_semester parsing);
+    callers wrap it in their never-raise guard.
     """
     import datetime as _dt
 
+    from rag_agent import ocu as _ocu
     from rag_agent import semester as _sem
 
-    try:
+    preds = []
+    if config.SEMESTER_FILTER_ENABLED:
         today = _dt.date.fromisoformat(config.SEMESTER_TODAY) if config.SEMESTER_TODAY else None
         target = _sem.target_semester(question, today)
-        selected = _sem.select_semester_scoped(
-            scored_docs, target, limit, config.SEARCH_SCORE_THRESHOLD)
-        logger.debug("semester scope(scored): target=%d pool=%d -> limit=%d",
-                     target, len(scored_docs), limit)
+        preds.append(lambda d: _sem.is_wrong_semester(d, target))
+    # OCU scope stands down entirely when the question itself asks about OCU.
+    if config.OCU_FILTER_ENABLED and not _ocu.is_ocu_question(question):
+        preds.append(_ocu.is_ocu_chunk)
+    if len(preds) == 1:
+        return preds[0]
+    # No lever criterion (e.g. OCU lever alone, on an OCU question): the always-False
+    # predicate makes select_scoped degrade to exactly the thresholded top-`limit` the
+    # un-scoped path would return.
+    return (lambda d: any(p(d) for p in preds)) if preds else (lambda d: False)
+
+
+def _apply_retrieval_scope_scored(scored_docs: list, question: str, limit: int) -> list:
+    """Threshold-aware scoping for the rerank-OFF paths (#178).
+
+    ``scored_docs`` is ``[(doc, score)]`` fetched at score_threshold=0.0 so demotion has
+    a real pool to work with; SEARCH_SCORE_THRESHOLD is enforced at selection time inside
+    ``scoping.select_scoped`` instead of at fetch time.
+    """
+    from rag_agent import scoping as _scoping
+
+    try:
+        selected = _scoping.select_scoped(
+            scored_docs, _demotion_predicate(question), limit, config.SEARCH_SCORE_THRESHOLD)
+        logger.debug("retrieval scope(scored): pool=%d -> limit=%d", len(scored_docs), limit)
         return selected
     except Exception:
-        # Same never-raise contract as _apply_semester_scope: fall back to what the
-        # un-scoped path would have returned (threshold at fetch, top-limit). The
-        # fallback itself unpacks scored_docs again, so it gets its own guard — a
-        # malformed pool must degrade to NO_RELEVANT_CHUNKS, not RETRIEVAL_ERROR.
-        logger.exception("semester scoping failed; falling back to thresholded top-%d", limit)
+        # Never-raise contract: fall back to what the un-scoped path would have returned
+        # (threshold at fetch, top-limit). The fallback itself unpacks scored_docs again,
+        # so it gets its own guard — a malformed pool must degrade to NO_RELEVANT_CHUNKS,
+        # not RETRIEVAL_ERROR.
+        logger.exception("retrieval scoping failed; falling back to thresholded top-%d", limit)
         try:
             return [d for d, s in scored_docs if s >= config.SEARCH_SCORE_THRESHOLD][:limit]
         except Exception:
@@ -93,26 +122,23 @@ def _apply_semester_scope_scored(scored_docs: list, question: str, limit: int) -
             return []
 
 
-def _apply_semester_scope(docs: list, question: str, limit: int) -> list:
-    """Demote wrong-semester chunks, then cut to `limit`. Never raises into the search path.
+def _apply_retrieval_scope(docs: list, question: str, limit: int) -> list:
+    """Demote scoped-out chunks, then cut to `limit`. Never raises into the search path.
 
     The question used for scoping is the ORIGINAL user text, not the agent's paraphrase —
     the agent routinely drops the "2학기" qualifier when it rewrites a query (24 such cases
-    in the #80 forensics), which is precisely the signal being read here.
+    in the #80 forensics), which is precisely the signal being read here; the OCU marker
+    is the same kind of signal.
     """
-    import datetime as _dt
-
-    from rag_agent import semester as _sem
+    from rag_agent import scoping as _scoping
 
     try:
-        today = _dt.date.fromisoformat(config.SEMESTER_TODAY) if config.SEMESTER_TODAY else None
-        target = _sem.target_semester(question, today)
-        ordered = _sem.demote_other_semesters(docs, target)
-        logger.debug("semester scope: target=%d pool=%d -> limit=%d", target, len(docs), limit)
+        ordered = _scoping.demote_scoped(docs, _demotion_predicate(question))
+        logger.debug("retrieval scope: pool=%d -> limit=%d", len(docs), limit)
         return ordered[:limit]
     except Exception:
         # A scoping bug must never turn into a retrieval outage — fall back to raw ranking.
-        logger.exception("semester scoping failed; falling back to unscoped top-%d", limit)
+        logger.exception("retrieval scoping failed; falling back to unscoped top-%d", limit)
         return docs[:limit]
 
 
@@ -200,10 +226,10 @@ class ToolFactory:
             # `question` (= rewrittenQuestions[idx]; with rewrite off this is the user's
             # message). `state` is injected via InjectedState and is hidden from the LLM schema.
             original = (state or {}).get("question", "") or query
-            # Semester scoping (학기 교차 오염): fetch a deeper pool so there is something to
-            # promote in place of the demoted wrong-semester chunks, then cut back to `limit`
+            # Retrieval scoping (학기/OCU 교차 오염): fetch a deeper pool so there is
+            # something to promote in place of the demoted chunks, then cut back to `limit`
             # AFTER demotion. Scoping off ⇒ fetch_k == limit and the path is byte-identical.
-            fetch_k = limit * config.SEMESTER_POOL_FACTOR if config.SEMESTER_FILTER_ENABLED else limit
+            fetch_k = limit * config.SEMESTER_POOL_FACTOR if _scoping_enabled() else limit
             if config.RERANK_ENABLED:
                 # Rerank path (#104): fetch a DEEPER pool at threshold 0 (so rank_cut chunks
                 # buried below the 0.3 RRF cutoff survive to the reranker), then let the
@@ -234,9 +260,9 @@ class ToolFactory:
                     )
                 results = reranker.rerank(original, pool, fetch_k,
                                           rrf_scores=rrf_scores, blend_alpha=config.RERANK_BLEND_ALPHA)
-                if config.SEMESTER_FILTER_ENABLED:
-                    results = _apply_semester_scope(results, original, limit)
-            elif config.SEMESTER_FILTER_ENABLED:
+                if _scoping_enabled():
+                    results = _apply_retrieval_scope(results, original, limit)
+            elif _scoping_enabled():
                 # #178: fetching at SEARCH_SCORE_THRESHOLD pre-cuts the pool to a
                 # handful of docs, so the deep fetch_k never materializes and demotion
                 # has nothing to promote. Follow the rerank path's precedent: fetch
@@ -250,7 +276,7 @@ class ToolFactory:
                 else:
                     scored = self.collection.similarity_search_with_score(
                         query, k=fetch_k, score_threshold=0.0)
-                results = _apply_semester_scope_scored(scored, original, limit)
+                results = _apply_retrieval_scope_scored(scored, original, limit)
             elif config.SPLIT_PATH_ENABLED:
                 results = _split_hybrid_search(
                     self.collection, dense_query=query, sparse_query=original,

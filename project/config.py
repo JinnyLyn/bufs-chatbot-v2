@@ -189,8 +189,20 @@ if RERANK_BLEND_ALPHA is not None and not (0.0 <= RERANK_BLEND_ALPHA <= 1.0):
 # semester's guide is still reachable (below-threshold ones are excluded either way; #178).
 # DEFAULT OFF — A/B toggle.
 SEMESTER_FILTER_ENABLED = os.environ.get("SEMESTER_FILTER_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# --- Retrieval-side lever: OCU 스코프 (OCU 교차 오염) ---
+# Each 학사안내 embeds a full OCU(한국열린사이버대학교 컨소시엄) block whose facts — 개강일,
+# 수강신청 방법, 시스템 사용료, On-line 시험·성적 규정 — parallel the normal curriculum's
+# with different values, so a general "1학기 개강일/수강신청/성적" question retrieves
+# OCU-topic chunks and the answer quotes OCU rules (user report 2026-09-01). When ON,
+# rag_agent.ocu demotes OCU-topic chunks (topical collocations, never the bare token —
+# incidental "- 라. OCU 수강 신청자 …" mentions in general sections stay put) UNLESS the
+# question itself mentions OCU. Same demote-never-delete selection as the semester lever
+# (shared via rag_agent.scoping, ONE pass with a combined predicate); pool depth shares
+# SEMESTER_POOL_FACTOR. DEFAULT OFF — A/B toggle (#162 procedure, 학기 레버 ON both arms).
+OCU_FILTER_ENABLED = os.environ.get("OCU_FILTER_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Demotion only helps if the pool is deeper than `limit` — otherwise there is nothing to
-# promote in place of the demoted chunks. Pool depth = limit * factor.
+# promote in place of the demoted chunks. Pool depth = limit * factor (shared by the
+# semester and OCU scoping levers — the deep fetch happens once for both).
 SEMESTER_POOL_FACTOR = int(os.environ.get("SEMESTER_POOL_FACTOR", "3"))
 if SEMESTER_POOL_FACTOR < 1:
     raise ValueError(f"SEMESTER_POOL_FACTOR must be >= 1, got {SEMESTER_POOL_FACTOR}")
@@ -198,7 +210,7 @@ if SEMESTER_POOL_FACTOR < 1:
 # A live A/B run months later must reproduce the semester the run was scored under.
 SEMESTER_TODAY = os.environ.get("SEMESTER_TODAY", "").strip()
 if SEMESTER_TODAY:
-    # Fail fast at import: the consumer (_apply_semester_scope) swallows runtime exceptions
+    # Fail fast at import: the consumer (tools._apply_retrieval_scope*) swallows runtime exceptions
     # by design, so a typo here would silently disable scoping and invalidate an A/B arm.
     try:
         _date.fromisoformat(SEMESTER_TODAY)
