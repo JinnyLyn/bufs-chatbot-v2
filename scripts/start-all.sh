@@ -97,7 +97,7 @@ drop_pid()  { rm -f "$RUN_DIR/$1.pid"; }
 # what previously made "stop-all then start-all" leave stale processes serving old code.
 adopt_pid() {
     local name="$1" pids
-    pids="$(find_service_pids "$name" | head -2)"
+    pids="$(find_service_pids "$name" | head -2 || true)"
     if [ "$(wc -l <<<"$pids")" = 1 ] && [ -n "$pids" ]; then
         write_pid "$name" "$pids"
         echo "        (adopted running $name pid $pids into $name.pid)"

@@ -42,22 +42,34 @@ wait_port() {
 # GPU isolation. Checking/starting on 11434 made the scripts manage the wrong server.
 #
 # Sets: OLLAMA_PORT (may stay empty), OLLAMA_LOCAL=1|0 (0 = remote URL in .env — the
-# scripts must not try to start/stop ollama at all).
+# scripts must not try to start/stop ollama at all). A pre-set OLLAMA_PORT wins, but a
+# disagreement with .env is warned about: the scripts would manage one ollama while the
+# backend dials another (split-brain that surfaces only as /health/llm failing).
 derive_ollama_port() {
     OLLAMA_LOCAL=1
-    if [ -n "${OLLAMA_PORT:-}" ]; then return 0; fi
-    local url=""
+    local url="" env_port=""
     if [ -f "$REPO/project/.env" ]; then
-        url="$(grep -E '^OLLAMA_BASE_URL=' "$REPO/project/.env" | tail -1 | cut -d= -f2- | tr -d ' \r')"
+        # `|| true`: no OLLAMA_BASE_URL line is a valid state — under pipefail a bare
+        # grep miss would otherwise abort the whole sourcing script with no output.
+        url="$(grep -E '^OLLAMA_BASE_URL=' "$REPO/project/.env" | tail -1 | cut -d= -f2- | tr -d ' \r' || true)"
     fi
     case "$url" in
         http://127.0.0.1:*|http://localhost:*)
-            OLLAMA_PORT="$(printf '%s' "${url##*:}" | tr -cd '0-9')" ;;
-        "")
-            OLLAMA_PORT=11434 ;;   # no .env — historical default
-        *)
-            OLLAMA_LOCAL=0; OLLAMA_PORT="" ;;  # remote ollama — hands off
+            env_port="$(printf '%s' "${url##*:}" | tr -cd '0-9')" ;;
+        "") ;;
+        *)  OLLAMA_LOCAL=0 ;;  # remote ollama — hands off
     esac
+    if [ -n "${OLLAMA_PORT:-}" ]; then
+        OLLAMA_LOCAL=1  # an explicit port always means "manage a local ollama there"
+        if [ -n "$env_port" ] && [ "$OLLAMA_PORT" != "$env_port" ]; then
+            echo "[warn]  OLLAMA_PORT=$OLLAMA_PORT disagrees with project/.env OLLAMA_BASE_URL (:$env_port)." >&2
+            echo "        Scripts manage :$OLLAMA_PORT, but the backend dials .env unless OLLAMA_PORT came from the command line." >&2
+        fi
+        return 0
+    fi
+    if [ "$OLLAMA_LOCAL" = 0 ]; then OLLAMA_PORT=""; return 0; fi
+    OLLAMA_PORT="${env_port:-11434}"   # no .env port — historical default
+    return 0
 }
 
 # Discover the pids of OUR services by identity, not by port. This box is SHARED:
@@ -79,15 +91,21 @@ find_service_pids() {
         [ -n "$cmd" ] || continue
         case "$name" in
             backend)
+                # Must be an actual python interpreter running server.py — a bare path
+                # match would also hit an editor/tail/grep the user has open on the file.
                 case "$cmd" in
-                    *"$REPO/project/server.py"*) echo "$pid" ;;
-                    *python*project/server.py*) [ "$cwd" = "$REPO" ] && echo "$pid" ;;
+                    *python*"$REPO/project/server.py"*) echo "$pid" ;;
+                    *python*project/server.py*) if [ "$cwd" = "$REPO" ]; then echo "$pid"; fi ;;
                 esac ;;
             frontend)
+                # Only real server invocations: the standalone server renames its argv
+                # to "next-server (vX)", start-all launches `node server.js` / `npm run
+                # dev`, and dev mode spawns `.../.bin/next dev`. Loose globs like
+                # *node*/*next* would match an editor on next.config.ts or an LSP.
                 case "$cwd" in
                     "$REPO/frontend"|"$REPO/frontend/"*)
                         case "$cmd" in
-                            *node*|*npm*|next-server*|*next*) echo "$pid" ;;
+                            next-server*|*"node server.js"*|*"npm run dev"*|*"next dev"*|*"next start"*) echo "$pid" ;;
                         esac ;;
                 esac ;;
             ollama)
@@ -101,4 +119,5 @@ find_service_pids() {
                 esac ;;
         esac
     done
+    return 0   # a failed guard on the last pid must not become the function's status (set -e)
 }
