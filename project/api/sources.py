@@ -74,3 +74,49 @@ def parse_tool_results(tool_contents: list[str], max_items: int = 10):
     # agentic-RAG sources are local filenames, not browseable URLs.
     source_urls: list[dict] = []
     return results[:max_items], source_urls
+
+
+# --- answer post-processing -------------------------------------------------
+# The prompts forbid the old sources footer ("---\n**출처:**\n- file.pdf …"), but a
+# disobedient generation can still emit one — the compression context keeps feeding
+# "### filename.pdf" headers to the model. The SourcePanel shows sources from
+# structured metadata, so a leaked footer only duplicates it; strip it from the
+# shipped answer so the guarantee is structural, not best-effort.
+#
+# Deliberately a bottom-up line scan with small anchored per-line patterns, NOT one
+# multi-line regex over the whole answer: the answer is model output shaped by user
+# input, and a single regex with alternating repeated groups was flagged by CodeQL
+# (py/redos) as exponential-backtracking territory. The scan is linear by
+# construction. A block counts as a footer ONLY when list/filename lines sit
+# directly under a 출처/Sources heading line at the very end of the answer.
+_FOOTER_HEADING_RE = re.compile(r"^[ \t]*\*{0,2}(?:출처|Sources?)\*{0,2}[ \t]*:?\*{0,2}[ \t]*$")
+_FOOTER_ITEM_RE = re.compile(r"^[ \t]*(?:[-*•]|\d+\.)[ \t]+\S")
+_FOOTER_FILENAME_RE = re.compile(r"\.(?:pdf|docx?|txt|md)[ \t]*$", re.IGNORECASE)
+_FOOTER_RULE_RE = re.compile(r"^[ \t]*-{3,}[ \t]*$")
+
+
+def strip_source_footer(answer: str) -> str:
+    """Remove a trailing 출처/Sources footer block; leave everything else untouched."""
+    lines = answer.split("\n")
+    i = len(lines) - 1
+    saw_item = False
+    # Walk up over the candidate item block (list items, bare filename lines, blanks).
+    while i >= 0:
+        line = lines[i]
+        if not line.strip():
+            i -= 1
+            continue
+        if _FOOTER_ITEM_RE.match(line) or (_FOOTER_FILENAME_RE.search(line) and line.strip()):
+            saw_item = True
+            i -= 1
+            continue
+        break
+    if not saw_item or i < 0 or not _FOOTER_HEADING_RE.match(lines[i]):
+        return answer
+    i -= 1
+    while i >= 0 and not lines[i].strip():
+        i -= 1
+    if i >= 0 and _FOOTER_RULE_RE.match(lines[i]):
+        i -= 1
+    stripped = "\n".join(lines[: i + 1]).rstrip()
+    return stripped or answer  # never blank the answer if it was footer-only

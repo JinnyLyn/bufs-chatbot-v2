@@ -71,6 +71,11 @@ class TestOrchestratorPrompt:
         p = _import_prompts()
         assert "한국어" in p.get_orchestrator_prompt()
 
+    def test_forbids_inline_sources_section(self):
+        """출처는 UI의 SourcePanel이 표시한다 — 답변 본문에는 출처 섹션을 금지."""
+        p = _import_prompts()
+        assert "출처 섹션이나 파일명 목록을 넣지 마세요" in p.get_orchestrator_prompt()
+
 
 class TestFallbackResponsePrompt:
     def test_returns_string(self):
@@ -81,9 +86,10 @@ class TestFallbackResponsePrompt:
         p = _import_prompts()
         assert len(p.get_fallback_response_prompt()) > 0
 
-    def test_mentions_sources_section(self):
+    def test_forbids_inline_sources_section(self):
+        """출처는 UI의 SourcePanel이 표시한다 — 답변 본문에는 출처 섹션을 금지."""
         p = _import_prompts()
-        assert "출처" in p.get_fallback_response_prompt()
+        assert "출처 섹션이나 파일명 목록을 넣지 마세요" in p.get_fallback_response_prompt()
 
 
 class TestContextCompressionPrompt:
@@ -105,11 +111,12 @@ class TestAggregationPrompt:
         p = _import_prompts()
         assert "한국어" in p.get_aggregation_prompt()
 
-    def test_mentions_source_file_extension_rule(self):
-        """Must include the file-extension filtering rule to avoid chunk ID leakage."""
+    def test_forbids_inline_sources_and_chunk_id_leakage(self):
+        """출처는 UI의 SourcePanel이 표시한다 — 본문 출처 섹션과 chunk 식별자 노출 금지."""
         p = _import_prompts()
         text = p.get_aggregation_prompt()
-        assert ".pdf" in text or "확장자" in text
+        assert "출처 섹션이나 파일명 목록을 넣지 마세요" in text
+        assert "chunk 식별자" in text
 
 
 class TestCentralizedMicroPrompts:
