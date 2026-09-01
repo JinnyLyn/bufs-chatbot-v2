@@ -34,6 +34,17 @@ def _seed_parent_store(tmp_path: Path, parent_id: str, content: str, source: str
     )
 
 
+@pytest.fixture(autouse=True)
+def _parent_scope_cache_hygiene():
+    """OCU parent verdicts (tools._parent_ocu_flag) are lru-cached by (store_path,
+    parent_id); tmp_path stores can collide across tests only through that cache —
+    clear on both sides of every test (pytest-randomly reorders sessions)."""
+    import rag_agent.tools as tools_mod
+    tools_mod._parent_ocu_flag.cache_clear()
+    yield
+    tools_mod._parent_ocu_flag.cache_clear()
+
+
 def _make_tool_factory(tmp_path: Path, collection):
     import sys, importlib
     if "config" in sys.modules:
@@ -318,8 +329,13 @@ class TestOcuLeverWiring:
         doc.metadata = {"parent_id": parent_id, "source": source}
         return doc
 
-    def _search(self, tmp_path, col):
+    def _search(self, tmp_path, col, monkeypatch=None):
+        # monkeypatch가 오면 부모 백스톱의 store도 tmp로 격리 (프로드 parent_store를
+        # 테스트가 읽지 않도록 — b7bef33과 같은 부류의 누수 방지).
         factory = _make_tool_factory(tmp_path, col)
+        if monkeypatch is not None:
+            import config as config_mod
+            monkeypatch.setattr(config_mod, "PARENT_STORE_PATH", str(tmp_path))
         return next(t for t in factory.create_tools() if t.name == "search_child_chunks")
 
     def test_ocu_lever_alone_fetches_deep_and_demotes_ocu_topic_chunk(
@@ -332,7 +348,7 @@ class TestOcuLeverWiring:
             (self._make_doc(self.일반_개강, "gen1"), 0.50),
             (self._make_doc("수강신청 기간 안내", "gen2"), 0.45),
         ]
-        search = self._search(tmp_path, col)
+        search = self._search(tmp_path, col, monkeypatch)
         result = search.invoke({"query": "1학기 개강일 언제야?", "limit": 2})
 
         col.similarity_search_with_score.assert_called_once_with(
@@ -345,7 +361,7 @@ class TestOcuLeverWiring:
         기존 thresholded top-k 경로 그대로 간다 (리뷰 지적사항: 불필요한 3x fetch 제거)."""
         monkeypatch.setenv("OCU_FILTER_ENABLED", "true")
         col = _make_fake_collection([self._make_doc(self.OCU_개강, "ocu")])
-        search = self._search(tmp_path, col)
+        search = self._search(tmp_path, col, monkeypatch)
         result = search.invoke({"query": "OCU 개강일은 언제인가요?", "limit": 2})
         col.similarity_search.assert_called_once_with(
             "OCU 개강일은 언제인가요?", k=2, score_threshold=0.3)
@@ -379,3 +395,67 @@ class TestOcuLeverWiring:
             "1학기 개강일 언제야?", k=5, score_threshold=0.3)
         col.similarity_search_with_score.assert_not_called()
         assert "ocu" in result  # 레버 OFF ⇒ 강등 없음 (기존 동작 그대로)
+
+
+class TestOcuParentBackstop:
+    """OCU 챕터 내부 하위섹션 재현 (prod A/B 2026-09-01): 자식 텍스트는 일반 문면이라
+    is_ocu_chunk 를 통과하지만, 부모가 OCU-topic 이면 강등되어야 한다."""
+
+    OCU_부모텍스트 = (
+        '## 7.  최종성적 확인 및 이의신청\n- 나. 방법 : OCU 컨소시엄 홈페이지 "나의 성적"메뉴를 '
+        '이용하여 성적을 확인하고, OCU 컨소시엄 홈페이지 "교수님께질문" 메뉴로 이의신청합니다.'
+    )
+
+    OCU자식_일반문면 = (
+        "## 5.  성적평가(상대평가) - 가. 평가원칙 : 출석요건(전체 출석일수의 12/15이상)을 "
+        "충족시킨 자에 한하여 성적을 부여"
+    )
+    일반_자식 = "성적처리 일정 안내: 성적입력 및 공시는 학사일정에 따릅니다"
+
+    def _make_doc(self, content, parent_id, source="2026학년도2학기학사안내.md"):
+        doc = MagicMock()
+        doc.page_content = content
+        doc.metadata = {"parent_id": parent_id, "source": source}
+        return doc
+
+    def _arm(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OCU_FILTER_ENABLED", "true")
+        self._tmp_store = tmp_path
+
+    def _search(self, tmp_path, col, monkeypatch):
+        # _make_tool_factory reloads config, so config.PARENT_STORE_PATH must be
+        # re-pointed AFTER the factory is built (reload restores the repo default —
+        # and the repo store must never be touched from tests, cf. b7bef33).
+        factory = _make_tool_factory(tmp_path, col)
+        import config as config_mod
+        monkeypatch.setattr(config_mod, "PARENT_STORE_PATH", str(tmp_path))
+        return next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+
+    def test_clean_child_of_ocu_parent_is_demoted(self, tmp_path, env_isolated, monkeypatch):
+        self._arm(tmp_path, monkeypatch)
+        _seed_parent_store(tmp_path, "pb_ocu", self.OCU_부모텍스트)
+        _seed_parent_store(tmp_path, "pb_gen", self.일반_자식)
+        _seed_parent_store(tmp_path, "pb_gen2", self.일반_자식)
+        col = MagicMock()
+        col.similarity_search_with_score.return_value = [
+            (self._make_doc(self.OCU자식_일반문면, "pb_ocu"), 0.55),
+            (self._make_doc(self.일반_자식, "pb_gen"), 0.50),
+            (self._make_doc("성적 공시 후 이의신청은 학과 사무실 문의", "pb_gen2"), 0.25),
+        ]
+        search = self._search(tmp_path, col, monkeypatch)
+        result = search.invoke({"query": "성적 이의신청 절차 알려줘", "limit": 2})
+        # 강등 1건(pb_ocu)이 비운 슬롯을 threshold 미달 일반 청크(pb_gen2)가 채운다
+        # ("pb_gen"은 "pb_gen2"의 부분문자열 — 정확한 라인으로 단언)
+        assert "Parent ID: pb_gen\n" in result
+        assert "Parent ID: pb_gen2\n" in result
+        assert "pb_ocu" not in result
+
+    def test_missing_parent_fails_open(self, tmp_path, env_isolated, monkeypatch):
+        self._arm(tmp_path, monkeypatch)
+        col = MagicMock()
+        col.similarity_search_with_score.return_value = [
+            (self._make_doc(self.OCU자식_일반문면, "pb_absent"), 0.55),
+        ]
+        search = self._search(tmp_path, col, monkeypatch)
+        result = search.invoke({"query": "성적 이의신청 절차 알려줘", "limit": 2})
+        assert "pb_absent" in result  # 부모 json 없음 ⇒ 오늘 동작 유지 (fail-open)

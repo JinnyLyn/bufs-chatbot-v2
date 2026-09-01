@@ -282,7 +282,8 @@ _PARENT_ID_LINE = re.compile(r"(?m)^Parent ID:\s*(.+?)\s*$")
 
 
 def _expand_parent_context(unique_contents: List[str],
-                           prior_ids: Optional[List[str]] = None) -> List[str]:
+                           prior_ids: Optional[List[str]] = None,
+                           question: str = "") -> List[str]:
     """Auto parent expansion (issue #126): load the parent originals for the child chunks
     the agent actually saw.
 
@@ -320,6 +321,14 @@ def _expand_parent_context(unique_contents: List[str],
         logger.exception("parent expansion disabled for this call: parent store init failed")
         return []
 
+    from rag_agent import ocu as _ocu
+
+    # Same stand-down rule as retrieval (tools._demotion_predicate): an OCU question
+    # gets its OCU parents. Empty question (defensive) also stands down — fail-open.
+    ocu_scope_armed = (
+        config.OCU_FILTER_ENABLED and bool(question) and not _ocu.is_ocu_question(question)
+    )
+
     blocks: List[str] = []
     total_chars = 0
     for pid in ordered_ids:
@@ -339,6 +348,14 @@ def _expand_parent_context(unique_contents: List[str],
             # The agent already fetched this parent's full text via retrieve_parent_chunks
             # (tool output embeds the same stripped content) — appending it again would
             # only duplicate large context.
+            continue
+        if ocu_scope_armed and _ocu.is_ocu_parent(content):
+            # Without this, a readmitted OCU child (demote-never-delete) or a replayed
+            # observed_parent_id re-imports the full OCU block into the synthesis prompt
+            # and reproduces the contamination retrieval-side demotion just removed.
+            # The child evidence itself stays in the prompt — only the parent append is
+            # skipped, so an only-evidence answer can still cite what was retrieved.
+            logger.info("parent expansion: OCU scope skipped parent_id=%s", pid)
             continue
         source = (parent.get("metadata") or {}).get("source", "unknown")
         block = f"--- 원문 (Parent ID: {pid} / File Name: {source}) ---\n{content}"
@@ -374,7 +391,8 @@ def _build_synthesis_prompt_content(state: AgentState) -> str:
         # so the compressed multi-turn population (the lever's target) still expands.
         prior_ids = state.get("observed_parent_ids") or []
         if unique_contents or prior_ids:
-            parent_blocks = _expand_parent_context(unique_contents, prior_ids)
+            parent_blocks = _expand_parent_context(
+                unique_contents, prior_ids, question=state.get("question") or "")
             if parent_blocks:
                 context_parts.append(
                     "## 원문 맥락 (검색된 조각의 상위 문단 전체)\n\n" + "\n\n".join(parent_blocks)

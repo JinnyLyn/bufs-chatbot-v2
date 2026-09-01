@@ -178,3 +178,51 @@ def test_demote_scoped_is_stable_within_groups():
     out = scoping.demote_scoped(docs, ocu.is_ocu_chunk)
     assert [d.page_content for d in out] == [일반_개강, 일반_수강신청, OCU_개강]
     assert scoping.demote_scoped([], ocu.is_ocu_chunk) == []
+
+
+# --- is_ocu_parent (부모 백스톱) ------------------------------------------------
+# OCU 챕터의 flat ## 하위섹션(성적평가, 이의신청 …)은 자기 텍스트에 collocation이
+# 없어 is_ocu_chunk 를 통과한다 — 부모 텍스트가 유일한 토픽 신호 (prod A/B 2026-09-01).
+
+OCU_부모 = (
+    "## 7.  최종성적 확인 및 이의신청\n"
+    '- 나. 방법 : OCU 컨소시엄 홈페이지 "나의 성적"메뉴를 이용하여 학생 본인이 과목의 성적을 '
+    '반드시 확인하고, OCU 컨소시엄 홈페이지 "교수님께질문" 메뉴를 이용하여 성적이의신청을 합니다.'
+)
+일반_부모 = (
+    "## 5.  성적평가(상대평가)\n"
+    "- 가. 평가원칙 : 출석요건(전체 출석일수의 12/15이상)을 충족시킨 자에 한하여 성적을 부여하며 "
+    "성적산출은 상대평가(100점 만점 기준)를 원칙으로 합니다."
+)
+
+
+def test_parent_with_collocation_is_ocu():
+    assert ocu.is_ocu_parent(OCU_부모)
+
+
+def test_parent_without_collocation_is_not_ocu():
+    """OCU 챕터 문면이라도 collocation이 없으면 부모 판정도 False — 백스톱은 부모 청크가
+    충분히 커서(≈2KB) collocation을 실제로 품는다는 관측에 기댄다 (ocu.py docstring)."""
+    assert not ocu.is_ocu_parent(일반_부모)
+
+
+def test_parent_check_fails_open_on_empty():
+    assert not ocu.is_ocu_parent("")
+    assert not ocu.is_ocu_parent(None)
+
+
+def test_low_density_incidental_parent_is_not_ocu():
+    """전화번호부 재현: 큰 일반 부모에 '(OCU) 교무' 류 부수 언급 3건 — 밀도 미달로 False
+    (실측: parent_86, 3 hits / 4.9KB = 0.61/KB)."""
+    text = ("학부(과) 사무실 전화번호 안내\n" + "전공 051-509-5000\n" * 150
+            + "(OCU) 교무 051-509-5100\n" + "교직 051-509-5200\n" * 150
+            + "(OCU) 학적 051-509-5300\n" + "장학 051-509-5400\n" * 100
+            + "(OCU) 수업 051-509-5500\n")
+    assert len(ocu._OCU_TOPIC_RE.findall(text)) == 3  # 픽스처 자가 검증
+    assert not ocu.is_ocu_parent(text)
+
+
+def test_single_toc_title_hit_is_not_ocu():
+    """표지/차례 재현: 'OCU 교과목 수강 안내' 제목 1건뿐인 큰 부모 — 건수 미달로 False."""
+    text = "차 례\n" + "제1장 수강신청 안내\n" * 100 + "OCU 교과목 수강 안내\n" + "제3장 성적\n" * 100
+    assert not ocu.is_ocu_parent(text)
