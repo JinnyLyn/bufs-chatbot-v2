@@ -202,10 +202,17 @@ SEMESTER_FILTER_ENABLED = os.environ.get("SEMESTER_FILTER_ENABLED", "false").low
 OCU_FILTER_ENABLED = os.environ.get("OCU_FILTER_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Demotion only helps if the pool is deeper than `limit` — otherwise there is nothing to
 # promote in place of the demoted chunks. Pool depth = limit * factor (shared by the
-# semester and OCU scoping levers — the deep fetch happens once for both).
-SEMESTER_POOL_FACTOR = int(os.environ.get("SEMESTER_POOL_FACTOR", "3"))
-if SEMESTER_POOL_FACTOR < 1:
-    raise ValueError(f"SEMESTER_POOL_FACTOR must be >= 1, got {SEMESTER_POOL_FACTOR}")
+# semester and OCU scoping levers — the deep fetch happens once for both). The
+# lever-neutral SCOPING_POOL_FACTOR is the canonical knob; SEMESTER_POOL_FACTOR is kept
+# as a fallback so existing box .env profiles keep working, and as a module constant for
+# code that still reads the old name.
+SCOPING_POOL_FACTOR = int(
+    os.environ.get("SCOPING_POOL_FACTOR", "").strip()
+    or os.environ.get("SEMESTER_POOL_FACTOR", "3")
+)
+if SCOPING_POOL_FACTOR < 1:
+    raise ValueError(f"SCOPING_POOL_FACTOR must be >= 1, got {SCOPING_POOL_FACTOR}")
+SEMESTER_POOL_FACTOR = SCOPING_POOL_FACTOR
 # Freeze "today" for reproducible evals / tests (ISO date, e.g. 2026-08-03). Empty = real clock.
 # A live A/B run months later must reproduce the semester the run was scored under.
 SEMESTER_TODAY = os.environ.get("SEMESTER_TODAY", "").strip()

@@ -46,6 +46,9 @@ def test_ocu_questions_pass_the_gate(q):
         "1학기 수강신청 기간 알려줘",
         "성적 이의신청 기간은?",
         "최대 몇 학점까지 신청 가능한가요?",
+        # 일반적 의미의 공동활용 — 게이트가 열리면 레버가 무력화되므로 절대 매칭 금지 (리뷰 지적)
+        "타 대학과 시설 공동활용 협약이 있나요?",
+        "교내 시설 공동활용 방안이 궁금해요",
         # Latin word-boundary: the "ocu" trigram inside English words is not a marker.
         "document에서 focus 부분만 알려줘",
         "",
@@ -81,8 +84,6 @@ def test_none_question_is_safe():
         "## ※ OCU 과목은 전공, 교양으로 인정 불가하며, OCU(자유선택)로만 학점 인정 가능함.",
         "|문의전화|(OCU) 교무, 학사, 수업운영 : 02-2197-4241|",
         "1. 한국열린사이버대학교(OCU)는 사이버공간을 통한 대학교육 및 학술교류의 대표적인 모범사례",
-        # 부록 과목 목록의 행: 과목 소속대학 열에 등장하는 주관대학명으로 잡힌다
-        "|74|인간/사회|사건을중심으로본남북관계론|810761|구원근|한국열린사이버대학교|",
     ],
 )
 def test_ocu_topic_chunks_are_flagged(line):
@@ -110,6 +111,9 @@ def test_ocu_topic_chunks_are_flagged(line):
         "수업연한초과자 수강신청학점별 등록금 납부 기준 (OCU 수강신청 학점 포함)",
         # 용어 사전 표제어 — OCU 질문은 게이트가 열어주고, 일반 질문에서 top-k에 들 일이 없다
         "## OCU (온라인 공동활용 수업)",
+        # 부록 과목 목록의 행 — 소속대학 열의 대학명만으로 강등하면 OCU 마커 없는 과목명
+        # 질문의 유일한 정답 청크를 밀어낸다 (리뷰 지적사항)
+        "|74|인간/사회|사건을중심으로본남북관계론|810761|구원근|한국열린사이버대학교|",
         # 영단어 속 소문자 trigram
         "see the document for details and focus on section 3",
         "",
@@ -142,15 +146,12 @@ def test_reported_bug_shape_ocu_chunk_demoted_below_general():
 
 
 def test_demoted_ocu_chunk_backfills_when_it_is_the_only_evidence():
-    """강등이지 삭제가 아니다: OCU 청크만 threshold를 넘는 판(예: 부록 과목명 질의)에서는
-    그대로 반환된다 — 과목명 질문이 OCU 마커 없이 와도 답을 잃지 않는다."""
-    pool = [
-        (_Doc("|74|인간/사회|사건을중심으로본남북관계론|810761|구원근|한국열린사이버대학교|"), 0.6),
-        (_Doc("무관한 청크"), 0.1),
-    ]
+    """강등이지 삭제가 아니다: OCU-주제 청크만 threshold를 넘는 판(예: OCU 규정이 유일한
+    근거인 질문)에서는 백필로 그대로 반환된다 — 답을 잃지 않는 것이 핵심."""
+    pool = [(_Doc(OCU_개강), 0.6), (_Doc("무관한 청크"), 0.1)]
     out = scoping.select_scoped(pool, ocu.is_ocu_chunk, limit=3, score_threshold=0.3)
-    # 강등 1건 → 미달 승격 1건(계약대로), 강등분은 백필로 살아남는다 — 답을 잃지 않는 것이 핵심.
-    assert any("사건을중심으로본남북관계론" in d.page_content for d in out)
+    # 강등 1건 → 미달 승격 1건(계약대로), 강등분은 백필로 살아남는다.
+    assert any(d.page_content == OCU_개강 for d in out)
 
 
 def test_one_subthreshold_admission_per_demotion():

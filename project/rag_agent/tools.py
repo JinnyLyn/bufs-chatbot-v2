@@ -61,9 +61,19 @@ def _split_hybrid_search(vs, dense_query: str, sparse_query: str, k: int, score_
     return docs
 
 
-def _scoping_enabled() -> bool:
-    """True when any retrieval-scoping lever wants the deep pool + demotion pass."""
-    return config.SEMESTER_FILTER_ENABLED or config.OCU_FILTER_ENABLED
+def _scope_criteria_active(question: str) -> bool:
+    """True when the enabled scoping levers have a demotion criterion for THIS question.
+
+    Decides whether the deep pool + demotion pass is worth paying for. Cheap and
+    never raises (regex only). Notably False for an OCU question with only the OCU
+    lever on — its predicate would demote nothing, so the plain thresholded path is
+    provably equivalent and skips the 3x scored fetch.
+    """
+    from rag_agent import ocu as _ocu
+
+    if config.SEMESTER_FILTER_ENABLED:
+        return True
+    return config.OCU_FILTER_ENABLED and not _ocu.is_ocu_question(question)
 
 
 def _demotion_predicate(question: str):
@@ -72,7 +82,9 @@ def _demotion_predicate(question: str):
     ONE selection pass with an OR of the enabled levers' criteria — sequential
     per-lever passes would double-count scoping.select_scoped's "one sub-threshold
     admission per demotion" bookkeeping. May raise (target_semester parsing);
-    callers wrap it in their never-raise guard.
+    callers wrap it in their never-raise guard. The debug logs here are the A/B
+    forensics trail: they say which lever criteria were armed and, for the semester
+    lever, the parsed target.
     """
     import datetime as _dt
 
@@ -83,15 +95,16 @@ def _demotion_predicate(question: str):
     if config.SEMESTER_FILTER_ENABLED:
         today = _dt.date.fromisoformat(config.SEMESTER_TODAY) if config.SEMESTER_TODAY else None
         target = _sem.target_semester(question, today)
+        logger.debug("scope criterion: semester target=%d", target)
         preds.append(lambda d: _sem.is_wrong_semester(d, target))
     # OCU scope stands down entirely when the question itself asks about OCU.
     if config.OCU_FILTER_ENABLED and not _ocu.is_ocu_question(question):
+        logger.debug("scope criterion: ocu demotion armed")
         preds.append(_ocu.is_ocu_chunk)
     if len(preds) == 1:
         return preds[0]
-    # No lever criterion (e.g. OCU lever alone, on an OCU question): the always-False
-    # predicate makes select_scoped degrade to exactly the thresholded top-`limit` the
-    # un-scoped path would return.
+    # Defensive only — callers gate on _scope_criteria_active, so preds is non-empty
+    # there; an empty combination still degrades to the thresholded top-`limit`.
     return (lambda d: any(p(d) for p in preds)) if preds else (lambda d: False)
 
 
@@ -169,7 +182,7 @@ def _budget_exceeded(state: dict) -> bool:
 
 # Ceiling on the model-authored `limit` for search_child_chunks. The value arrives from
 # the LLM, so a prompt-injected question can propose any number, and it is then
-# multiplied by SEMESTER_POOL_FACTOR before reaching Qdrant. Qdrant caps returns at the
+# multiplied by SCOPING_POOL_FACTOR before reaching Qdrant. Qdrant caps returns at the
 # collection size (~1.8k points), so this is not an unbounded allocation — the cost is a
 # large string build plus a tiktoken encode of the whole pool — but nothing about that
 # bound is guaranteed by this code, and it grows with the KB. Clamp at the trust
@@ -216,7 +229,7 @@ class ToolFactory:
                 return ("SEARCH_BUDGET_EXCEEDED: 검색 시간 예산을 초과했습니다. "
                         "추가 검색 없이 현재까지 수집된 컨텍스트로 답하세요.")
 
-            # Clamp before the SEMESTER_POOL_FACTOR multiplication below — `limit` is
+            # Clamp before the SCOPING_POOL_FACTOR multiplication below — `limit` is
             # chosen by the model and is therefore attacker-influenceable via the question.
             limit = _clamp_limit(limit)
 
@@ -228,8 +241,11 @@ class ToolFactory:
             original = (state or {}).get("question", "") or query
             # Retrieval scoping (학기/OCU 교차 오염): fetch a deeper pool so there is
             # something to promote in place of the demoted chunks, then cut back to `limit`
-            # AFTER demotion. Scoping off ⇒ fetch_k == limit and the path is byte-identical.
-            fetch_k = limit * config.SEMESTER_POOL_FACTOR if _scoping_enabled() else limit
+            # AFTER demotion. No active criterion for this question (levers off, or only
+            # the OCU lever on an OCU question) ⇒ fetch_k == limit and the path is
+            # byte-identical to un-scoped retrieval.
+            _scoping_active = _scope_criteria_active(original)
+            fetch_k = limit * config.SCOPING_POOL_FACTOR if _scoping_active else limit
             if config.RERANK_ENABLED:
                 # Rerank path (#104): fetch a DEEPER pool at threshold 0 (so rank_cut chunks
                 # buried below the 0.3 RRF cutoff survive to the reranker), then let the
@@ -260,9 +276,9 @@ class ToolFactory:
                     )
                 results = reranker.rerank(original, pool, fetch_k,
                                           rrf_scores=rrf_scores, blend_alpha=config.RERANK_BLEND_ALPHA)
-                if _scoping_enabled():
+                if _scoping_active:
                     results = _apply_retrieval_scope(results, original, limit)
-            elif _scoping_enabled():
+            elif _scoping_active:
                 # #178: fetching at SEARCH_SCORE_THRESHOLD pre-cuts the pool to a
                 # handful of docs, so the deep fetch_k never materializes and demotion
                 # has nothing to promote. Follow the rerank path's precedent: fetch

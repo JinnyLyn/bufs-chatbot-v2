@@ -341,17 +341,16 @@ class TestOcuLeverWiring:
         assert "gen1" in result and "gen2" in result and "ocu" not in result
 
     def test_ocu_question_stands_the_lever_down(self, tmp_path, env_isolated, monkeypatch):
-        """질문이 OCU를 명시하면 강등 없음 — thresholded top-k와 동일하게 동작한다."""
+        """질문이 OCU를 명시하면 강등 기준이 없다 — 깊은 scored fetch를 아예 생략하고
+        기존 thresholded top-k 경로 그대로 간다 (리뷰 지적사항: 불필요한 3x fetch 제거)."""
         monkeypatch.setenv("OCU_FILTER_ENABLED", "true")
-        col = MagicMock()
-        col.similarity_search_with_score.return_value = [
-            (self._make_doc(self.OCU_개강, "ocu"), 0.55),
-            (self._make_doc(self.일반_개강, "gen1"), 0.50),
-            (self._make_doc("threshold 미달 청크", "sub"), 0.1),
-        ]
+        col = _make_fake_collection([self._make_doc(self.OCU_개강, "ocu")])
         search = self._search(tmp_path, col)
         result = search.invoke({"query": "OCU 개강일은 언제인가요?", "limit": 2})
-        assert "ocu" in result and "gen1" in result and "sub" not in result
+        col.similarity_search.assert_called_once_with(
+            "OCU 개강일은 언제인가요?", k=2, score_threshold=0.3)
+        col.similarity_search_with_score.assert_not_called()
+        assert "ocu" in result
 
     def test_both_levers_demote_through_one_selection_pass(
             self, tmp_path, env_isolated, monkeypatch):
