@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # start-all.sh — Linux/H100 equivalent of scripts/start-all.ps1.
 #
-# Starts the full stack: Ollama (:11434), FastAPI backend (:8000), Next.js frontend (:3000).
-# Idempotent: anything already listening is left alone. Logs go under <repo>/logs.
+# Starts the full stack: Ollama, FastAPI backend (:8000), Next.js frontend (:3000).
+# Idempotent: anything already listening is left alone (its pid is adopted into
+# logs/run/*.pid when it is identifiably ours, so stop-all.sh can manage it later).
+# Logs go under <repo>/logs.
 #
-# On the H100 the LLM is LOCAL, so there is no SSH tunnel to preserve (the Windows box
-# tunnelled :11434 to this machine; here Ollama simply runs on :11434 directly).
+# The Ollama port is derived from project/.env's OLLAMA_BASE_URL — the URL the backend
+# actually dials (on the H100 that is the team-owned :11500 instance, NOT the system
+# ollama on :11434 which belongs to another user and runs outside our GPU isolation).
+# A remote OLLAMA_BASE_URL in .env means the scripts do not manage ollama at all.
 #
 # Ports are overridable because this is a SHARED box — another user may already hold
 # the defaults:
@@ -15,27 +19,29 @@
 # BACKEND_PORT needs the cloudflared ingress updated AND the frontend rebuilt with
 # BACKEND_ORIGIN=http://localhost:<port> (the /api rewrite is baked in at build time).
 #
-# Env:
+# Env (scripts/env.local, if present, is sourced first — box-local, gitignored):
 #   BACKEND_PORT   (default 8000)   also exported as PORT for project/server.py
 #   FRONTEND_PORT  (default 3000)
-#   OLLAMA_PORT    (default 11434)  if set explicitly, exported to the backend (see above)
+#   OLLAMA_PORT    (default: port of OLLAMA_BASE_URL in project/.env, else 11434)
 #   START_OLLAMA   (default auto)   auto|yes|no — "auto" starts one only if the port is free
 #   FRONTEND_MODE  (default auto)   auto|prod|dev — "auto" uses the standalone build if present
-#   PYTHON         (default python3)
+#   PYTHON         (default <repo>/.venv/bin/python, else python3)
+#   CUDA_VISIBLE_DEVICES            required to auto-start ollama (shared GPU box —
+#                                   set the MIG slice UUID in scripts/env.local)
 
 set -Eeuo pipefail
 
-REPO="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-LOG_DIR="$REPO/logs"
-RUN_DIR="$LOG_DIR/run"
-mkdir -p "$LOG_DIR"/{ollama,backend,frontend} "$RUN_DIR"
+# Remember whether the caller set OLLAMA_PORT — only then do we override the backend's
+# OLLAMA_BASE_URL (otherwise project/.env stays in control, e.g. a deliberate remote URL).
+# Checked BEFORE sourcing _common.sh, which may load env.local / derive a port.
+ollama_port_explicit="${OLLAMA_PORT:+1}"
+
+# shellcheck source=scripts/_common.sh
+. "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
 
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
-# Remember whether the caller set OLLAMA_PORT — only then do we override the backend's
-# OLLAMA_BASE_URL (otherwise project/.env stays in control, e.g. a deliberate remote URL).
-ollama_port_explicit="${OLLAMA_PORT:+1}"
-OLLAMA_PORT="${OLLAMA_PORT:-11434}"
+derive_ollama_port
 START_OLLAMA="${START_OLLAMA:-auto}"
 FRONTEND_MODE="${FRONTEND_MODE:-auto}"
 # Prefer the repo's own venv over whatever `python3` happens to resolve to.
@@ -63,22 +69,6 @@ fi
 SETSID="$(command -v setsid || true)"
 [ -n "$SETSID" ] || echo "[warn]  setsid not found — stop-all.sh may not reap child processes cleanly."
 
-# Listening check with no external tools and no root: try to connect.
-port_open() {
-    (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3<&- 3>&- && return 0
-    return 1
-}
-
-wait_port() {
-    local port="$1" timeout="${2:-60}" waited=0
-    while [ "$waited" -lt "$timeout" ]; do
-        port_open "$port" && return 0
-        sleep 2
-        waited=$((waited + 2))
-    done
-    return 1
-}
-
 # Poll a URL for 200; if a pidfile is given, bail out as soon as that process dies
 # (a backend that crashes at boot should fail in seconds, not after the full timeout).
 wait_http_200() {
@@ -97,10 +87,24 @@ wait_http_200() {
 }
 
 # Record a PID so stop-all.sh can shut down exactly what we started — never kill by port
-# on a shared machine. When we DIDN'T start a service, drop any stale pidfile so a later
-# stop-all.sh can't act on a recycled PID.
+# on a shared machine.
 write_pid() { echo "$2" >"$RUN_DIR/$1.pid"; }
 drop_pid()  { rm -f "$RUN_DIR/$1.pid"; }
+
+# When a service is already listening, it may still be OURS (started by systemd or an
+# earlier shell whose pidfile is gone). Adopt its pid so stop-all.sh / restart-all.sh
+# keep working; only drop the pidfile when nothing identifiable is found. Dropping is
+# what previously made "stop-all then start-all" leave stale processes serving old code.
+adopt_pid() {
+    local name="$1" pids
+    pids="$(find_service_pids "$name" | head -2 || true)"
+    if [ "$(wc -l <<<"$pids")" = 1 ] && [ -n "$pids" ]; then
+        write_pid "$name" "$pids"
+        echo "        (adopted running $name pid $pids into $name.pid)"
+    else
+        drop_pid "$name"
+    fi
+}
 
 # --- 0) Qdrant runs embedded (single-writer). A stale lock means an ingest or an old
 #        backend still holds the DB; starting a second writer fails at load time.
@@ -110,17 +114,26 @@ if [ -e "$REPO/qdrant_db/.lock" ] && ! port_open "$BACKEND_PORT"; then
 fi
 
 # --- 1) Ollama (local H100 GPU) ---
-if port_open "$OLLAMA_PORT"; then
+if [ "$OLLAMA_LOCAL" != 1 ]; then
+    echo "[skip]  OLLAMA_BASE_URL in project/.env is remote — not managing ollama."
+elif port_open "$OLLAMA_PORT"; then
     echo "[ok]    Ollama already on :$OLLAMA_PORT"
-    drop_pid ollama
+    adopt_pid ollama
 elif [ "$START_OLLAMA" = "no" ]; then
     echo "[skip]  Ollama not running on :$OLLAMA_PORT (START_OLLAMA=no)"
     drop_pid ollama
 elif ! command -v ollama >/dev/null 2>&1; then
     echo "[warn]  'ollama' not on PATH and nothing listening on :$OLLAMA_PORT — backend will fail to reach the LLM."
     drop_pid ollama
+elif [ -z "${CUDA_VISIBLE_DEVICES:-}" ]; then
+    # Shared GPU box: an ollama started without the MIG slice UUID grabs whatever GPU
+    # it likes (or CPU-falls-back) and can poach another team's device. Refuse.
+    echo "[error] refusing to start Ollama: CUDA_VISIBLE_DEVICES is not set."
+    echo "        Put the MIG slice UUID in scripts/env.local, e.g.:"
+    echo "        export CUDA_VISIBLE_DEVICES=MIG-xxxxxxxx-...."
+    drop_pid ollama
 else
-    echo "[start] Ollama :$OLLAMA_PORT"
+    echo "[start] Ollama :$OLLAMA_PORT (CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES)"
     OLLAMA_HOST="127.0.0.1:$OLLAMA_PORT" $SETSID nohup ollama serve \
         >"$LOG_DIR/ollama/ollama.out" 2>"$LOG_DIR/ollama/ollama.err" &
     write_pid ollama $!
@@ -130,7 +143,7 @@ fi
 # --- 2) Backend (FastAPI) ---
 if port_open "$BACKEND_PORT"; then
     echo "[ok]    backend already on :$BACKEND_PORT"
-    drop_pid backend
+    adopt_pid backend
 else
     echo "[start] backend :$BACKEND_PORT"
     if [ -n "$ollama_port_explicit" ]; then
@@ -167,7 +180,7 @@ stage_standalone() {
 
 if port_open "$FRONTEND_PORT"; then
     echo "[ok]    frontend already on :$FRONTEND_PORT"
-    drop_pid frontend
+    adopt_pid frontend
 else
     mode="$FRONTEND_MODE"
     if [ "$mode" = "auto" ]; then
@@ -199,13 +212,21 @@ fi
 # /health only returns 200 after the embedding model + graph are built, so allow a while.
 backend_up=0; wait_http_200 "http://127.0.0.1:$BACKEND_PORT/health" 300 "$RUN_DIR/backend.pid" && backend_up=1
 frontend_up=0; wait_port "$FRONTEND_PORT" 90 && frontend_up=1
+ollama_up=1
+if [ "$OLLAMA_LOCAL" = 1 ] && [ "$START_OLLAMA" != "no" ]; then
+    ollama_up=0; port_open "$OLLAMA_PORT" && ollama_up=1
+fi
 
 echo
-echo "Ollama   :$OLLAMA_PORT   -> $(port_open "$OLLAMA_PORT" && echo up || echo down)"
+if [ "$OLLAMA_LOCAL" = 1 ]; then
+    echo "Ollama   :$OLLAMA_PORT   -> $(port_open "$OLLAMA_PORT" && echo up || echo down)"
+else
+    echo "Ollama   remote (project/.env OLLAMA_BASE_URL) — not managed here"
+fi
 echo "Backend  :$BACKEND_PORT  -> $([ "$backend_up" = 1 ] && echo up || echo down)   (health: http://127.0.0.1:$BACKEND_PORT/health)"
 echo "Frontend :$FRONTEND_PORT -> $([ "$frontend_up" = 1 ] && echo up || echo down)   (open:   http://127.0.0.1:$FRONTEND_PORT)"
 
-if [ "$backend_up" != 1 ] || [ "$frontend_up" != 1 ]; then
+if [ "$backend_up" != 1 ] || [ "$frontend_up" != 1 ] || [ "$ollama_up" != 1 ]; then
     echo "Some services are not ready — check $LOG_DIR/ for details." >&2
     exit 1
 fi
