@@ -80,7 +80,7 @@ class TestLoadProfile:
         p = load_profile("h100-fast")
         assert p.fast_refuse is True
         assert p.compress_threshold is None
-        assert p.num_ctx == 8192
+        assert p.num_ctx == 16384   # deployed H100 .env (MIGRATION_H100.md 3-2)
 
     def test_4090_local_config(self) -> None:
         p = load_profile("4090-local")

@@ -27,7 +27,8 @@ profiles:
     config:
       fast_refuse: true
       compress_threshold: null                      # nocompress (H100 fast-path)
-      num_ctx: 8192
+      num_ctx: 16384                                # deployed H100 .env (MIGRATION_H100.md 3-2);
+                                                    # 8192 was the pre-migration 4070 value
     thresholds:
       target_contains: 0.90         # aspirational; gap-tracked in report, NEVER blocks
       contains_floor: 0.83          # FLAG (unmeasured): re-measure from H100 N=3 dump

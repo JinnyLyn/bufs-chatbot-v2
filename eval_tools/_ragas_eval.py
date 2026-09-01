@@ -19,7 +19,9 @@ try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception: pass
 
 NEW_BASE = "http://localhost:8000"
-OLLAMA = "http://localhost:11435"
+# judge Ollama — H100에선 로컬 :11434 (구 Windows/4070 시절의 :11435 아님).
+# _ragas_kpi.py/_rejudge.py와 동일하게 OLLAMA_JUDGE_URL 환경변수로 덮어쓸 수 있다.
+OLLAMA = os.environ.get("OLLAMA_JUDGE_URL", "http://127.0.0.1:11434")
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Gemini-only TLS bundle for networks behind a corporate/Norton MITM proxy: point
 # REQUESTS_CA_BUNDLE at a PEM file there. Unset (Linux CI / normal nets) → verify via certifi.
