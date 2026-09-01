@@ -60,11 +60,12 @@ class DocumentManager:
                 self.rag_system.parent_store.save_many(parent_chunks)
                 
                 added += 1
-                
+
             except Exception as e:
                 print(f"Error processing {doc_path}: {e}")
                 skipped += 1
-            
+
+        _invalidate_parent_scope_cache()
         return added, skipped
     
     def get_markdown_files(self):
@@ -79,3 +80,15 @@ class DocumentManager:
         self.rag_system.parent_store.clear_store()
         self.rag_system.vector_db.delete_collection(self.rag_system.collection_name)
         self.rag_system.vector_db.create_collection(self.rag_system.collection_name)
+        _invalidate_parent_scope_cache()
+
+
+def _invalidate_parent_scope_cache():
+    """The OCU parent verdicts in rag_agent.tools are cached for the life of the
+    process (safe for doc_sync, which restarts the server) — this in-process mutation
+    path must drop them or verdicts go stale against the rewritten/wiped store."""
+    try:
+        from rag_agent.tools import _parent_ocu_flag  # lazy: avoids an import cycle
+        _parent_ocu_flag.cache_clear()
+    except Exception:  # noqa: BLE001 — cache hygiene must never fail a KB mutation
+        pass

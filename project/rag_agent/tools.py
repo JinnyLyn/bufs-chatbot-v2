@@ -1,3 +1,4 @@
+import functools
 import logging
 import os
 import time
@@ -76,6 +77,41 @@ def _scope_criteria_active(question: str) -> bool:
     return config.OCU_FILTER_ENABLED and not _ocu.is_ocu_question(question)
 
 
+# Parent texts are immutable for the life of the process for the doc_sync path (it
+# stops the server before reindexing — KB_MANAGEMENT.md), so the OCU verdict per
+# (store, parent_id) is cached. The Gradio admin path mutates the store IN-PROCESS
+# (core/document_manager.py) and clears this cache after every mutation. The store
+# path is part of the key so eval harnesses with variant stores never cross-read;
+# tests that point config.PARENT_STORE_PATH elsewhere must still cache_clear().
+@functools.lru_cache(maxsize=1024)
+def _parent_ocu_flag(store_path: str, parent_id: str) -> bool:
+    from rag_agent import ocu as _ocu
+
+    try:
+        content = ParentStoreManager(store_path=store_path).load_content(parent_id)["content"]
+        return _ocu.is_ocu_parent(content)
+    except Exception:  # noqa: BLE001 — scoping must never break retrieval
+        # Cached as a False verdict: a parent that is in Qdrant but unreadable on disk
+        # would otherwise re-do open()+json for every pool candidate of every query.
+        # Logged (once, thanks to the cache) — a systematically broken store must not
+        # silently degrade the backstop to a no-op.
+        logger.warning(
+            "ocu parent backstop: cannot judge parent_id=%r (store=%s) — failing open",
+            parent_id, store_path, exc_info=True)
+        return False
+
+
+def _parent_is_ocu(doc) -> bool:
+    """OCU verdict for the chunk's PARENT — the topic signal children inside the OCU
+    chapter lack (ocu.py docstring). Fail-open: no parent_id, or a parent the store
+    cannot load, keeps today's behavior for that chunk."""
+    try:
+        pid = (getattr(doc, "metadata", None) or {}).get("parent_id") or ""
+        return bool(pid) and _parent_ocu_flag(str(config.PARENT_STORE_PATH), pid)
+    except Exception:  # noqa: BLE001 — e.g. unhashable parent_id from a hostile doc
+        return False
+
+
 def _demotion_predicate(question: str):
     """Combined is_demoted(doc) predicate from the enabled scoping levers.
 
@@ -100,7 +136,9 @@ def _demotion_predicate(question: str):
     # OCU scope stands down entirely when the question itself asks about OCU.
     if config.OCU_FILTER_ENABLED and not _ocu.is_ocu_question(question):
         logger.debug("scope criterion: ocu demotion armed")
-        preds.append(_ocu.is_ocu_chunk)
+        # Child OR parent: OCU-chapter subsections carry no collocation in their own
+        # text, so the parent text is the reliable topic signal (ocu.py docstring).
+        preds.append(lambda d: _ocu.is_ocu_chunk(d) or _parent_is_ocu(d))
     if len(preds) == 1:
         return preds[0]
     # Defensive only — callers gate on _scope_criteria_active, so preds is non-empty

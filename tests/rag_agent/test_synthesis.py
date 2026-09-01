@@ -544,3 +544,42 @@ class TestCleanSynthesisAggregationBypass:
         monkeypatch.setattr(config, "PARENT_EXPANSION_ENABLED", False)
         state = {"question": "질문?", "messages": [_tool_msg(CHUNK_A)]}
         assert nodes.clean_synthesis(state, fake_llm)["clean_synthesized"] is True
+
+
+class TestExpandParentContextOcuScope:
+    """OCU 부모는 확장 단계에서도 차단 (리뷰 🔴: 강등만으로는 readmit/replay 경로로
+    OCU 부모 전문이 합성 프롬프트에 재유입) — 자식 증거는 프롬프트에 그대로 남는다."""
+
+    OCU_전문 = (
+        'OCU 컨소시엄 홈페이지 "나의 성적"메뉴로 성적을 확인하고, '
+        'OCU 컨소시엄 홈페이지 "교수님께질문" 메뉴로 이의신청합니다.'
+    )
+
+    def test_general_question_skips_ocu_parent(self, parent_store, monkeypatch):
+        monkeypatch.setattr(config, "OCU_FILTER_ENABLED", True)
+        parent_store({
+            "guide_parent_3": _parent(self.OCU_전문),
+            "guide_parent_7": _parent("일반 성적처리 일정 전문"),
+        })
+        blocks = nodes._expand_parent_context(
+            [CHUNK_A, CHUNK_B], question="성적 이의신청 절차 알려줘")
+        assert len(blocks) == 1
+        assert "guide_parent_7" in blocks[0]
+
+    def test_ocu_question_keeps_ocu_parent(self, parent_store, monkeypatch):
+        monkeypatch.setattr(config, "OCU_FILTER_ENABLED", True)
+        parent_store({"guide_parent_3": _parent(self.OCU_전문)})
+        blocks = nodes._expand_parent_context([CHUNK_A], question="OCU 성적 확인 방법?")
+        assert len(blocks) == 1 and "guide_parent_3" in blocks[0]
+
+    def test_missing_question_stands_down(self, parent_store, monkeypatch):
+        monkeypatch.setattr(config, "OCU_FILTER_ENABLED", True)
+        parent_store({"guide_parent_3": _parent(self.OCU_전문)})
+        assert len(nodes._expand_parent_context([CHUNK_A])) == 1
+
+    def test_lever_off_keeps_ocu_parent(self, parent_store, monkeypatch):
+        monkeypatch.setattr(config, "OCU_FILTER_ENABLED", False)
+        parent_store({"guide_parent_3": _parent(self.OCU_전문)})
+        blocks = nodes._expand_parent_context(
+            [CHUNK_A], question="성적 이의신청 절차 알려줘")
+        assert len(blocks) == 1

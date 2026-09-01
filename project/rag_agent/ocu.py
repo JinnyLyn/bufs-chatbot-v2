@@ -21,10 +21,34 @@ Chunk-level profile (offline chunker run over the two 2026 guides, 2026-09-01):
    these chunks.
 
 So ``is_ocu_chunk`` keys on the topical collocations, never on the bare token.
-Known gap, deliberate: 부록 course-list *table rows* (including those whose 소속대학
-column reads 한국열린사이버대학교) stay unscoped — they only ever rank for
-course-name queries, where they are the right answer, and a course-name question
-usually carries no OCU marker to stand the gate down.
+
+Child-level detection alone is NOT enough (prod A/B, 2026-09-01): the guides'
+OCU chapter uses flat ``##`` subsections ("## 5. 성적평가(상대평가)",
+"## 7. 최종성적 확인 및 이의신청" …) whose body text never repeats an OCU
+collocation. Those children look fully general, rank for general 성적/수강
+questions, and parent expansion then hauls the whole OCU block into the answer
+context. ``is_ocu_parent`` is the backstop: tools demotes a child when the child
+OR its parent is OCU-topic (``tools._parent_is_ocu``), and nodes skips OCU
+parents at expansion time (``nodes._expand_parent_context``) — child evidence
+stays in the prompt either way.
+
+Parent verdict is DENSITY-based, not mere presence — MIN_PARENT_SIZE merging
+makes parents straddle chapter borders, so one stray collocation must not flag a
+parent. Live-store measurement (2026-09-01, 170 parents, 2학기 guide):
+
+    hits  hits/KB  parent                      truth
+      15     6.6   parent_13 (OCU 본문)          OCU
+       8     3.7   parent_15 (OCU 끝+일반 시작)   border
+       5     2.1   parent_14 (OCU 본문)          OCU
+       3     0.61  parent_86 (전화번호부, "(OCU) 교무" 류)  general
+       1     0.13  parent_0  (표지/차례)          general
+
+≥2 hits AND ≥1.0 hits/KB keeps all real OCU parents (margin 2.1 vs 0.61 = 3.4x)
+and clears the phone-directory / TOC collateral. Border parents like parent_15
+are still demoted — accepted collateral: demote-never-delete readmits their
+general children (학사경고자 …) when they are the only evidence, but ranking
+shifts, so the 정답률 eval must confirm (flagged in the PR). Same acceptance for
+the old deliberate 부록 course-list gap.
 
 Question side: demotion applies only when the question does NOT mention OCU
 (OCU / 오씨유 / 열린사이버 / 온라인 공동활용 …). Both detectors fail open: a missed OCU
@@ -93,3 +117,21 @@ def is_ocu_question(question) -> bool:
 def is_ocu_chunk(doc) -> bool:
     """True when OCU is the chunk's topic (not a mere incidental mention)."""
     return bool(_OCU_TOPIC_RE.search(getattr(doc, "page_content", "") or ""))
+
+
+# Parent-verdict thresholds — measured over the live store, table in the module
+# docstring. Presence alone is NOT enough: merged parents straddle chapter borders.
+_PARENT_MIN_HITS = 2
+_PARENT_MIN_HITS_PER_KB = 1.0
+
+
+def is_ocu_parent(content) -> bool:
+    """True when a PARENT chunk's text is OCU-topic — backstop for children inside
+    the OCU chapter that carry no collocation themselves (module docstring).
+    Density-gated so a lone incidental collocation (전화번호부의 "(OCU) 교무", 차례의
+    섹션 제목) never flags a general parent."""
+    text = content or ""
+    if not text:
+        return False
+    hits = len(_OCU_TOPIC_RE.findall(text))
+    return hits >= _PARENT_MIN_HITS and hits * 1000 / len(text) >= _PARENT_MIN_HITS_PER_KB
