@@ -302,3 +302,80 @@ class TestSemesterLeverWiring:
                             MagicMock(side_effect=RuntimeError("boom")))
         result = search.invoke({"query": "개강일", "limit": 5})
         assert "keep" in result and "cut" not in result
+
+
+# ---------------------------------------------------------------------------
+# OCU lever wiring — OCU-topic chunks demoted unless the question asks about OCU
+# ---------------------------------------------------------------------------
+
+class TestOcuLeverWiring:
+    OCU_개강 = "- 가. OCU 개강일 : 2026.03.02.(월) 오전 10시"
+    일반_개강 = "2026학년도 1학기 개강: 3월 2일(월)"
+
+    def _make_doc(self, content, parent_id="p0", source="2026학년도1학기학사안내.pdf"):
+        doc = MagicMock()
+        doc.page_content = content
+        doc.metadata = {"parent_id": parent_id, "source": source}
+        return doc
+
+    def _search(self, tmp_path, col):
+        factory = _make_tool_factory(tmp_path, col)
+        return next(t for t in factory.create_tools() if t.name == "search_child_chunks")
+
+    def test_ocu_lever_alone_fetches_deep_and_demotes_ocu_topic_chunk(
+            self, tmp_path, env_isolated, monkeypatch):
+        """사용자 신고 재현: '1학기 개강일' 질문에서 OCU 개강일 청크가 limit 밖으로 강등된다."""
+        monkeypatch.setenv("OCU_FILTER_ENABLED", "true")
+        col = MagicMock()
+        col.similarity_search_with_score.return_value = [
+            (self._make_doc(self.OCU_개강, "ocu"), 0.55),
+            (self._make_doc(self.일반_개강, "gen1"), 0.50),
+            (self._make_doc("수강신청 기간 안내", "gen2"), 0.45),
+        ]
+        search = self._search(tmp_path, col)
+        result = search.invoke({"query": "1학기 개강일 언제야?", "limit": 2})
+
+        col.similarity_search_with_score.assert_called_once_with(
+            "1학기 개강일 언제야?", k=6, score_threshold=0.0)  # limit 2 × POOL_FACTOR 3
+        col.similarity_search.assert_not_called()
+        assert "gen1" in result and "gen2" in result and "ocu" not in result
+
+    def test_ocu_question_stands_the_lever_down(self, tmp_path, env_isolated, monkeypatch):
+        """질문이 OCU를 명시하면 강등 기준이 없다 — 깊은 scored fetch를 아예 생략하고
+        기존 thresholded top-k 경로 그대로 간다 (리뷰 지적사항: 불필요한 3x fetch 제거)."""
+        monkeypatch.setenv("OCU_FILTER_ENABLED", "true")
+        col = _make_fake_collection([self._make_doc(self.OCU_개강, "ocu")])
+        search = self._search(tmp_path, col)
+        result = search.invoke({"query": "OCU 개강일은 언제인가요?", "limit": 2})
+        col.similarity_search.assert_called_once_with(
+            "OCU 개강일은 언제인가요?", k=2, score_threshold=0.3)
+        col.similarity_search_with_score.assert_not_called()
+        assert "ocu" in result
+
+    def test_both_levers_demote_through_one_selection_pass(
+            self, tmp_path, env_isolated, monkeypatch):
+        """학기 + OCU 강등이 결합 predicate 한 번의 선별로 함께 적용된다."""
+        monkeypatch.setenv("SEMESTER_FILTER_ENABLED", "true")
+        monkeypatch.setenv("OCU_FILTER_ENABLED", "true")
+        monkeypatch.setenv("SEMESTER_TODAY", "2026-05-20")  # 1학기
+        col = MagicMock()
+        col.similarity_search_with_score.return_value = [
+            (self._make_doc(self.OCU_개강, "ocu"), 0.60),                      # OCU 강등
+            (self._make_doc("2학기 개강 안내", "s2",
+                            source="2026학년도2학기학사안내.md"), 0.55),        # 학기 강등
+            (self._make_doc(self.일반_개강, "gen1"), 0.50),
+            (self._make_doc("수강신청 기간 안내", "gen2"), 0.45),
+        ]
+        search = self._search(tmp_path, col)
+        result = search.invoke({"query": "1학기 개강일 언제야?", "limit": 2})
+        assert "gen1" in result and "gen2" in result
+        assert "ocu" not in result and "s2" not in result
+
+    def test_lever_off_never_touches_scored_search(self, tmp_path, env_isolated):
+        col = _make_fake_collection([self._make_doc(self.OCU_개강, "ocu")])
+        search = self._search(tmp_path, col)
+        result = search.invoke({"query": "1학기 개강일 언제야?", "limit": 5})
+        col.similarity_search.assert_called_once_with(
+            "1학기 개강일 언제야?", k=5, score_threshold=0.3)
+        col.similarity_search_with_score.assert_not_called()
+        assert "ocu" in result  # 레버 OFF ⇒ 강등 없음 (기존 동작 그대로)

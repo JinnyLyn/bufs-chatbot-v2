@@ -27,12 +27,25 @@ def parser():
     """A built `search`-capable parser.
 
     `_build_parser` interpolates `config.SEARCH_SCORE_THRESHOLD` into help text,
-    so config must be bootstrapped first — exactly as `main()` does. This loads
-    project/.env into *this* process only; import-purity is verified in isolated
-    subprocesses (tests/debug/test_import_purity.py) and is unaffected.
+    so config must be bootstrapped first — exactly as `main()` does. That loads
+    project/.env into os.environ, so the fixture restores the env (and reloads
+    config) afterwards: on a box whose .env flips retrieval levers
+    (SEMESTER_FILTER_ENABLED=true in production), leaking it made every
+    later-collected lever-OFF test in the suite run lever-ON. Import-purity is
+    verified in isolated subprocesses (tests/debug/test_import_purity.py) and is
+    unaffected.
     """
+    import importlib
+    import os
+    import sys
+
+    before = dict(os.environ)
     _bootstrap_env()
-    return _build_parser()
+    yield _build_parser()
+    os.environ.clear()
+    os.environ.update(before)
+    if "config" in sys.modules:
+        importlib.reload(sys.modules["config"])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

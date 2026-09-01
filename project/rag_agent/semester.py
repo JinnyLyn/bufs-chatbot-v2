@@ -46,6 +46,8 @@ import datetime as _dt
 import re
 from typing import Optional
 
+from rag_agent import scoping as _scoping
+
 # "2학기", "2 학기", "제2학기" — the digit immediately qualifying 학기.
 _SEM_IN_TEXT = re.compile(r"제?\s*([12])\s*학기")
 # 학년도 / 학년 度 forms: "2026학년도", "2026 학년도", "2026년도"
@@ -110,6 +112,16 @@ def source_semester(source: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
+def is_wrong_semester(doc, target: int) -> bool:
+    """True when the doc's source names a semester and it is not ``target``.
+
+    Semester-neutral sources (no marker) are never wrong (module docstring #2).
+    """
+    src = (getattr(doc, "metadata", None) or {}).get("source", "")
+    sem = source_semester(src)
+    return sem is not None and sem != target
+
+
 def select_semester_scoped(scored_docs: list, target: int, limit: int,
                            score_threshold: float) -> list:
     """Final selection over a deep pool fetched WITHOUT a score cutoff (#178).
@@ -128,21 +140,12 @@ def select_semester_scoped(scored_docs: list, target: int, limit: int,
       threshold still returns [] and the NO_RELEVANT_CHUNKS → refusal routing
       (edges.py) keeps working exactly as it does with the lever OFF.
 
-    ``scored_docs`` is a ranked list of ``(doc, score)`` pairs.
+    ``scored_docs`` is a ranked list of ``(doc, score)`` pairs. The selection
+    mechanics live in rag_agent.scoping so other levers (OCU 스코프) share them
+    through a combined predicate.
     """
-    keep, demote, standby = [], [], []
-    for doc, score in scored_docs:
-        src = (getattr(doc, "metadata", None) or {}).get("source", "")
-        sem = source_semester(src)
-        if sem is not None and sem != target:
-            if score >= score_threshold:
-                demote.append(doc)
-        elif score >= score_threshold:
-            keep.append(doc)
-        else:
-            standby.append(doc)
-    keep += standby[:len(demote)]
-    return (keep + demote)[:limit]
+    return _scoping.select_scoped(
+        scored_docs, lambda d: is_wrong_semester(d, target), limit, score_threshold)
 
 
 def demote_other_semesters(docs: list, target: int) -> list:
@@ -151,9 +154,4 @@ def demote_other_semesters(docs: list, target: int) -> list:
     Order *within* each group is preserved, so the retriever's ranking still decides
     everything except the semester split.
     """
-    keep, demote = [], []
-    for d in docs:
-        src = (getattr(d, "metadata", None) or {}).get("source", "")
-        sem = source_semester(src)
-        (demote if (sem is not None and sem != target) else keep).append(d)
-    return keep + demote
+    return _scoping.demote_scoped(docs, lambda d: is_wrong_semester(d, target))

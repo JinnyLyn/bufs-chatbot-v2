@@ -576,11 +576,11 @@ class TestSearchLimitClamp:
         assert _clamp_limit(proposed) == expected
 
     def test_clamp_happens_before_the_pool_multiplication(self):
-        """SEMESTER_POOL_FACTOR multiplies limit, so clamping after it would be useless."""
+        """SCOPING_POOL_FACTOR multiplies limit, so clamping after it would be useless."""
         import inspect
 
         from rag_agent.tools import ToolFactory
         src = inspect.getsource(ToolFactory._search_child_chunks)
         # Match the multiplication expression, not the bare identifier — the identifier
         # also appears in the explanatory comment above the clamp.
-        assert src.index("_clamp_limit(limit)") < src.index("limit * config.SEMESTER_POOL_FACTOR")
+        assert src.index("_clamp_limit(limit)") < src.index("limit * config.SCOPING_POOL_FACTOR")
