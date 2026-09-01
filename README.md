@@ -104,6 +104,7 @@ npm run dev                   # :3000 (프로덕션: npm run build && npm start)
 → http://localhost:3000
 
 전체 통합·운영 가이드는 [INTEGRATION.md](INTEGRATION.md) 참조.
+KB 문서 추가·제거(학기/연도 전환)는 [KB_MANAGEMENT.md](KB_MANAGEMENT.md) 참조.
 **H100 리눅스 서버로의 서빙 이관**(cloudflared 터널 포함)은 [MIGRATION_H100.md](MIGRATION_H100.md) 참조
 — `scripts/start-all.sh` / `stop-all.sh` / `healthcheck.sh`가 기존 `.ps1`들의 리눅스 대응이다.
 
@@ -120,7 +121,7 @@ npm run dev                   # :3000 (프로덕션: npm run build && npm start)
 │   ├── document_chunker.py   # 학번/월 인지 청킹
 │   └── reindex.py            # KB 클린 재빌드
 ├── frontend/                 # Next.js 채팅 UI (CamChat 축소판)
-├── markdown_docs/            # 학사문서 23종 (KB 소스)
+├── markdown_docs/            # 학사문서 (KB 소스; archive/ = 색인 제외 — KB_MANAGEMENT.md)
 ├── qdrant_db/ parent_store/  # 벡터DB + parent 청크 (커밋됨)
 ├── eval_tools/               # 평가/분석 하니스 (룰기반·RAGAS·Langfuse)
 ├── scripts/                  # 기동/중지/헬스체크(.ps1=Windows, .sh=Linux)/롤백/배포
