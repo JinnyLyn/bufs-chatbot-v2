@@ -185,3 +185,28 @@ class TestAdd:
         p = run(kb, "apply")
         assert (kb / "markdown_docs" / "수강신청 FAQ.md").exists()
         assert "경고" in p.stdout
+
+
+class TestReadmeReserved:
+    """archive/README.md 는 폴더 설명용 예약 이름 — 집계·매칭·복원 어디에도 안 걸려야 함."""
+
+    def test_archive_readme_not_counted_as_retired(self, kb):
+        (kb / "markdown_docs" / "archive" / "README.md").write_text("설명", encoding="utf-8")
+        p = run(kb, "status")
+        assert "은퇴(archive/): 0" in p.stdout
+
+    def test_stray_readme_original_never_restores_archive_readme(self, kb):
+        """pdfs/ 에 README.* 가 흘러들어도 archive/README.md 를 KB 로 '복원'하면 안 됨."""
+        (kb / "markdown_docs" / "archive" / "README.md").write_text("설명", encoding="utf-8")
+        (kb / "pdfs" / "README.pdf").write_bytes(b"%PDF-fake")
+        p = run(kb, "apply")
+        assert (kb / "markdown_docs" / "archive" / "README.md").exists()
+        assert not (kb / "markdown_docs" / "README.md").exists()
+        assert "archive/README.md →" not in p.stdout
+
+    def test_readme_marker_in_pdfs_archive_warns_as_stale(self, kb):
+        """pdfs/archive/README.* 마커는 '이미 은퇴됨'으로 조용히 넘기지 말고 미매칭 경고."""
+        (kb / "markdown_docs" / "archive" / "README.md").write_text("설명", encoding="utf-8")
+        (kb / "pdfs" / "archive" / "README.pdf").write_bytes(b"")
+        p = run(kb, "status")
+        assert "경고" in p.stdout
