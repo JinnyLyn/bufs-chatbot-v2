@@ -63,6 +63,9 @@ python project/ingest.py "..\bufs-chatbot\data\pdfs" --clear
 First run downloads the `bge-m3` embedding model (~2 GB). Qdrant runs **embedded**
 (local file) — stop the API server before ingesting; only one process can hold the DB.
 
+운영 중 문서 추가·제거(학기/연도 전환, `markdown_docs/archive/` 방식)는
+[KB_MANAGEMENT.md](KB_MANAGEMENT.md) 참조.
+
 ## 3. Run the backend
 ```powershell
 python project/server.py          # http://localhost:8000  (docs at /docs)
