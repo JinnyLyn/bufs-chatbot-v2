@@ -1,8 +1,14 @@
-"""Unit tests for api/agent_stream._strip_source_footer — the structural backstop
+"""Unit tests for api/sources.strip_source_footer — the structural backstop
 behind the prompt-level 출처 섹션 금지 (the SourcePanel shows sources from metadata,
 so a footer leaked by a disobedient generation must never reach the done payload).
+
+Lives in api/sources (imports only `re`) so this stays collectible in the offline
+CI job — importing api.agent_stream would pull the whole RAGSystem chain
+(langchain_ollama etc.), which offline CI does not install.
 """
-from api.agent_stream import _strip_source_footer
+import time
+
+from api.sources import strip_source_footer as _strip_source_footer
 
 BODY = "휴학은 등록 기간 내에 학생포털에서 신청할 수 있습니다."
 
@@ -56,3 +62,21 @@ class TestLeavesAnswerAlone:
 
     def test_empty_answer(self):
         assert _strip_source_footer("") == ""
+
+
+class TestLinearScan:
+    def test_adversarial_repetition_completes_fast(self):
+        # CodeQL py/redos flagged the earlier single-regex version: exponential
+        # backtracking on many repetitions of lines matching both the list-item and
+        # the filename alternation. The line scan must stay linear on that input.
+        answer = BODY + "\n\n**출처:**\n" + ("*\t.md\n" * 10_000)
+        t0 = time.monotonic()
+        result = _strip_source_footer(answer)
+        assert time.monotonic() - t0 < 1.0
+        assert result == BODY
+
+    def test_many_plain_lines_unchanged(self):
+        answer = "\n".join(f"본문 문장 {i}입니다." for i in range(10_000))
+        t0 = time.monotonic()
+        assert _strip_source_footer(answer) == answer
+        assert time.monotonic() - t0 < 1.0

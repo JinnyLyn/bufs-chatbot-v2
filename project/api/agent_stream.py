@@ -21,14 +21,13 @@ Approximate, but enough to see where the wall time goes; the total is exact.
 """
 
 import logging
-import re
 import time
 
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 
 import config
 from api.runtime import build_config, get_rag_system
-from api.sources import parse_tool_results
+from api.sources import parse_tool_results, strip_source_footer
 from api.trace_context import set_trace_id
 from api.translate import needs_korean_translation, to_korean
 
@@ -44,26 +43,6 @@ _SELF_CHECK_JUDGE_TAG = "selfcheck_judge"
 _OUTER_NODES = {"summarize_history", "rewrite_query", "aggregate_answers", "self_check"}
 
 _FALLBACK_KO = "죄송합니다. 답변을 생성하지 못했습니다. 다시 시도해 주세요."
-
-# The prompts forbid the old sources footer ("---\n**출처:**\n- file.pdf …"), but a
-# disobedient generation can still emit one — the compression context keeps feeding
-# "### filename.pdf" headers to the model. The SourcePanel shows sources from structured
-# metadata, so a leaked footer only duplicates it; strip it from the shipped answer so
-# the guarantee is structural, not best-effort. Matches ONLY a trailing block: optional
-# horizontal rule, a 출처/Sources heading line, then nothing but list items or bare
-# filename lines through the end of the answer.
-_SOURCE_FOOTER_RE = re.compile(
-    r"(?:^|\n+)(?:-{3,}[ \t]*\n+)?"                        # optional --- rule
-    r"[ \t]*\*{0,2}(?:출처|Sources?)\*{0,2}[ \t]*:?\*{0,2}[ \t]*\n"  # 출처: / **출처:** / Sources:
-    r"(?:[ \t]*(?:[-*•]|\d+\.)[ \t].*(?:\n|$)"             # bullet/numbered list lines
-    r"|[ \t]*\S[^\n]*\.(?:pdf|docx?|txt|md)[ \t]*(?:\n|$))+"  # or bare filename lines
-    r"\s*\Z"
-)
-
-
-def _strip_source_footer(answer: str) -> str:
-    stripped = _SOURCE_FOOTER_RE.sub("", answer).rstrip()
-    return stripped or answer  # never blank the answer if it was footer-only
 
 
 def _bucket(node: str) -> str:
@@ -228,7 +207,7 @@ def _run_turn(rs, session_id: str, question: str, trace_id: str):
 
         # Applied last so every path (stream, state reconcile, translation) is covered;
         # the frontend replaces the streamed text with this payload's answer on "done".
-        answer = _strip_source_footer(answer)
+        answer = strip_source_footer(answer)
 
         results, source_urls = parse_tool_results(tool_contents)
         sub_questions = len(final_state.values.get("rewrittenQuestions", []) or [])
