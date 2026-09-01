@@ -4,6 +4,7 @@
 backups/
 docs/*
 !docs/observability/
+!docs/CAPACITY.md
 !docs/debugging/
 __pycache__/
 .vscode/
@@ -40,6 +41,8 @@ eval_tools/runs/
 
 # Eval-run outputs (per-run JSON/logs — ephemeral, rebuild from _qa_blend_sweep.sh)
 logs/h2eval/
+# Load-test outputs (eval_tools/_load_test.py) — per-run JSON/logs, never committed
+logs/load/
 # Q&A transcripts — REAL end-user conversations (this repo is public). Every answered
 # turn is appended verbatim by api/qa_logger.py, so these files carry whatever students
 # type, including names and other personal details. Never commit them; analyse them in
