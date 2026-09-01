@@ -33,6 +33,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _ragas_eval as rag  # noqa: E402  (judge prompts + extract_score, verbatim)
+import endpoints  # noqa: E402  (judge URL 해석 — env → project/.env 체인)
 import qa_scorer  # noqa: E402
 from _ragas_kpi import hmean, judge_ollama  # noqa: E402  (same judge call as the online pass)
 
@@ -47,9 +48,8 @@ _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inp", required=True, help="ragas_kpi result json (saved generations)")
-    ap.add_argument("--judge-url",
-                    default=(os.environ.get("OLLAMA_JUDGE_URL") or os.environ.get("OLLAMA_BASE_URL")
-                             or "http://127.0.0.1:11434"))
+    ap.add_argument("--judge-url", default=endpoints.judge_ollama_url(),
+                    help="judge Ollama (기본: $OLLAMA_JUDGE_URL → $OLLAMA_BASE_URL → project/.env)")
     ap.add_argument("--judge-model", default="gemma4:26b", help="judge model (MUST differ from the generator)")
     ap.add_argument("--think", dest="think", action="store_true", help="let the judge use reasoning tokens")
     ap.add_argument("--no-think", dest="think", action="store_false", help="force JSON output (default)")

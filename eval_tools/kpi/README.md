@@ -10,7 +10,7 @@
 
 ```bash
 # 1) 백엔드 기동 (qwen3.5:9b 서빙하는 Ollama를 가리킴; h100-fast = nocompress)
-OLLAMA_BASE_URL=http://<ollama-host>:11434 LLM_MODEL=qwen3.5:9b \
+OLLAMA_BASE_URL=http://<ollama-host>:<port> LLM_MODEL=qwen3.5:9b \
   LLM_NUM_CTX=16384 BASE_TOKEN_THRESHOLD=12000 LANGFUSE_ENABLED=false \
   python project/server.py            # :8000  (H100 배포 .env와 동일 config — MIGRATION_H100.md 3-2)
 

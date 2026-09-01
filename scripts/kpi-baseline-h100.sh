@@ -7,17 +7,23 @@
 #
 #   ./scripts/kpi-baseline-h100.sh
 #
-# Env: BACKEND_URL (기본 http://localhost:8000), N (기본 3), PYTHON (기본 python3),
+# Env: BACKEND_URL (기본: $BUFS_BACKEND_URL → localhost:$BACKEND_PORT → :8000),
+#      N (기본 3), PYTHON (기본 python3),
 #      SKIP_CONFIG_CHECK=1 (num_ctx 검증 생략 — 의도적으로 다른 운영점을 잴 때만)
+# 박스-로컬 설정(scripts/env.local, gitignored)이 있으면 먼저 읽는다 (_common.sh 규약).
 #
 # 끝나면 커밋해야 하는 파일 (둘 다 커밋 대상 — runs/ 캡처 덤프는 gitignored):
 #   eval_tools/kpi_profiles.yaml       (floors 실측값 + gating: blocking)
 #   eval_tools/baselines/h100-fast.json
 
 set -euo pipefail
-cd "$(dirname "$0")/.."
+SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
-BACKEND_URL="${BACKEND_URL:-http://localhost:8000}"
+# shellcheck disable=SC1091
+[ -f "$SCRIPT_DIR/env.local" ] && . "$SCRIPT_DIR/env.local"
+
+BACKEND_URL="${BACKEND_URL:-${BUFS_BACKEND_URL:-http://localhost:${BACKEND_PORT:-8000}}}"
 N="${N:-3}"
 PYTHON="${PYTHON:-python3}"
 PROFILE=h100-fast

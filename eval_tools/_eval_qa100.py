@@ -31,6 +31,7 @@ import urllib.parse
 # Make the sibling qa_scorer importable regardless of CWD (sys.path[0] is this dir when
 # run as a script; pythonpath=["eval_tools"] covers pytest).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import endpoints  # noqa: E402  (백엔드 URL 해석 — $BUFS_BACKEND_URL/$BACKEND_PORT 체인)
 import qa_scorer  # noqa: E402
 
 try:
@@ -87,7 +88,8 @@ def dry_run(data: list[dict]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", default="http://localhost:8000")
+    ap.add_argument("--base", default=endpoints.backend_url(),
+                    help="chatbot backend (기본: $BUFS_BACKEND_URL → localhost:$BACKEND_PORT → :8000)")
     ap.add_argument("--n", type=int, default=0, help="run only the first N questions (0=all)")
     ap.add_argument("--dataset", default=None, help="override dataset path")
     ap.add_argument("--timeout", type=int, default=300)

@@ -1,6 +1,8 @@
 # eval_tools — 평가/분석 하니스
 
-세션 중 만든 일회성·재사용 평가 스크립트 모음. 백엔드(`localhost:8000`)와 Langfuse(`project/.env`의 키)를 사용.
+세션 중 만든 일회성·재사용 평가 스크립트 모음. 백엔드와 Langfuse(`project/.env`의 키)를 사용.
+엔드포인트는 하드코딩 대신 **`endpoints.py`** 체인으로 해석: 백엔드 = `$BUFS_BACKEND_URL` → `localhost:$BACKEND_PORT` → `:8000`,
+judge Ollama = `$OLLAMA_JUDGE_URL` → `$OLLAMA_BASE_URL` → **`project/.env`의 `OLLAMA_BASE_URL`**(백엔드가 실제 다이얼하는 값, 단일 출처 — 유저별 Ollama 포트도 자동 추종) → `:11434`.
 주력 스크립트(`_eval_qa100`/`_ragas_eval`/`_answer_analysis`)는 **레포 내 골든셋**(`datasets/qa_dataset.json`)을 쓰므로 클론 후 재현 가능. repo 루트에서 `python eval_tools/<script>.py` 실행.
 
 ## 골든 데이터셋
@@ -48,7 +50,7 @@ python -m eval_tools.kpi baseline-update --profile h100-fast --from-predictions 
 - **`_qa_report.py`** — `_ragas_kpi` 결과 → **단일 마크다운 리포트**(KPI 헤드라인 + 난이도/카테고리별 KPI + 7버킷 표 + guard오탐 목록 + 오답상세 + 주의사항). `--in <ragas_kpi json> --out <md>`.
 - **`_langfuse_analyze.py`** — Langfuse 트레이스 집계(지연분포·노드별·에러·툴호출 깊이).
 - **`_answer_analysis.py`** — 정답/오답을 **검색실패 vs 생성실패**로 귀인. in-repo 골든셋의 `must_include` 토큰을 답변/컨텍스트(Langfuse) 양쪽에 대조.
-- **`_error_analysis7.py`** + **`error_taxonomy.py`** — `_answer_analysis`(2버킷)의 후속. 오답을 역할 명세의 **7버킷**(① 검색실패 ② Prompt실패 ③ 문서없음 ④ 질문애매 ⑤ Hallucination ⑥ Chunk문제 ⑦ Embedding문제)으로 귀인. `error_taxonomy.py`는 **순수 결정트리 분류기**(stdlib+`qa_scorer`만, `tests/eval/test_error_taxonomy.py`가 7버킷 전부+저하경로 보호) + 오프라인 **KBCorpus**(`markdown_docs`+`parent_store`로 "문서없음"·"Chunk문제"를 라이브 서비스 없이 판정). 드라이버는 신호를 계산해 먹인다 — 세밀한 잎(⑥/⑦ 라이브 top-k, ②/⑤ judge)의 신호가 없으면 **추측 대신 상위(미분리) 버킷으로 정직하게 저하**. 입력 3모드: `--from-dump PATH`(저장 덤프 오프라인 분류; 데이터셋 미매칭 시 `reference`에서 사실 합성) · `--langfuse`(라이브) · `--dry-run`(합성 자기점검, 인프라 0). 세분화 신호(선택): `--judge MODEL`(②/⑤ 분리 — faithfulness judge, `--judge-url` 기본 `$OLLAMA_JUDGE_URL` 또는 로컬 Ollama :11434(H100); **⚠ judge는 반드시 생성 모델과 다른 계열로** — 자기평가는 상관된 맹점·자기선호 편향으로 Hallucination을 과소집계한다. 실측: 같은 답에 qwen 자기판정 1.0 vs exaone 교차판정 0.0, #82. 권장: `exaone3.5:7.8b` 또는 `gemma3:4b`) · `--probe-embedding`(①→⑦ 분리 — dense-only top-k 프로브, **임베디드 Qdrant 락 때문에 백엔드 내린 상태에서**). `logs/error_taxonomy_result.json` 출력. 첫 실측(2026-07-02, 로컬 qwen3.5:9b): 정답 21 / ①16 ②16 ③9 ⑤1 ⑦37 — **⑦ Embedding(dense 레그가 원질문에서 사실청크를 top-10에 못 올림)이 최대 버킷**, 복학 카테고리는 10문항 중 8이 ⑦.
+- **`_error_analysis7.py`** + **`error_taxonomy.py`** — `_answer_analysis`(2버킷)의 후속. 오답을 역할 명세의 **7버킷**(① 검색실패 ② Prompt실패 ③ 문서없음 ④ 질문애매 ⑤ Hallucination ⑥ Chunk문제 ⑦ Embedding문제)으로 귀인. `error_taxonomy.py`는 **순수 결정트리 분류기**(stdlib+`qa_scorer`만, `tests/eval/test_error_taxonomy.py`가 7버킷 전부+저하경로 보호) + 오프라인 **KBCorpus**(`markdown_docs`+`parent_store`로 "문서없음"·"Chunk문제"를 라이브 서비스 없이 판정). 드라이버는 신호를 계산해 먹인다 — 세밀한 잎(⑥/⑦ 라이브 top-k, ②/⑤ judge)의 신호가 없으면 **추측 대신 상위(미분리) 버킷으로 정직하게 저하**. 입력 3모드: `--from-dump PATH`(저장 덤프 오프라인 분류; 데이터셋 미매칭 시 `reference`에서 사실 합성) · `--langfuse`(라이브) · `--dry-run`(합성 자기점검, 인프라 0). 세분화 신호(선택): `--judge MODEL`(②/⑤ 분리 — faithfulness judge, `--judge-url` 기본 `endpoints.judge_ollama_url()` 체인; **⚠ judge는 반드시 생성 모델과 다른 계열로** — 자기평가는 상관된 맹점·자기선호 편향으로 Hallucination을 과소집계한다. 실측: 같은 답에 qwen 자기판정 1.0 vs exaone 교차판정 0.0, #82. 권장: `exaone3.5:7.8b` 또는 `gemma3:4b`) · `--probe-embedding`(①→⑦ 분리 — dense-only top-k 프로브, **임베디드 Qdrant 락 때문에 백엔드 내린 상태에서**). `logs/error_taxonomy_result.json` 출력. 첫 실측(2026-07-02, 로컬 qwen3.5:9b): 정답 21 / ①16 ②16 ③9 ⑤1 ⑦37 — **⑦ Embedding(dense 레그가 원질문에서 사실청크를 top-10에 못 올림)이 최대 버킷**, 복학 카테고리는 10문항 중 8이 ⑦.
 - **`_check2020.py`** — 단일 회귀 질의("2020학번 졸업요건") 빠른 확인.
 
 ## 일회성 (특정 수정 검증, 보관용)

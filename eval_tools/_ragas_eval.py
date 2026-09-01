@@ -13,16 +13,16 @@ Run:
 """
 import argparse, json, os, re, sys, time, urllib.parse
 import requests
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)                    # 형제 모듈(qa_scorer/endpoints) 직접 임포트용
+sys.path.insert(0, os.path.dirname(_HERE))   # kpi/runners 내부의 `eval_tools.*` 절대 임포트용
+import endpoints  # 백엔드/judge URL 해석 — 하드코딩 대신 env → project/.env 체인
 import qa_scorer  # in-repo golden dataset loader (eval_tools/datasets/qa_dataset.json)
 try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception: pass
 
-NEW_BASE = "http://localhost:8000"
-# judge Ollama — 기본값 체인: $OLLAMA_JUDGE_URL → $OLLAMA_BASE_URL(백엔드와 같은 인스턴스)
-# → :11434. 공유 박스에서 :11434는 남의 시스템 Ollama일 수 있으니(scripts/_common.sh),
-# 프로젝트 인스턴스가 다른 포트면 환경변수로 지정. _ragas_kpi.py/_rejudge.py와 동일 규약.
-OLLAMA = os.environ.get("OLLAMA_JUDGE_URL") or os.environ.get("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
+NEW_BASE = endpoints.backend_url()
+OLLAMA = endpoints.judge_ollama_url()
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Gemini-only TLS bundle for networks behind a corporate/Norton MITM proxy: point
 # REQUESTS_CA_BUNDLE at a PEM file there. Unset (Linux CI / normal nets) → verify via certifi.

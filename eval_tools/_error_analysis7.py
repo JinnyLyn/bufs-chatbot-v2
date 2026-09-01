@@ -32,6 +32,7 @@ from dataclasses import replace
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)                    # import qa_scorer / error_taxonomy / kpi.*
 sys.path.insert(0, os.path.dirname(_HERE))   # kpi/runners 내부의 `eval_tools.*` 절대 임포트용
+import endpoints
 import error_taxonomy as et
 import qa_scorer
 from error_taxonomy import KBCorpus, Signals, classify, present
@@ -477,10 +478,8 @@ def main() -> None:
     ap.add_argument("--out", default="logs/error_taxonomy_result.json")
     ap.add_argument("--judge", metavar="MODEL", default=None,
                     help="②/⑤ 분리: GENERATION_UNSPLIT에 faithfulness judge 적용 (예: qwen3.5:9b)")
-    ap.add_argument("--judge-url",
-                    default=(os.environ.get("OLLAMA_JUDGE_URL") or os.environ.get("OLLAMA_BASE_URL")
-                             or "http://127.0.0.1:11434"),
-                    help="judge Ollama 엔드포인트 (기본: $OLLAMA_JUDGE_URL → $OLLAMA_BASE_URL → :11434)")
+    ap.add_argument("--judge-url", default=endpoints.judge_ollama_url(),
+                    help="judge Ollama 엔드포인트 (기본: $OLLAMA_JUDGE_URL → $OLLAMA_BASE_URL → project/.env)")
     ap.add_argument("--probe-embedding", action="store_true",
                     help="①→⑦ 분리: dense-only top-k 프로브 (임베디드 Qdrant — 백엔드 내린 상태에서)")
     ap.add_argument("--k", type=int, default=10, help="임베딩 프로브 top-k")
