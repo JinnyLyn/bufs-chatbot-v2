@@ -33,7 +33,6 @@ import argparse
 import asyncio
 import json
 import random
-import statistics
 import sys
 import time
 from dataclasses import dataclass, field, asdict
@@ -121,8 +120,11 @@ async def ask_question(
     current_event: str | None = None
     data_lines: list[str] = []
     try:
-        async with client.stream(
-            "GET", f"{base_url}/api/chat/stream", params=params, timeout=httpx.Timeout(QUESTION_TIMEOUT_S, connect=15.0)
+        # sse-starlette sends a keepalive ping every 15s regardless of generator
+        # progress, which resets httpx's per-read timeout — so the per-question
+        # ceiling must be a wall-clock bound around the whole stream.
+        async with asyncio.timeout(QUESTION_TIMEOUT_S), client.stream(
+            "GET", f"{base_url}/api/chat/stream", params=params, timeout=httpx.Timeout(None, connect=15.0)
         ) as resp:
             sample.http_status = resp.status_code
             if resp.status_code == 503:
@@ -154,7 +156,14 @@ async def ask_question(
                     sample.result = "ok"
                     return sample
                 elif current_event == "error":
-                    sample.error = "\n".join(data_lines)[:200]
+                    msg = "\n".join(data_lines)[:200]
+                    # The slot race inside the SSE generator delivers the same busy
+                    # rejection as the 503 path, but over an already-open 200 stream
+                    # (advisory reject_if_saturated() vs authoritative acquire).
+                    if "지금 처리 중인 질문이 많습니다" in msg:
+                        sample.result = "rejected"
+                    else:
+                        sample.error = msg
                     return sample
                 current_event = None
                 data_lines = []
