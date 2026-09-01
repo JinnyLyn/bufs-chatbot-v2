@@ -63,3 +63,38 @@ def test_wrapper_with_answer_key_still_detected(tmp_path):
     dump = tmp_path / "d.json"
     dump.write_text(json.dumps([{"source": "x", "answer": "summary", "records": [rec]}]), encoding="utf-8")
     assert _load_dump_records(dump) == [rec]
+
+
+# ── refusal family, zero-unanswerable set (2026-09-01) ────────────────────
+# Mirror of E3: an all-answerable golden set cannot measure refusal, and
+# _rate(0, 0) == 0.0 read as "refused nothing" → NO-GO against refusal_floor 1.0.
+def test_zero_unanswerable_reports_no_refusal_metric():
+    m = build_run_metrics(score=_sr(0.9), total_count=10)  # unanswerable_total=0
+    assert m["refusal_rate"] is None
+    assert m["measurement_error"] is None  # accuracy is still perfectly measurable
+
+
+def test_refusal_family_skips_when_metric_absent():
+    from eval_tools.kpi.gate import aggregate_runs, evaluate_gate
+
+    runs = [build_run_metrics(score=_sr(0.9), total_count=10)]
+    assert aggregate_runs(runs)["refusal_rate"] is None
+    verdict = evaluate_gate(runs, {"contains_floor": 0.8, "strict_floor": 0.8,
+                              "refusal_floor": 1.0, "flaky_tolerance": 0.13})
+    refusal = next(f for f in verdict.families if f.name == "refusal")
+    assert refusal.status == "SKIPPED"
+    assert verdict.exit_code != 1, "an unmeasurable refusal family must not fail the gate"
+
+
+def test_refusal_still_gated_when_set_has_unanswerable():
+    from eval_tools.kpi.gate import evaluate_gate
+
+    sr = ScoreResult(contains_rate=0.9, strict_rate=0.9, refusal_rate=0.5,
+                     answerable_total=10, contains_count=9, strict_count=9,
+                     unanswerable_total=8, refusal_count=4)
+    runs = [build_run_metrics(score=sr, total_count=18)]
+    assert runs[0]["refusal_rate"] == 0.5
+    verdict = evaluate_gate(runs, {"contains_floor": 0.8, "strict_floor": 0.8,
+                              "refusal_floor": 1.0, "flaky_tolerance": 0.13})
+    refusal = next(f for f in verdict.families if f.name == "refusal")
+    assert refusal.status == "NO-GO"

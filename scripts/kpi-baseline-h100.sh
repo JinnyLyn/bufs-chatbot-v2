@@ -9,6 +9,7 @@
 #
 # Env: BACKEND_URL (기본: $BUFS_BACKEND_URL → localhost:$BACKEND_PORT → :8000),
 #      N (기본 3), PYTHON (기본 python3),
+#      TESTSET / TESTSET_FORMAT (기본: 2학기 골든셋 + qa 포맷 — 아래 주석 참조),
 #      SKIP_CONFIG_CHECK=1 (num_ctx 검증 생략 — 의도적으로 다른 운영점을 잴 때만)
 # 박스-로컬 설정(scripts/env.local, gitignored)이 있으면 먼저 읽는다 (_common.sh 규약).
 #
@@ -27,6 +28,11 @@ BACKEND_URL="${BACKEND_URL:-${BUFS_BACKEND_URL:-http://localhost:${BACKEND_PORT:
 N="${N:-3}"
 PYTHON="${PYTHON:-python3}"
 PROFILE=h100-fast
+# 현재 학기 기준 골든셋으로 잰다. 기본값 combined88은 2026-1학기 시절 셋이라
+# 1학기 학사안내 은퇴(#271) 이후 22문항의 정답이 KB에 없어, 그대로 floor 를 확정하면
+# 문서 은퇴분 하락이 릴리스 기준선으로 굳는다 (2026-09-01 실측: 85.2% → 60.5%).
+TESTSET="${TESTSET:-eval_tools/datasets/qa_dataset_sem2_100.json}"
+TESTSET_FORMAT="${TESTSET_FORMAT:-qa}"
 
 # 0) 백엔드 헬스 + 운영점 검증 — 베이스라인 STAMP에는 프로파일의 num_ctx가 박히므로
 #    (build_stamp는 라이브 값을 안 본다), 백엔드가 실제로 그 config로 떠 있는지
@@ -58,7 +64,8 @@ mkdir -p "$CAP_DIR"
 for i in $(seq 1 "$N"); do
     echo "── capture $i/$N ─────────────────────────────────────────"
     rc=0
-    "$PYTHON" -m eval_tools.kpi run --profile "$PROFILE" --backend-url "$BACKEND_URL" --seed 42 || rc=$?
+    "$PYTHON" -m eval_tools.kpi run --profile "$PROFILE" --backend-url "$BACKEND_URL" \
+        --testset "$TESTSET" --format "$TESTSET_FORMAT" --seed 42 || rc=$?
     if [ "$rc" -ge 2 ]; then
         # exit 2 = 측정 자체가 실패(ERROR) — 덤프를 믿을 수 없으니 중단
         echo "ERROR: kpi run failed (exit $rc, measurement ERROR) — abort" >&2
@@ -79,8 +86,12 @@ for i in $(seq 1 "$N"); do
 done
 
 # 2) 베이스라인 시드 + floors 실측 확정 (kpi_profiles.yaml 자동 재작성, advisory→blocking)
+#    --testset/--format 을 여기에도 넘겨야 한다: match_key 의 testset_hash 는 이 인자로
+#    결정되므로, 빠뜨리면 기본값(combined88) 해시가 sem2 수치 위에 찍혀 이후 sem2 런은
+#    영영 매칭되지 않고(회귀 가드 무력화), combined88 런이 sem2 베이스라인과 비교된다.
 "$PYTHON" -m eval_tools.kpi baseline-update --profile "$PROFILE" \
-    --from-predictions "$CAP_DIR" --set-floors --temp 0 --seed 42
+    --from-predictions "$CAP_DIR" --testset "$TESTSET" --format "$TESTSET_FORMAT" \
+    --set-floors --temp 0 --seed 42
 
 echo
 echo "✅ floors 실측 완료. 이제 커밋할 것:"
