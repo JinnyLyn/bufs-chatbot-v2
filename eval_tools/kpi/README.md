@@ -10,9 +10,9 @@
 
 ```bash
 # 1) 백엔드 기동 (qwen3.5:9b 서빙하는 Ollama를 가리킴; h100-fast = nocompress)
-OLLAMA_BASE_URL=http://<ollama-host>:11434 LLM_MODEL=qwen3.5:9b \
-  LLM_NUM_CTX=8192 BASE_TOKEN_THRESHOLD=12000 LANGFUSE_ENABLED=false \
-  python project/server.py            # :8000
+OLLAMA_BASE_URL=http://<ollama-host>:<port> LLM_MODEL=qwen3.5:9b \
+  LLM_NUM_CTX=16384 BASE_TOKEN_THRESHOLD=12000 LANGFUSE_ENABLED=false \
+  python project/server.py            # :8000  (H100 배포 .env와 동일 config — MIGRATION_H100.md 3-2)
 
 # 2) 게이트 한 줄
 python -m eval_tools.kpi run --profile h100-fast --backend-url http://localhost:8000
@@ -53,6 +53,12 @@ python -m eval_tools.kpi baseline-update --profile h100-fast --from-predictions 
 
 `h100-fast`의 floor(`contains_floor`/`strict_floor`)는 아직 **추측치**라 게이트가 **advisory**(보고만, 절대 exit 1 안 함).
 H100에서 N=3 캡처 후 `baseline-update --set-floors`로 floor를 실측하면 `gating: advisory → blocking`으로 전환된다.
+
+```bash
+# H100 박스에서 원커맨드 (백엔드 떠 있는 상태): N=3 캡처 → floors 확정 → blocking 전환
+./scripts/kpi-baseline-h100.sh
+# 끝나면 kpi_profiles.yaml + baselines/h100-fast.json 커밋
+```
 
 ## 실사용 갭 측정 (핵심 KPI)
 

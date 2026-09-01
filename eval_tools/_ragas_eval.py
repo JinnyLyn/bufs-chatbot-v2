@@ -13,13 +13,16 @@ Run:
 """
 import argparse, json, os, re, sys, time, urllib.parse
 import requests
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)                    # 형제 모듈(qa_scorer/endpoints) 직접 임포트용
+sys.path.insert(0, os.path.dirname(_HERE))   # kpi/runners 내부의 `eval_tools.*` 절대 임포트용
+import endpoints  # 백엔드/judge URL 해석 — 하드코딩 대신 env → project/.env 체인
 import qa_scorer  # in-repo golden dataset loader (eval_tools/datasets/qa_dataset.json)
 try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception: pass
 
-NEW_BASE = "http://localhost:8000"
-OLLAMA = "http://localhost:11435"
+NEW_BASE = endpoints.backend_url()
+OLLAMA = endpoints.judge_ollama_url()
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Gemini-only TLS bundle for networks behind a corporate/Norton MITM proxy: point
 # REQUESTS_CA_BUNDLE at a PEM file there. Unset (Linux CI / normal nets) → verify via certifi.
