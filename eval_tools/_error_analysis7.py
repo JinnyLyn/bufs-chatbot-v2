@@ -477,8 +477,10 @@ def main() -> None:
     ap.add_argument("--out", default="logs/error_taxonomy_result.json")
     ap.add_argument("--judge", metavar="MODEL", default=None,
                     help="②/⑤ 분리: GENERATION_UNSPLIT에 faithfulness judge 적용 (예: qwen3.5:9b)")
-    ap.add_argument("--judge-url", default=os.environ.get("OLLAMA_JUDGE_URL", "http://127.0.0.1:11434"),
-                    help="judge Ollama 엔드포인트 (기본: $OLLAMA_JUDGE_URL 또는 H100 로컬 :11434)")
+    ap.add_argument("--judge-url",
+                    default=(os.environ.get("OLLAMA_JUDGE_URL") or os.environ.get("OLLAMA_BASE_URL")
+                             or "http://127.0.0.1:11434"),
+                    help="judge Ollama 엔드포인트 (기본: $OLLAMA_JUDGE_URL → $OLLAMA_BASE_URL → :11434)")
     ap.add_argument("--probe-embedding", action="store_true",
                     help="①→⑦ 분리: dense-only top-k 프로브 (임베디드 Qdrant — 백엔드 내린 상태에서)")
     ap.add_argument("--k", type=int, default=10, help="임베딩 프로브 top-k")

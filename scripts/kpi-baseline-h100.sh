@@ -7,7 +7,8 @@
 #
 #   ./scripts/kpi-baseline-h100.sh
 #
-# Env: BACKEND_URL (기본 http://localhost:8000), N (기본 3), PYTHON (기본 python3)
+# Env: BACKEND_URL (기본 http://localhost:8000), N (기본 3), PYTHON (기본 python3),
+#      SKIP_CONFIG_CHECK=1 (num_ctx 검증 생략 — 의도적으로 다른 운영점을 잴 때만)
 #
 # 끝나면 커밋해야 하는 파일 (둘 다 커밋 대상 — runs/ 캡처 덤프는 gitignored):
 #   eval_tools/kpi_profiles.yaml       (floors 실측값 + gating: blocking)
@@ -21,9 +22,24 @@ N="${N:-3}"
 PYTHON="${PYTHON:-python3}"
 PROFILE=h100-fast
 
-# 0) 백엔드 헬스 체크 — 안 떠 있으면 측정 자체가 불가
-if ! curl -fsS --max-time 5 "$BACKEND_URL/health" >/dev/null; then
+# 0) 백엔드 헬스 + 운영점 검증 — 베이스라인 STAMP에는 프로파일의 num_ctx가 박히므로
+#    (build_stamp는 라이브 값을 안 본다), 백엔드가 실제로 그 config로 떠 있는지
+#    여기서 확인하지 않으면 "다른 운영점에서 잰 floor"가 게이트 기준이 되어 버린다.
+health_json="$(curl -fsS --max-time 5 "$BACKEND_URL/health")" || {
     echo "ERROR: backend not reachable at $BACKEND_URL — ./scripts/start-all.sh 먼저" >&2
+    exit 2
+}
+live_ctx="$(printf '%s' "$health_json" | "$PYTHON" -c \
+    'import json,sys; h=json.load(sys.stdin); print(h.get("num_ctx",""))' 2>/dev/null || true)"
+live_model="$(printf '%s' "$health_json" | "$PYTHON" -c \
+    'import json,sys; h=json.load(sys.stdin); print(h.get("model",""))' 2>/dev/null || true)"
+want_ctx="$("$PYTHON" -c \
+    "from eval_tools.kpi.profiles import load_profile; print(load_profile('$PROFILE').num_ctx)")"
+echo "backend: $BACKEND_URL  model=$live_model  num_ctx=$live_ctx  (profile expects num_ctx=$want_ctx)"
+if [ "${SKIP_CONFIG_CHECK:-0}" != "1" ] && [ "$live_ctx" != "$want_ctx" ]; then
+    echo "ERROR: 백엔드 num_ctx($live_ctx) ≠ $PROFILE 프로파일($want_ctx)." >&2
+    echo "       배포 config(MIGRATION_H100.md 3-2, LLM_NUM_CTX=$want_ctx)로 백엔드를 다시 띄우고 실행." >&2
+    echo "       (의도적으로 다른 운영점을 재려면 SKIP_CONFIG_CHECK=1 — 단, 그 floor는 게이트 기준이 된다)" >&2
     exit 2
 fi
 
@@ -35,8 +51,20 @@ mkdir -p "$CAP_DIR"
 #     "-<sha>" 꼬리가 없어 아래 글롭에 걸리지 않는다)
 for i in $(seq 1 "$N"); do
     echo "── capture $i/$N ─────────────────────────────────────────"
-    "$PYTHON" -m eval_tools.kpi run --profile "$PROFILE" --backend-url "$BACKEND_URL" --seed 42
-    latest="$(ls -td eval_tools/runs/*-"$PROFILE"-*/ 2>/dev/null | head -1)"
+    rc=0
+    "$PYTHON" -m eval_tools.kpi run --profile "$PROFILE" --backend-url "$BACKEND_URL" --seed 42 || rc=$?
+    if [ "$rc" -ge 2 ]; then
+        # exit 2 = 측정 자체가 실패(ERROR) — 덤프를 믿을 수 없으니 중단
+        echo "ERROR: kpi run failed (exit $rc, measurement ERROR) — abort" >&2
+        exit "$rc"
+    elif [ "$rc" -eq 1 ]; then
+        # exit 1 = blocking 게이트의 NO-GO 판정. floors "재측정"이 필요한 상황이
+        # 바로 성능이 옛 floor 아래일 때이므로, 판정은 기록만 하고 캡처는 계속한다.
+        echo "note: gate verdict NO-GO (exit 1) — 캡처는 계속 (floors 재측정 경로)"
+    fi
+    # `|| true`: pipefail 아래서 글롭 미스/ls 실패가 여기서 조용히 스크립트를 죽이면
+    # 아래 진단 메시지가 영영 안 나온다 (scripts/_common.sh의 동일 패턴 참고)
+    latest="$(ls -td eval_tools/runs/*-"$PROFILE"-*/ 2>/dev/null | head -1 || true)"
     if [ -z "$latest" ] || [ ! -f "$latest/predictions.json" ]; then
         echo "ERROR: predictions.json not found under eval_tools/runs/ (latest='$latest')" >&2
         exit 2

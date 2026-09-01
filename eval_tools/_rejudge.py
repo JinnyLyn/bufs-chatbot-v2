@@ -47,7 +47,9 @@ _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inp", required=True, help="ragas_kpi result json (saved generations)")
-    ap.add_argument("--judge-url", default=os.environ.get("OLLAMA_JUDGE_URL", "http://127.0.0.1:11434"))
+    ap.add_argument("--judge-url",
+                    default=(os.environ.get("OLLAMA_JUDGE_URL") or os.environ.get("OLLAMA_BASE_URL")
+                             or "http://127.0.0.1:11434"))
     ap.add_argument("--judge-model", default="gemma4:26b", help="judge model (MUST differ from the generator)")
     ap.add_argument("--think", dest="think", action="store_true", help="let the judge use reasoning tokens")
     ap.add_argument("--no-think", dest="think", action="store_false", help="force JSON output (default)")
