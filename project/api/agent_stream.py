@@ -27,7 +27,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, Too
 
 import config
 from api.runtime import build_config, get_rag_system
-from api.sources import parse_tool_results
+from api.sources import parse_tool_results, strip_source_footer
 from api.trace_context import set_trace_id
 from api.translate import needs_korean_translation, to_korean
 
@@ -204,6 +204,10 @@ def _run_turn(rs, session_id: str, question: str, trace_id: str):
                 answer = translated
                 yield ("clear", None)    # wipe the streamed non-Korean tokens
                 yield ("token", answer)  # show the Korean answer live
+
+        # Applied last so every path (stream, state reconcile, translation) is covered;
+        # the frontend replaces the streamed text with this payload's answer on "done".
+        answer = strip_source_footer(answer)
 
         results, source_urls = parse_tool_results(tool_contents)
         sub_questions = len(final_state.values.get("rewrittenQuestions", []) or [])
