@@ -60,6 +60,9 @@ match_md() {
     local key="$1" dir="$2" hits=() f n rem
     for f in "$dir"/*.md; do
         [ -e "$f" ] || continue
+        # archive/README.md 는 폴더 설명용 예약 이름 — KB 문서가 아니므로 매칭 대상에서 제외.
+        # (제외 안 하면 pdfs/ 에 흘러든 README.* 가 "README" 키로 매칭돼 복원/은퇴로 오분류된다.)
+        case "${f##*/}" in [Rr][Ee][Aa][Dd][Mm][Ee].[Mm][Dd]) continue ;; esac
         n="$(norm "$f")"
         if [ "$n" = "$key" ]; then
             hits+=("$f")
@@ -138,7 +141,9 @@ done
 print_status() {
     local n_active n_archived
     n_active=$(find "$MD" -maxdepth 1 -name '*.md' | wc -l)
-    n_archived=$(find "$MD_ARCHIVE" -maxdepth 1 -name '*.md' | wc -l)
+    # README.md 는 예약 이름이라 은퇴 수에서 제외. n_active 는 일부러 제외 안 함 —
+    # markdown_docs/ 바로 아래 있으면 README 든 뭐든 실제로 색인되기 때문(집계=색인 세트).
+    n_archived=$(find "$MD_ARCHIVE" -maxdepth 1 -iname '*.md' ! -iname 'README.md' | wc -l)
     echo "KB 활성 문서(markdown_docs/*.md): $n_active  |  은퇴(archive/): $n_archived"
     echo
     echo "[은퇴 예정 — pdfs/archive/ 기준] ${#RETIRE[@]}건"

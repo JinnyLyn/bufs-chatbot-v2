@@ -9,7 +9,7 @@
 |------|------|
 | `pdfs/` | 원본 보관소이자 `doc_sync.sh`의 **제어면**: `pdfs/` = 현재 서비스가 쓸 문서의 원본, `pdfs/archive/` = 은퇴 대상(원본 또는 빈 마커 파일). 색인이 직접 읽지는 않는다. `.git/info/exclude`로 **서버 로컬 전용**(커밋 안 됨). |
 | `markdown_docs/` | **KB의 실제 소스.** 문서 1개 = `.md` 1개 (Docling 변환본). 커밋 대상. 여기 있는 파일이 곧 색인되는 문서 세트다. |
-| `markdown_docs/archive/` | 색인에서 제외한 은퇴 문서 보관소. 모든 색인 경로(`reindex.py`, `DocumentManager`, health의 `kb_docs` 카운트)가 `markdown_docs/` 바로 아래 `*.md`만 비재귀로 읽으므로, **여기로 옮기면 KB에서 빠진다.** 코드 변경 불필요. |
+| `markdown_docs/archive/` | 색인에서 제외한 은퇴 문서 보관소. 모든 색인 경로(`reindex.py`, `DocumentManager`, health의 `kb_docs` 카운트)가 `markdown_docs/` 바로 아래 `*.md`만 비재귀로 읽으므로, **여기로 옮기면 KB에서 빠진다.** 코드 변경 불필요. 폴더 안 `README.md`(대소문자 무관)는 설명용 **예약 이름** — `doc_sync.sh`의 집계·매칭·복원 대상에서 제외된다. |
 | `qdrant_db/` + `parent_store/` | `markdown_docs/`에서 생성되는 산출물(child 벡터 색인 + parent 원문 청크). 수동 편집 금지 — 항상 `reindex.py`로 통째 재생성. |
 
 파이프라인: PDF → (`project/ingest.py`, Docling 변환) → `markdown_docs/*.md` → (parent/child 청킹) → Qdrant(`document_child_chunks`, dense+sparse 하이브리드) + `parent_store/`.
