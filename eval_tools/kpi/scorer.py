@@ -54,10 +54,17 @@ def extract_facts(gt: str) -> set[str]:
         for m in re.findall(pat, s):
             facts.add(m.replace(" ", ""))
         s = re.sub(pat, " ", s)
+    # ``M.D`` → ``M월D일``, but ONLY for a plausible calendar date. "0.5학점" and
+    # "2.0" are decimals, not dates: turning them into "0월5일" made a correct answer
+    # ("진로설정, 0.5학점") unscorable (2026-09-01 measurement).
+    _consumed_dates: list[str] = []
     for m in re.findall(r"\d{1,2}\.\d{1,2}", s):
-        mo, da = m.split(".")
-        facts.add(f"{int(mo)}월{int(da)}일")
-    s = re.sub(r"\d{1,2}\.\d{1,2}", " ", s)
+        mo, da = (int(x) for x in m.split("."))
+        if 1 <= mo <= 12 and 1 <= da <= 31:
+            facts.add(f"{mo}월{da}일")
+            _consumed_dates.append(m)
+    for m in _consumed_dates:
+        s = s.replace(m, " ", 1)
     for m in re.findall(r"(?<![A-Za-z])[A-F][+-]?(?![A-Za-z])", s):  # grades incl. single letter
         facts.add(m)
     for m in re.findall(r"\d[\d,]*", s):
@@ -73,21 +80,39 @@ def matched(fact: str, answer: str) -> bool:
 
     - bare number: digit-boundary match (so ``6`` ≠ ``16``); 24h hour ``13..23``
       also matches its 12h ``오후 (n-12)시`` form.
-    - ``H:MM`` time: exact, zero-padded, and ``H시 MM분`` spoken forms.
+    - ``H:MM`` time: exact, zero-padded, ``H시 MM분`` spoken forms, and the 12h
+      ``오전/오후 h시 (mm분)`` reading — "15:30" and "오후 3시 30분" are the same fact,
+      and the served model writes the spoken form (2026-09-01 measurement).
     - ``M월D일`` date: substring after stripping spaces.
     - grade / token: plain substring.
+
+    Spoken-form comparisons run against a whitespace-stripped copy of the answer:
+    the model emits "오후 3 시 30 분" (spaces around 시/분), which is the same reading.
     """
     a = answer
+    a_ns = re.sub(r"\s+", "", answer)
     if re.fullmatch(r"\d+", fact):
         n = int(fact)
         if re.search(r"(?<!\d)" + fact + r"(?!\d)", a.replace(",", "")):
             return True
-        if 13 <= n <= 23 and (f"오후 {n - 12}시" in a or f"오후{n - 12}시" in a):
+        if 13 <= n <= 23 and f"오후{n - 12}시" in a_ns:
             return True
         return False
     if re.fullmatch(r"\d{1,2}:\d{2}", fact):
-        h, mi = fact.split(":")
-        return any(v in a for v in (fact, f"{int(h):02d}:{mi}", f"{h}시 {int(mi)}분", f"{h}시{int(mi)}분"))
+        h, mi = int(fact.split(":")[0]), int(fact.split(":")[1])
+        if any(v in a for v in (fact, f"{h:02d}:{mi:02d}", f"{h}:{mi:02d}")):
+            return True
+        tail = f"시{mi}분" if mi else "시"
+        half, marker = (h % 12 or 12), ("오후" if h >= 12 else "오전")
+        # 24h spoken ("15시30분") is unambiguous only above 12 — below that it is
+        # spelled the same as the bare 12h form and must take the guarded path.
+        if h >= 13 and f"{h}{tail}" in a_ns:
+            return True
+        if f"{marker}{half}{tail}" in a_ns:  # correctly marked 12h reading
+            return True
+        # The bare 12h form ("3시30분") is only equivalent when the answer does not
+        # carry the OPPOSITE marker — otherwise "오후 9시" would satisfy 09:00.
+        return bool(re.search(r"(?<!오전)(?<!오후)" + re.escape(f"{half}{tail}"), a_ns))
     if re.fullmatch(r"\d{1,2}월\d{1,2}일", fact):
         return fact in a.replace(" ", "")
     return fact in a

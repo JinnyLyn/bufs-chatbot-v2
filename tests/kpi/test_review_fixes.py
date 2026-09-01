@@ -98,3 +98,49 @@ def test_refusal_still_gated_when_set_has_unanswerable():
                               "refusal_floor": 1.0, "flaky_tolerance": 0.13})
     refusal = next(f for f in verdict.families if f.name == "refusal")
     assert refusal.status == "NO-GO"
+
+
+# ── fact surface forms (2026-09-01 measurement) ───────────────────────────
+class TestFactSurfaceForms:
+    """Facts the rule scorer marked wrong on answers that were in fact correct.
+
+    Both came out of the 2학기 골든셋 실측: the served model writes times in the
+    spoken 12h form ("오후 3 시 30 분") and the gold answers carry decimals
+    ("0.5학점") that were being parsed as calendar dates.
+    """
+
+    def test_decimal_is_not_a_date(self):
+        from eval_tools.kpi.scorer import extract_facts
+
+        facts = extract_facts("'진로설정(0.5학점)' 과목을 반드시 이수해야 합니다.")
+        assert "0월5일" not in facts, "decimal parsed as a date makes the fact unmatchable"
+        assert facts == {"0", "5"}
+
+    def test_real_date_still_extracted(self):
+        from eval_tools.kpi.scorer import extract_facts
+
+        assert "9월15일" in extract_facts("신청은 9.15 까지입니다")
+
+    @pytest.mark.parametrize("fact,answer", [
+        ("15:30", "오후 3 시 30 분부터 신청 가능"),   # spoken 12h + spaces
+        ("17:00", "오전 9 시부터 오후 5 시까지"),
+        ("09:00", "오전 9 시부터 입금 가능"),
+        ("09:00", "9 시부터 입금 가능"),              # unmarked bare form
+        ("13:00", "13시에 시작"),                     # 24h spoken
+        ("12:00", "오후 12 시"),
+        ("00:30", "오전 12 시 30 분"),
+    ])
+    def test_equivalent_time_readings_match(self, fact, answer):
+        from eval_tools.kpi.scorer import matched
+
+        assert matched(fact, answer)
+
+    @pytest.mark.parametrize("fact,answer", [
+        ("09:00", "오후 9 시"),      # opposite meridiem must NOT satisfy the fact
+        ("16:00", "오전 4 시"),
+        ("15:30", "오후 4 시"),      # wrong time entirely
+    ])
+    def test_wrong_meridiem_does_not_match(self, fact, answer):
+        from eval_tools.kpi.scorer import matched
+
+        assert not matched(fact, answer)
