@@ -18,8 +18,9 @@
 #     청킹이 달라지는 것을 방지). add 는 매칭되는 md 가 없는 파일만 색인한다.
 #   - 원본 파일명과 md 파일명은 공백/언더스코어/'+' 차이가 흔하다 (예:
 #     "2026학년도_1학기_학사안내.pdf" ↔ "2026학년도1학기학사안내.md"). 매칭은 이 문자들을
-#     제거한 정규화 stem 의 (접두 포함) 유일 매치로 판단하고, 애매하면 중단한다 —
-#     잘못 매칭해 같은 문서를 이중 색인하면 검색 품질이 떨어진다.
+#     제거한 정규화 stem 의 완전 일치(원본 쪽 "…_0723" 같은 버전 접미만 허용) 유일
+#     매치로 판단하고, 애매하면 중단한다 — 오매칭은 이중 색인(성능 하락)이나
+#     신규 문서 누락으로 직결되기 때문.
 #   - 원본이 pdfs/ 에 없는 md 전용 문서(과거 일괄 인제스트분)는 건드리지 않는다.
 #     은퇴시키려면 같은 이름의 빈 마커 파일을 pdfs/archive/ 에 만들면 된다:
 #       touch "pdfs/archive/수강신청 FAQ.pdf"
@@ -50,26 +51,35 @@ norm() { local b; b="$(basename "$1")"; b="${b%.*}"; printf '%s' "$b" | tr -d ' 
 # $1(정규화 stem)와 유일하게 매칭되는 $2 디렉터리 안의 .md 경로를 출력.
 # 매치 0개면 빈 출력. 2개 이상이면 die — 호출부는 반드시 `m="$(match_md ...)"` 형태의
 # 단독 할당으로 부를 것 (if 조건 안에서 부르면 set -e 가 die 를 삼킨다).
+#
+# 매칭 규칙: 정규화 stem 완전 일치, 또는 원본(key) 쪽이 md 이름 뒤에 버전류 접미
+# ([0-9.()v-], 예: "…학사안내_0723" ↔ "…학사안내")만 더 붙은 경우.
+# md 쪽이 더 긴 prefix 매치는 허용하지 않는다 — "수강신청.pdf"(신규)가
+# "수강신청 FAQ.md"에 잘못 붙어 조용히 skip 되는 오매칭이 실제로 확인됐다.
 match_md() {
-    local key="$1" dir="$2" hits=() f n
+    local key="$1" dir="$2" hits=() f n rem
     for f in "$dir"/*.md; do
         [ -e "$f" ] || continue
         n="$(norm "$f")"
-        if [ "$n" = "$key" ] || [[ "$n" == "$key"* ]] || [[ "$key" == "$n"* ]]; then
+        if [ "$n" = "$key" ]; then
             hits+=("$f")
+        elif [[ "$key" == "$n"* ]]; then
+            rem="${key#"$n"}"
+            [[ "$rem" =~ ^[0-9.()v-]+$ ]] && hits+=("$f")
         fi
     done
     [ "${#hits[@]}" -le 1 ] || die "'$key' 매칭이 애매합니다 (${hits[*]}) — 파일명을 정리한 뒤 다시 실행하세요."
     [ "${#hits[@]}" -eq 0 ] || printf '%s' "${hits[0]}"
 }
 
-backend_up() {
-    [ -n "${DOC_SYNC_SKIP_PORT_CHECK:-}" ] && return 1
-    command -v lsof >/dev/null 2>&1 && lsof -ti ":$PORT" >/dev/null 2>&1
-}
-
 require_backend_down_or_restart() {  # $1 = restart 플래그("1"|"")
-    if backend_up && [ -z "$1" ]; then
+    [ -n "${DOC_SYNC_SKIP_PORT_CHECK:-}" ] && return 0
+    [ -n "$1" ] && return 0
+    # lsof 가 없으면 "떠 있는지 모름"이지 "내려가 있음"이 아니다 — 확인 불가 상태로
+    # reindex 를 진행하면 프로덕션이 잡고 있는 qdrant_db/ 를 지울 수 있으므로 중단한다.
+    command -v lsof >/dev/null 2>&1 \
+        || die "lsof 가 없어 백엔드 상태를 확인할 수 없습니다 — --restart 를 쓰거나 백엔드를 내린 뒤 DOC_SYNC_SKIP_PORT_CHECK=1 로 재실행하세요."
+    if lsof -ti ":$PORT" >/dev/null 2>&1; then
         die "백엔드가 :$PORT 에 떠 있습니다 (임베디드 Qdrant 락). --restart 를 붙이거나 먼저 내리세요: systemctl --user stop agentic-rag"
     fi
 }
@@ -83,8 +93,18 @@ run_reindex() {
 }
 
 run_ingest() {  # $@ = 원본 파일들 — 기존 ingest.py 경로 재사용 (변환 + 증분 색인)
-    if [ -n "${DOC_SYNC_INGEST_CMD:-}" ]; then eval "$DOC_SYNC_INGEST_CMD \"\$@\""; return; fi
-    "$PY" "$ROOT/project/ingest.py" "$@"
+    local out
+    if [ -n "${DOC_SYNC_INGEST_CMD:-}" ]; then
+        out="$(eval "$DOC_SYNC_INGEST_CMD \"\$@\"")"
+    else
+        out="$("$PY" "$ROOT/project/ingest.py" "$@")"
+    fi
+    printf '%s\n' "$out"
+    # ingest.py 는 개별 문서 실패(변환 오류 등)를 Skipped 로 세고 rc=0 으로 끝난다 —
+    # "완료" 로 넘어가면 색인 안 된 문서를 색인됐다고 믿게 되므로 여기서 잡는다.
+    if printf '%s' "$out" | grep -q "Added=0"; then
+        die "ingest 가 아무 문서도 추가하지 못했습니다 (Added=0) — 위 출력에서 원인을 확인하세요."
+    fi
 }
 
 # ── 계획 수립 ────────────────────────────────────────────────────────
@@ -159,12 +179,15 @@ case "$cmd" in
             echo; echo "변경 없음 — 이동/재색인 생략."; exit 0
         fi
         require_backend_down_or_restart "$restart"
-        [ -n "$restart" ] && svc_stop
+        if [ -n "$restart" ]; then
+            svc_stop
+            # reindex/이동이 어디서 실패해도 백엔드는 반드시 다시 올린다 (다운 방치 방지).
+            trap 'svc_start' EXIT
+        fi
         for m in "${RETIRE[@]+"${RETIRE[@]}"}";  do mv "$m" "$MD_ARCHIVE/"; done
         for m in "${RESTORE[@]+"${RESTORE[@]}"}"; do mv "$m" "$MD/"; done
         echo; echo ">> reindex (markdown_docs/ 기준 클린 재빌드)"
         run_reindex
-        [ -n "$restart" ] && svc_start
         echo
         echo "완료. markdown_docs/ 의 이동을 커밋하세요 (git 이 rename 으로 감지합니다)."
         ;;
@@ -196,13 +219,21 @@ case "$cmd" in
         done
         if [ "${#todo[@]}" -eq 0 ]; then echo "추가할 새 문서 없음."; exit 0; fi
         require_backend_down_or_restart "$restart"
-        [ -n "$restart" ] && svc_stop
+        if [ -n "$restart" ]; then
+            svc_stop
+            trap 'svc_start' EXIT
+        fi
         echo ">> ingest (변환 + 증분 색인): ${#todo[@]}건"
         run_ingest "${todo[@]}"
         for src in "${todo[@]}"; do
-            case "$src" in "$PDFS"/*) ;; *) cp -n "$src" "$PDFS/" 2>/dev/null || true ;; esac
+            case "$src" in "$PDFS"/*) continue ;; esac
+            dest="$PDFS/$(basename "$src")"
+            if [ -e "$dest" ]; then
+                cmp -s "$src" "$dest" || echo "  (주의) $(basename "$dest") 가 pdfs/ 에 이미 있고 내용이 다릅니다 — 원본 보관을 생략했으니 직접 확인하세요."
+            else
+                cp "$src" "$dest"
+            fi
         done
-        [ -n "$restart" ] && svc_start
         echo
         echo "완료. 새로 생긴 markdown_docs/*.md 를 커밋하세요."
         ;;

@@ -150,3 +150,38 @@ class TestAdd:
         bad = kb / "문서.hwp"
         bad.write_bytes(b"hwp")
         assert run(kb, "add", str(bad), check=False).returncode != 0
+
+    def test_add_short_name_not_swallowed_by_longer_md(self, kb):
+        """리뷰 CONFIRMED 회귀: '수강신청.pdf'(신규)가 '수강신청 FAQ.md'에 prefix
+        오매칭돼 조용히 skip 되면 안 됨 — 신규로 취급해 ingest 호출해야 함."""
+        src = kb / "수강신청.pdf"
+        src.write_bytes(b"%PDF-fake")
+        p = run(kb, "add", str(src))
+        assert "skip" not in p.stdout
+        assert (kb / "ingest.log").exists()
+
+    def test_version_suffix_original_still_pairs(self, kb):
+        """'…_0723' 류 버전 접미가 붙은 원본은 기존 md 와 페어링 유지 (skip)."""
+        src = kb / "2026학년도_1학기_학사안내_0301.pdf"
+        src.write_bytes(b"%PDF-fake")
+        p = run(kb, "add", str(src))
+        assert "skip" in p.stdout
+        assert not (kb / "ingest.log").exists()
+
+    def test_add_all_skipped_ingest_fails_loudly(self, kb, tmp_path):
+        """ingest.py 는 문서별 실패를 Skipped 로 세고 rc=0 — Added=0 이면 실패로 승격."""
+        src = tmp_path / "신규문서.pdf"
+        src.write_bytes(b"%PDF-fake")
+        env = os.environ.copy()
+        env["DOC_SYNC_ROOT"] = str(kb)
+        env["DOC_SYNC_SKIP_PORT_CHECK"] = "1"
+        env["DOC_SYNC_INGEST_CMD"] = "echo 'Done. Added=0  Skipped=1' #"
+        p = subprocess.run(["bash", SCRIPT, "add", str(src)], capture_output=True, text=True, env=env)
+        assert p.returncode != 0 and "Added=0" in p.stderr
+
+    def test_short_marker_warns_instead_of_wrong_retire(self, kb):
+        """짧은 마커 '수강신청'이 FAQ md 를 은퇴시키면 안 됨 — 미매칭 경고로 남아야 함."""
+        (kb / "pdfs" / "archive" / "수강신청.pdf").write_bytes(b"")
+        p = run(kb, "apply")
+        assert (kb / "markdown_docs" / "수강신청 FAQ.md").exists()
+        assert "경고" in p.stdout
