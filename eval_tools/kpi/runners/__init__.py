@@ -108,10 +108,20 @@ def build_run_metrics(
     if measurement_error is None and score is not None and score.answerable_total == 0:
         measurement_error = "no answerable records in run (cannot measure accuracy)"
 
+    # Mirror of E3 for the refusal family: a test set with no UNANSWERABLE items
+    # cannot measure refusal, and _rate(0, 0) == 0.0 would read as a total refusal
+    # failure against refusal_floor 1.0. Emit None so the gate SKIPs the family
+    # (gate._refusal_family: worst is None → SKIPPED) instead of a false NO-GO.
+    # Not a measurement_error: the accuracy families are still perfectly measurable.
+    # score=None keeps its documented 0.0 contract (no scoring ran at all).
+    refusal_rate: Optional[float] = 0.0
+    if score is not None:
+        refusal_rate = score.refusal_rate if score.unanswerable_total > 0 else None
+
     return {
         "contains_rate": score.contains_rate if score is not None else 0.0,
         "strict_rate": score.strict_rate if score is not None else 0.0,
-        "refusal_rate": score.refusal_rate if score is not None else 0.0,
+        "refusal_rate": refusal_rate,
         # LatencyResult already stores values in seconds (duration_ms / 1000).
         "latency_p95_s": latency.p95 if latency is not None else 0.0,
         "latency_max_s": latency.max if latency is not None else 0.0,

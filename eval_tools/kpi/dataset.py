@@ -129,15 +129,16 @@ def load_qa_dataset(
 
     Accepted input shapes
     ---------------------
-    - ``{"results": [{question, answer|ground_truth, ...}, ...]}``
-    - ``[{question, answer|ground_truth, ...}, ...]``
+    - ``{"results": [{question, answer|expected_answer|ground_truth, ...}, ...]}``
+    - ``[{question, answer|expected_answer|ground_truth, ...}, ...]``
 
     Normalization rules
     -------------------
-    - Record has ``answer`` but no ``ground_truth`` → ``ground_truth = answer``.
-      (The external Q-A format uses ``answer`` as the reference; this re-maps it
-      to the canonical slot. Contrast with dump records where ``answer`` is the
-      *model's prediction*.)
+    - Record has ``answer`` or ``expected_answer`` but no ``ground_truth`` →
+      that field becomes ``ground_truth`` (``answer`` wins if both are present).
+      ``answer`` is the external WS-0a field name; ``expected_answer`` is the key
+      this repo's own golden sets use (``eval_tools/datasets/*.json``). Contrast
+      with dump records, where ``answer`` is the *model's prediction*.
     - ``answerable`` absent → ``answerable_default`` (default ``True``).
     - No ``ground_truth`` after mapping → ``judge_scored: True`` flagged on the
       returned record dict; the caller must route these through the RAGAS judge.
@@ -188,10 +189,18 @@ def load_qa_dataset(
     for raw_item in items:
         item: dict = dict(raw_item)  # shallow copy — don't mutate caller's data
 
-        # Re-map answer → ground_truth for Q-A format.
+        # Re-map the reference answer → ground_truth for Q-A format.
         # Only when ground_truth is absent; otherwise keep the existing ground_truth.
-        if "ground_truth" not in item and "answer" in item:
-            item["ground_truth"] = item.pop("answer")
+        # ``answer`` is the WS-0a external field; ``expected_answer`` is what this
+        # repo's own golden sets use (eval_tools/datasets/*.json). Without the second
+        # key every in-repo set fell through to judge_scored and the rule gate scored
+        # 0.000 contains on a run whose answers were in fact correct (2026-09-01).
+        # ``not item.get(...)``, not ``not in``: a record carrying an empty
+        # ground_truth alongside a real reference answer must still be rule-scorable.
+        for _ref_key in ("answer", "expected_answer"):
+            if not item.get("ground_truth") and item.get(_ref_key):
+                item["ground_truth"] = item.pop(_ref_key)
+                break
 
         # Inject answerable default when absent.
         if "answerable" not in item:

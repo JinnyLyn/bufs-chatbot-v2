@@ -194,6 +194,42 @@ class TestLoadQaDataset:
         records, _ = load_qa_dataset(p)
         assert records[0]["ground_truth"] == "GT"
 
+    def test_expected_answer_mapped_to_ground_truth(self, tmp_path: Path) -> None:
+        """In-repo golden sets key the reference as 'expected_answer' — it must map
+        too, else every eval_tools/datasets/*.json falls through to judge_scored and
+        the rule gate reports 0.000 contains on correct answers (2026-09-01)."""
+        p = tmp_path / "qa.json"
+        self._write(p, [{"question": "개강일은?", "expected_answer": "8월 31일(월)"}])
+        records, _ = load_qa_dataset(p)
+        assert records[0]["ground_truth"] == "8월 31일(월)"
+        assert "judge_scored" not in records[0]
+
+    def test_answer_wins_over_expected_answer(self, tmp_path: Path) -> None:
+        """Both keys present: 'answer' is the documented WS-0a field and takes it."""
+        p = tmp_path / "qa.json"
+        self._write(p, [{"question": "Q?", "answer": "A", "expected_answer": "E"}])
+        records, _ = load_qa_dataset(p)
+        assert records[0]["ground_truth"] == "A"
+
+    def test_empty_ground_truth_still_takes_reference(self, tmp_path: Path) -> None:
+        """ground_truth: "" + a real reference must still map — an empty string is the
+        same unscorable state as a missing key (same failure class as the bug fixed)."""
+        p = tmp_path / "qa.json"
+        self._write(p, [{"question": "Q?", "ground_truth": "", "expected_answer": "E"}])
+        records, _ = load_qa_dataset(p)
+        assert records[0]["ground_truth"] == "E"
+        assert "judge_scored" not in records[0]
+
+    def test_repo_golden_set_is_rule_scorable(self) -> None:
+        """The committed 2학기 골든셋 must load rule-scorable. NOT skipped when the file
+        is missing: a rename/delete has to fail loudly — the gate measures against it."""
+        p = Path(__file__).resolve().parents[2] / "eval_tools" / "datasets" / "qa_dataset_sem2_100.json"
+        assert p.exists(), f"gate golden set missing: {p}"
+        records, _ = load_qa_dataset(p)
+        assert len(records) == 100, f"golden set truncated: {len(records)} records"
+        assert all(r.get("ground_truth") for r in records)
+        assert not any(r.get("judge_scored") for r in records)
+
     def test_answerable_defaults_to_true(self, tmp_path: Path) -> None:
         p = tmp_path / "qa.json"
         self._write(p, [{"question": "Q?", "answer": "A"}])
