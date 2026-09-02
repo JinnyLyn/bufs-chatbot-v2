@@ -1,0 +1,227 @@
+"""REPORT_결과.md + REPORT_결과.docx 동시 생성 — 같은 내용 구조에서 두 형식을 뽑는다.
+
+비전공자(행정 담당자)가 읽는 문서라 기술 용어는 뜻을 붙이고, 수치는 근거와 함께 적는다.
+"""
+import subprocess
+from pathlib import Path
+
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.shared import Pt, RGBColor
+
+REPO = Path("/home/team_b/camchat")
+DATE = "2026-09-02"
+HEAD = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+# (제목, 본문 문단들, 표) — 표는 (헤더, 행들) 또는 None
+SECTIONS = [
+    (
+        "한 줄 요약",
+        [
+            "부산외대 학사 챗봇의 답변 정확도는 **89.1%** 입니다. "
+            "학생이 물어보는 학사 질문 열 개 중 아홉 개에 정확한 정보를 담아 답합니다.",
+            "지난 6월 보고서의 85.2%와 같은 수준이며, 그 사이 지식 자료를 2학기 기준으로 "
+            "교체했는데도 정확도가 유지됐습니다.",
+        ],
+        None,
+    ),
+    (
+        "무엇을 어떻게 측정했나",
+        [
+            "실제 서비스 중인 챗봇에 2학기 학사 질문 100개를 그대로 물어보고, "
+            "답변에 정답의 핵심 정보(날짜·숫자·이름)가 들어 있는지 자동으로 채점했습니다.",
+            "여기에 더해 다른 AI 모델을 심사관으로 세워 25개 질문의 답변 품질을 별도로 평가했습니다. "
+            "답변을 만든 모델이 자기 답을 스스로 후하게 매기지 않도록, 계열이 다른 모델을 썼습니다.",
+        ],
+        None,
+    ),
+    (
+        "측정 결과",
+        [],
+        (
+            ["항목", "결과", "뜻"],
+            [
+                ["응답 정확도", "89.1%", "정답의 핵심 정보를 답변에 담은 비율 (57/64문항)"],
+                ["완전 정답률", "65.6%", "날짜·숫자까지 하나도 빠뜨리지 않은 비율"],
+                ["근거 충실도", "0.84", "찾은 자료 범위 안에서만 답하는 정도 (1.0에 가까울수록 지어내지 않음)"],
+                ["정답 일치도", "0.756", "모범답안과 얼마나 일치하는지"],
+                ["자료 찾기 성공률", "100%", "질문에 맞는 문서를 찾아온 비율 (25문항 기준)"],
+                ["응답 시간", "10.2초", "질문 100개의 중앙값. 느린 편이 15.8초"],
+            ],
+        ),
+    ),
+    (
+        "분야별 정확도",
+        ["학생이 가장 많이 묻는 학사일정·수강신청·성적은 높고, 표에 잘게 흩어진 정보를 "
+         "묻는 분야가 상대적으로 낮습니다."],
+        (
+            ["분야", "정확도"],
+            [
+                ["학사일정 (개강일·시험기간 등)", "100%"],
+                ["수강신청", "93%"],
+                ["성적", "89%"],
+                ["졸업", "75%"],
+                ["학적", "62%"],
+                ["등록금", "60%"],
+                ["교과과정", "60%"],
+            ],
+        ),
+    ),
+    (
+        "지난 보고서와 비교",
+        [
+            "지난 보고서(2026-06-08)와는 평가 문항과 심사 모델이 달라 숫자를 직접 빼서 "
+            "비교하기는 어렵습니다. 다만 심사 모델이 바뀌었는데도 근거 충실도가 거의 같게 나온 것은 "
+            "두 평가의 잣대가 크게 다르지 않다는 뜻입니다.",
+        ],
+        (
+            ["항목", "2026-06 보고서", "이번 (2026-09)"],
+            [
+                ["응답 정확도", "85.2%", "89.1%"],
+                ["완전 정답률", "66.7%", "65.6%"],
+                ["근거 충실도", "0.836", "0.840"],
+                ["정답 일치도", "0.58", "0.756"],
+            ],
+        ),
+    ),
+    (
+        "이번에 개선한 것",
+        [
+            "**지식 자료를 현재 학기 기준으로 정리했습니다.** 종료된 1학기 학사안내를 내리고 "
+            "2학기 자료로 재구성했습니다.",
+            "**용어 차이로 엉뚱한 답이 나가던 문제를 고쳤습니다.** 학사일정표는 '성적확인및정정'이라 "
+            "쓰는데 학생은 '이의신청'이라고 물어, 온라인 공동수업(OCU) 안내로 답이 새는 경우가 "
+            "있었습니다. 용어 사전에 동의어를 연결했습니다.",
+            "**답변을 기다리는 동안 진행 상황이 보이도록 했습니다.** 이전에는 첫 글자가 뜰 때까지 "
+            "최대 17초간 빈 화면이었는데, 이제 0.01초 만에 '자료를 찾고 있어요 → 확인하고 있어요 "
+            "→ 답변을 정리하고 있어요'가 순서대로 표시됩니다. 실제 속도가 빨라진 것은 아니고, "
+            "멈춘 것처럼 보이던 구간이 사라진 것입니다.",
+            "**측정 도구의 오류 세 가지를 바로잡았습니다.** 채점기가 '오후 3시 30분'을 '15:30'과 "
+            "다른 답으로 세거나, '0.5학점'을 날짜로 잘못 읽는 문제가 있어 실제보다 낮게 집계되고 "
+            "있었습니다.",
+        ],
+        None,
+    ),
+    (
+        "남은 과제",
+        [
+            "**응답 속도** — 지금 개선 여지가 가장 큰 부분입니다. 답변 길이를 제한하고 내부 "
+            "생성 단계를 줄이면 실제 시간을 줄일 수 있으나, 정확도에 영향이 없는지 확인이 "
+            "필요해 다음 과제로 남겼습니다.",
+            "**표 안의 세부 숫자** — 남은 오답 대부분이 운영 시간, 납부 가능 시간처럼 표에 "
+            "잘게 흩어진 값을 묻는 질문입니다. 표를 행 단위로 나누어 다루는 방식을 검토 중입니다.",
+            "참고로 더 큰 AI 모델로 바꾸는 방안도 검토했으나, 응답 시간이 두 배가 되어 "
+            "현시점에는 권하지 않습니다. 검색 순위를 다시 매기는 기능도 실제로 측정해 본 결과 "
+            "정확도 이득이 없어 사용하지 않습니다.",
+        ],
+        None,
+    ),
+    (
+        "용어 풀이",
+        [],
+        (
+            ["용어", "뜻"],
+            [
+                ["응답 정확도", "정답에 꼭 필요한 정보가 답변에 들어 있는가"],
+                ["완전 정답률", "그 정보를 하나도 빠뜨리지 않았는가"],
+                ["근거 충실도", "찾아온 자료에 없는 내용을 지어내지 않았는가"],
+                ["정답 일치도", "모범답안과 내용이 얼마나 같은가"],
+                ["OCU", "여러 대학이 함께 운영하는 온라인 공동수업. 일정과 창구가 별도로 운영됨"],
+            ],
+        ),
+    ),
+]
+
+FOOT = (
+    f"측정 조건: 2학기 평가 문항 100개 중 자동 채점이 가능한 64문항 기준 "
+    f"(나머지는 서술형이라 자동 채점 대상이 아님). 품질 평가는 같은 문항 중 25개. "
+    f"서비스 버전 {HEAD}."
+)
+
+
+def _set_font(run, name="맑은 고딕", size=None, bold=False, color=None):
+    run.font.name = name
+    run.font.bold = bold
+    if size:
+        run.font.size = Pt(size)
+    if color:
+        run.font.color.rgb = color
+    # 한글은 eastAsia 폰트를 따로 지정하지 않으면 워드에서 다른 글꼴로 대체된다.
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), name)
+
+
+def _rich(par, text, size=10.5):
+    """**굵게** 표기만 처리하는 최소 인라인 파서."""
+    for i, piece in enumerate(text.split("**")):
+        if not piece:
+            continue
+        _set_font(par.add_run(piece), size=size, bold=(i % 2 == 1))
+
+
+def build_docx(path: Path):
+    doc = Document()
+    base = doc.styles["Normal"]
+    base.font.name = "맑은 고딕"
+    base.font.size = Pt(10.5)
+    base.element.rPr.rFonts.set(qn("w:eastAsia"), "맑은 고딕")
+
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _set_font(title.add_run("부산외대 학사 챗봇 — 성능 점검 보고서"), size=18, bold=True)
+    sub = doc.add_paragraph()
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _set_font(sub.add_run(f"{DATE} · 운영 서버 실측"), size=9,
+              color=RGBColor(0x60, 0x6E, 0x6A))
+
+    for heading, paras, table in SECTIONS:
+        h = doc.add_paragraph()
+        h.paragraph_format.space_before = Pt(14)
+        _set_font(h.add_run(heading), size=13, bold=True, color=RGBColor(0x0F, 0x5B, 0x4F))
+        for text in paras:
+            p = doc.add_paragraph()
+            p.paragraph_format.space_after = Pt(6)
+            _rich(p, text)
+        if table:
+            header, rows = table
+            t = doc.add_table(rows=1, cols=len(header))
+            t.style = "Light Grid Accent 1"
+            for cell, label in zip(t.rows[0].cells, header):
+                cell.text = ""
+                _set_font(cell.paragraphs[0].add_run(label), size=10, bold=True)
+            for row in rows:
+                cells = t.add_row().cells
+                for cell, value in zip(cells, row):
+                    cell.text = ""
+                    _set_font(cell.paragraphs[0].add_run(value), size=10)
+            doc.add_paragraph()
+
+    f = doc.add_paragraph()
+    f.paragraph_format.space_before = Pt(16)
+    _set_font(f.add_run(FOOT), size=8.5, color=RGBColor(0x6D, 0x7F, 0x78))
+    doc.save(path)
+
+
+def build_md(path: Path):
+    out = ["# 부산외대 학사 챗봇 — 성능 점검 보고서", "",
+           f"> {DATE} · 운영 서버 실측", ""]
+    for heading, paras, table in SECTIONS:
+        out += [f"## {heading}", ""]
+        for text in paras:
+            out += [text, ""]
+        if table:
+            header, rows = table
+            out += ["| " + " | ".join(header) + " |",
+                    "|" + "|".join(["---"] * len(header)) + "|"]
+            out += ["| " + " | ".join(r) + " |" for r in rows]
+            out += [""]
+    out += ["---", "", FOOT, ""]
+    path.write_text("\n".join(out), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    build_md(REPO / "REPORT_결과.md")
+    build_docx(REPO / "REPORT_결과.docx")
+    print("생성 완료:", (REPO / "REPORT_결과.md").stat().st_size,
+          (REPO / "REPORT_결과.docx").stat().st_size)
