@@ -1,12 +1,15 @@
 "use client";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { sseUrl } from "@/lib/api";
-import type { ChatMessage, StreamDoneData, SourceURL, SearchResultItem } from "@/lib/types";
+import type {
+  ChatMessage, StreamDoneData, SourceURL, SearchResultItem, StreamProgress,
+} from "@/lib/types";
 
 export function useChat(sessionId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
+  const [progress, setProgress] = useState<StreamProgress | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
   const sendMessage = useCallback(
@@ -18,6 +21,7 @@ export function useChat(sessionId: string | null) {
       setMessages((prev) => [...prev, userMsg]);
       setIsStreaming(true);
       setStreamText("");
+      setProgress(null);
 
       let accumulated = "";
 
@@ -43,6 +47,15 @@ export function useChat(sessionId: string | null) {
         setStreamText("");
       });
 
+      // Coarse progress while the answer is still being prepared. Informational only —
+      // if it never arrives, the UI falls back to the generic thinking animation.
+      es.addEventListener("status", (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data) as StreamProgress;
+          if (data?.stage) setProgress(data);
+        } catch { /* ignore parse errors */ }
+      });
+
       es.addEventListener("done", (e: MessageEvent) => {
         try {
           const data: StreamDoneData = JSON.parse(e.data);
@@ -64,6 +77,7 @@ export function useChat(sessionId: string | null) {
         }
         setIsStreaming(false);
         setStreamText("");
+        setProgress(null);
         es.close();
         esRef.current = null;
       });
@@ -77,6 +91,7 @@ export function useChat(sessionId: string | null) {
         setMessages((prev) => [...prev, { role: "assistant", content: errMsg }]);
         setIsStreaming(false);
         setStreamText("");
+        setProgress(null);
         es.close();
         esRef.current = null;
       });
@@ -94,6 +109,7 @@ export function useChat(sessionId: string | null) {
         }
         setIsStreaming(false);
         setStreamText("");
+        setProgress(null);
         esRef.current = null;
       };
     },
@@ -112,9 +128,17 @@ export function useChat(sessionId: string | null) {
   );
 
   const clearMessages = useCallback(() => {
+    // 진행 중인 스트림을 먼저 닫는다. 닫지 않으면 초기화 직후 도착한 status/token 이
+    // 방금 비운 상태를 다시 채우고, 버려진 답변이 새 대화에 끼어든다.
+    esRef.current?.close();
+    esRef.current = null;
+    setIsStreaming(false);
     setMessages([]);
     setStreamText("");
+    setProgress(null);
   }, []);
 
-  return { messages, isStreaming, streamText, sendMessage, clearMessages, setMessages };
+  return {
+    messages, isStreaming, streamText, progress, sendMessage, clearMessages, setMessages,
+  };
 }

@@ -193,3 +193,107 @@ class TestFinalAnswerFromState:
         from api.agent_stream import _final_answer_from_state
         st = self._state(messages=[HumanMessage(content="질문")])
         assert _final_answer_from_state(st) is None
+
+
+class TestProgressStatusEvent:
+    """`status` 이벤트: 답변 첫 토큰 전에 진행 단계를 알려준다 (체감 지연 개선).
+
+    계약은 '추가만' 이다 — token/done 스트림은 그대로여야 하고, status 를 무시하는
+    클라이언트도 기존과 동일하게 동작해야 한다.
+    """
+
+    def test_stage_helper_maps_nodes(self):
+        from api.agent_stream import _stage_for
+
+        assert _stage_for("aggregate_answers", 0) == "writing"
+        assert _stage_for("self_check", 3) == "checking"
+        assert _stage_for("orchestrator", 0) == "searching"
+        # 도구 결과가 하나라도 있으면 같은 agent 노드도 '자료 확인'으로 올라간다
+        assert _stage_for("orchestrator", 2) == "reading"
+        # 모르는 노드도 죽지 않고 검색 단계로 떨어진다
+        assert _stage_for("", 0) == "searching"
+
+    def test_stream_emits_status_before_done(self, tmp_path):
+        """status 가 첫 토큰보다 먼저 나가고, done 페이로드 키는 그대로다."""
+        try:
+            from starlette.testclient import TestClient
+            import api.runtime as runtime  # noqa: F401
+        except ImportError as e:
+            pytest.skip(f"starlette or runtime deps missing: {e}")
+
+        app, _ = _build_test_app()
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.get(
+            "/api/chat/stream",
+            params={"question": "테스트", "session_id": TEST_SESSION_ID},
+            headers={"X-Test-Mode": "1"},
+        )
+        assert resp.status_code == 200
+        body = resp.text
+        assert "event: status" in body, "진행 상태 이벤트가 스트림에 없다"
+        assert "\"stage\"" in body
+        # done 이 아니라 첫 token 보다 앞서야 의미가 있다 — done 직전으로 옮겨도
+        # 통과하는 단언은 체감 개선을 전혀 보장하지 못한다.
+        first_status = body.index("event: status")
+        assert first_status < body.index("event: done")
+        if "event: token" in body:
+            assert first_status < body.index("event: token"), \
+                "status 는 첫 답변 토큰보다 먼저 나가야 대기 화면이 채워진다"
+
+    def _fake_graph(self, chunks):
+        """_run_turn 이 소비하는 최소 그래프 — (chunk, metadata) 시퀀스를 그대로 흘린다."""
+        from unittest.mock import MagicMock
+
+        graph = MagicMock()
+        state = MagicMock()
+        state.next = None
+        state.values = {"messages": []}
+        graph.get_state.return_value = state
+        graph.stream.return_value = iter(chunks)
+        return graph
+
+    def test_stage_machine_over_a_real_chunk_sequence(self):
+        """루프 내부까지 검증: 검색 → 자료 확인 → 답변 작성 순으로 한 번씩만 나간다."""
+        from unittest.mock import MagicMock
+
+        from langchain_core.messages import AIMessageChunk, ToolMessage
+        import api.agent_stream as ast_mod
+
+        chunks = [
+            (AIMessageChunk(content=""), {"langgraph_node": "orchestrator"}),
+            (ToolMessage(content="Parent ID: p1\n내용", tool_call_id="t1"),
+             {"langgraph_node": "tools"}),
+            (AIMessageChunk(content=""), {"langgraph_node": "orchestrator"}),
+            (AIMessageChunk(content="답변"), {"langgraph_node": "aggregate_answers"}),
+        ]
+        rs = MagicMock()
+        rs.agent_graph = self._fake_graph(chunks)
+        events = list(ast_mod._run_turn(rs, TEST_SESSION_ID, "질문", "tid"))
+
+        stages = [p["stage"] for k, p in events if k == "status"]
+        assert stages == ["searching", "reading", "writing"], stages
+        # 검색 횟수는 실행된 도구 호출 수 — 문서 건수가 아니다.
+        searches = [p["searches"] for k, p in events if k == "status"]
+        assert searches == [0, 1, 1], searches
+        assert any(k == "token" for k, _ in events), "토큰 스트림이 그대로 나가야 한다"
+
+    def test_stage_never_moves_backwards(self):
+        """답변 작성이 시작된 뒤 도착한 미지의 노드 청크가 단계를 되돌리면 안 된다."""
+        from unittest.mock import MagicMock
+
+        from langchain_core.messages import AIMessageChunk, ToolMessage
+        import api.agent_stream as ast_mod
+
+        chunks = [
+            (AIMessageChunk(content="답변"), {"langgraph_node": "aggregate_answers"}),
+            (AIMessageChunk(content=""), {"langgraph_node": "some_future_node"}),
+            (ToolMessage(content="늦게 온 도구 결과", tool_call_id="t2"),
+             {"langgraph_node": "tools"}),
+        ]
+        rs = MagicMock()
+        rs.agent_graph = self._fake_graph(chunks)
+        events = list(ast_mod._run_turn(rs, TEST_SESSION_ID, "질문", "tid"))
+
+        stages = [p["stage"] for k, p in events if k == "status"]
+        assert stages[-1] == "writing", stages
+        assert "searching" not in stages[1:] and "reading" not in stages, stages

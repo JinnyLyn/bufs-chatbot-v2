@@ -17,7 +17,7 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
   const lang = (rawLang === "en" ? "en" : "ko") as Lang;
 
   const { sessionId, loading } = useSession(lang);
-  const { messages, isStreaming, streamText, sendMessage, clearMessages } = useChat(sessionId);
+  const { messages, isStreaming, streamText, progress, sendMessage, clearMessages } = useChat(sessionId);
 
   const [sidebarOpen, setSidebarOpen] = useState(
     typeof window !== "undefined" ? window.innerWidth >= 1024 : false
@@ -87,7 +87,7 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
                   (streamText ? (
                     <StreamingMessage text={streamText} />
                   ) : (
-                    <ThinkingAnimation lang={lang} />
+                    <ThinkingAnimation lang={lang} progress={progress} />
                   ))}
                 <div ref={bottomRef} />
               </div>

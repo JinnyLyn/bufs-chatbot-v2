@@ -96,8 +96,9 @@ async def chat_stream(
 ):
     """GET /api/chat/stream?session_id=&question= → SSE.
 
-    Emits `token` (incremental), `done` (final payload) and `error` events, exactly
-    as the frontend `useChat` hook expects. `X-Test-Mode` header skips Q&A logging.
+    Emits `token` (incremental), `status` (coarse progress, purely informational),
+    `done` (final payload) and `error` events, exactly as the frontend `useChat` hook
+    expects. `X-Test-Mode` header skips Q&A logging.
     """
     # Order matters: reject cheaply before anything expensive. Rate limit first (a
     # flood costs nothing to refuse), then validate the id, then claim a GPU slot.
@@ -197,6 +198,10 @@ async def chat_stream(
                     yield {"event": "token", "data": json.dumps({"token": payload}, ensure_ascii=False)}
                 elif kind == "clear":
                     yield {"event": "clear", "data": "{}"}
+                elif kind == "status":
+                    # Progress only. A client that ignores this event still gets the
+                    # exact same token/done stream it got before.
+                    yield {"event": "status", "data": json.dumps(payload, ensure_ascii=False)}
                 elif kind == "done":
                     _finalize(tid, session_id, question, payload, t0)
                     yield {"event": "done", "data": json.dumps(payload, ensure_ascii=False)}

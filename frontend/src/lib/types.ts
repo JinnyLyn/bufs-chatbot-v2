@@ -52,6 +52,18 @@ export interface StreamDoneData {
   duration_ms: number;
 }
 
+// SSE `status` 이벤트 — 답변 생성 전 진행 상황(정보 전달용). 서버는 단계 키만 보내고
+// 문구와 번역은 프론트가 갖는다. 알 수 없는 단계 키는 무시하면 되고, 이벤트가 아예 오지
+// 않아도 기존 동작(제네릭 로딩 애니메이션) 그대로다.
+export const STREAM_STAGES = ["searching", "reading", "writing", "checking"] as const;
+export type StreamStage = (typeof STREAM_STAGES)[number];
+
+export interface StreamProgress {
+  stage: StreamStage;
+  /** 실행된 검색 횟수(문서 건수가 아님) — 답변 뒤 출처 목록 개수와는 다른 값이다. */
+  searches: number;
+}
+
 export type Lang = "ko" | "en";
 
 // 학사 리포트 분석 (GET /api/transcript/analysis)
