@@ -106,12 +106,24 @@ adopt_pid() {
     fi
 }
 
-# --- 0) Qdrant runs embedded (single-writer). A stale lock means an ingest or an old
-#        backend still holds the DB; starting a second writer fails at load time.
-if [ -e "$REPO/qdrant_db/.lock" ] && ! port_open "$BACKEND_PORT"; then
-    echo "[warn]  qdrant_db/.lock exists but nothing is on :$BACKEND_PORT."
-    echo "        If no ingest/reindex is running, remove it: rm $REPO/qdrant_db/.lock"
+# --- 0) Qdrant runs embedded (single-writer): a second writer fails at load time.
+#        The lock FILE always survives its owner (the lock itself is an OS-level
+#        advisory lock released when the process dies), so its mere presence is not a
+#        problem — every restart tripped the old warning between stop and start. Warn
+#        only when something actually holds it right now.
+_qlock="$REPO/qdrant_db/.lock"
+if [ -e "$_qlock" ] && ! port_open "$BACKEND_PORT"; then
+    _holders="$(lock_holders "$_qlock")" || _holders="?"
+    if [ "$_holders" = "?" ]; then
+        echo "[warn]  qdrant_db/.lock exists but nothing is on :$BACKEND_PORT (holder unknown: no /proc)."
+        echo "        If no ingest/reindex is running, remove it: rm $_qlock"
+    elif [ -n "$_holders" ]; then
+        echo "[warn]  qdrant_db is held by pid(s) $(echo "$_holders" | tr '\n' ' ')— an ingest/reindex"
+        echo "        or an old backend still owns it. The backend will fail to load until that stops."
+    fi
+    # Nobody holds it: leftover file, harmless — Qdrant reuses it. Say nothing.
 fi
+unset _qlock _holders
 
 # --- 1) Ollama (local H100 GPU) ---
 if [ "$OLLAMA_LOCAL" != 1 ]; then
