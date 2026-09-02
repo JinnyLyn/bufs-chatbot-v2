@@ -26,6 +26,30 @@ port_open() {
     return 1
 }
 
+# PIDs that currently hold $1 open, one per line; empty when nobody does.
+# Exists because a lock FILE outliving its owner says nothing: the embedded Qdrant
+# lock is an OS-level advisory lock that dies with the process, so "file present"
+# and "DB in use" are different questions and only the second one matters.
+# Reads /proc directly — no fuser/lsof dependency, no root. Returns 2 when the
+# answer is unknowable (no /proc), so callers can fall back instead of guessing.
+lock_holders() {
+    local target pid fd
+    [ -e "$1" ] || return 0
+    [ -d /proc ] || return 2
+    target="$(readlink -f -- "$1" 2>/dev/null || echo "$1")"
+    for pid in /proc/[0-9]*; do
+        for fd in "$pid"/fd/*; do
+            # Unreadable fds belong to other users' processes — never our writer.
+            [ -e "$fd" ] || continue
+            if [ "$(readlink -f -- "$fd" 2>/dev/null)" = "$target" ]; then
+                basename "$pid"
+                break
+            fi
+        done
+    done
+    return 0
+}
+
 wait_port() {
     local port="$1" timeout="${2:-60}" waited=0
     while [ "$waited" -lt "$timeout" ]; do
