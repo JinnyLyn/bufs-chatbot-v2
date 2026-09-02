@@ -26,27 +26,40 @@ port_open() {
     return 1
 }
 
-# PIDs that currently hold $1 open, one per line; empty when nobody does.
+# PIDs holding an advisory LOCK on $1, one per line; empty when nobody holds one.
 # Exists because a lock FILE outliving its owner says nothing: the embedded Qdrant
-# lock is an OS-level advisory lock that dies with the process, so "file present"
+# lock is an OS-level advisory lock released when the process dies, so "file present"
 # and "DB in use" are different questions and only the second one matters.
-# Reads /proc directly — no fuser/lsof dependency, no root. Returns 2 when the
-# answer is unknowable (no /proc), so callers can fall back instead of guessing.
+#
+# Reads /proc/locks — the kernel's own lock table, so it answers ownership, not mere
+# openness: a backup or a diagnostic that merely OPENS the file is not a holder and
+# must not raise the warning (a plain `cp -r qdrant_db` does exactly that). No
+# fuser/lsof dependency, no root. Returns 2 when the answer is unknowable (no
+# /proc/locks), so callers fall back instead of guessing.
+#
+# /proc/locks lines look like:
+#   117: FLOCK  ADVISORY  WRITE 625682 08:02:71833165 0 EOF
+#   118: -> POSIX ADVISORY WRITE 900 08:02:71833165 0 EOF     ← blocked waiter
+# field 5 is the pid and field 6 is MAJ:MIN:INODE (hex device, decimal inode).
+# An OFD lock reports pid -1 (owned by an open file description, not a process);
+# it still means the DB is in use, so it is reported as "?".
 lock_holders() {
-    local target pid fd
+    local dev ino maj min key
     [ -e "$1" ] || return 0
-    [ -d /proc ] || return 2
-    target="$(readlink -f -- "$1" 2>/dev/null || echo "$1")"
-    for pid in /proc/[0-9]*; do
-        for fd in "$pid"/fd/*; do
-            # Unreadable fds belong to other users' processes — never our writer.
-            [ -e "$fd" ] || continue
-            if [ "$(readlink -f -- "$fd" 2>/dev/null)" = "$target" ]; then
-                basename "$pid"
-                break
-            fi
-        done
-    done
+    [ -r /proc/locks ] || return 2
+    dev="$(stat -c %d -- "$1" 2>/dev/null)" || return 2
+    ino="$(stat -c %i -- "$1" 2>/dev/null)" || return 2
+    # glibc st_dev encoding → the major:minor pair the kernel prints.
+    maj=$(( ((dev >> 8) & 0xfff) | ((dev >> 32) & ~0xfff) ))
+    min=$(( (dev & 0xff) | ((dev >> 12) & ~0xff) ))
+    key="$(printf '%02x:%02x:%d' "$maj" "$min" "$ino")"
+    awk -v key="$key" '
+        {
+            # A blocked waiter prints "->" as the second field, shifting the rest.
+            i = ($2 == "->") ? 1 : 0
+            if ($(6 + i) == key) print ($(5 + i) == "-1") ? "?" : $(5 + i)
+        }
+    ' /proc/locks | sort -u
     return 0
 }
 
