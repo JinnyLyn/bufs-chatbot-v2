@@ -6,5 +6,5 @@ CamChat Next.js chat UI expects:
 
   POST /api/session            -> create a session (session_id == LangGraph thread_id)
   GET  /api/session/{id}       -> session info
-  GET  /api/chat/stream        -> SSE: token / clear / done / error events
+  GET  /api/chat/stream        -> SSE: token / clear / status / done / error events
 """

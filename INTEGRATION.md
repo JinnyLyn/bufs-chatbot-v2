@@ -24,9 +24,11 @@ auth, transcript / academic-report analysis, and the quick-shortcut panels.
 - `POST /api/session` mints a `session_id` that is used directly as the LangGraph
   **thread_id** (so each browser tab is an isolated multi-turn conversation).
 - `GET /api/chat/stream` runs the agent in a worker thread and streams Server-Sent
-  Events: `token` (answer text), `done` (`{answer, source_urls, results, intent,
-  duration_ms}`), `error`. Only the final `aggregate_answers` node's tokens are
-  surfaced as the answer; earlier reasoning stays hidden behind the “thinking” UI.
+  Events: `token` (answer text), `status` (`{stage, searches}` — coarse progress,
+  informational only), `done` (`{answer, source_urls, results, intent, duration_ms}`),
+  `error`. Only the final `aggregate_answers` node's tokens are surfaced as the answer;
+  earlier reasoning stays hidden behind the “thinking” UI, which now labels itself with
+  the current `status` stage instead of showing a blank wait.
 - Retrieved documents are parsed out of the agent's tool output into `results` for
   the Source panel (`project/api/sources.py`).
 
