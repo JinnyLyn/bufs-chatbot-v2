@@ -83,3 +83,9 @@ htmlcov/
 
 # box-local service env for scripts/ (CUDA MIG slice etc.) — never commit
 scripts/env.local
+
+# 평가·성능 리포트는 생성물이다 — 측정할 때마다 바뀌고, 커밋하면 diff가 무의미하게 커진다.
+# (WORKFLOW.md/CLAUDE.md의 "생성물은 커밋하지 않는다" 규칙과 같은 취지)
+REPORT_*.md
+REPORT_*.docx
+REPORT_*.pdf
