@@ -56,7 +56,7 @@
 
 ## 성능 (평가 결과)
 
-`bufs-chatbot`의 `combined88`(89문항: 답변가능 81 + 문서밖 8)로 룰기반 + RAGAS + Langfuse 분석. 자세한 내용은 [REPORT_결과.md](REPORT_결과.md) · [REPORT_vs_BUFS.md](REPORT_vs_BUFS.md).
+`bufs-chatbot`의 `combined88`(89문항: 답변가능 81 + 문서밖 8)로 룰기반 + RAGAS + Langfuse 분석. 자세한 내용은 [reports/REPORT_결과.md](reports/REPORT_결과.md) · [reports/REPORT_vs_BUFS.md](reports/REPORT_vs_BUFS.md). 장애 대응 계획은 [reports/REPORT_장애대응.md](reports/REPORT_장애대응.md).
 
 | 지표 | **신규 (H100+무압축+빠른거부)** | 기존 BUFS-CHATBOT |
 |---|---|---|
@@ -125,7 +125,7 @@ KB 문서 추가·제거(학기/연도 전환)는 [KB_MANAGEMENT.md](KB_MANAGEME
 ├── qdrant_db/ parent_store/  # 벡터DB + parent 청크 (커밋됨)
 ├── eval_tools/               # 평가/분석 하니스 (룰기반·RAGAS·Langfuse)
 ├── scripts/                  # 기동/중지/헬스체크(.ps1=Windows, .sh=Linux)/롤백/배포/KB 문서동기화(doc_sync.sh)
-├── REPORT_결과.md / REPORT_vs_BUFS.md   # 평가·비교 보고서
+├── reports/                  # 보고서 (성능 REPORT_결과 · 비교 REPORT_vs_BUFS · 장애대응) + 생성 스크립트
 └── INTEGRATION.md            # 통합·운영 가이드
 ```
 

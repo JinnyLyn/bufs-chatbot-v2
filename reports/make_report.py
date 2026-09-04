@@ -1,4 +1,4 @@
-"""REPORT_결과.md + REPORT_결과.docx 동시 생성 — 같은 내용 구조에서 두 형식을 뽑는다.
+"""reports/REPORT_결과.md + reports/REPORT_결과.docx 동시 생성 — 같은 내용 구조에서 두 형식을 뽑는다.
 
 비전공자(행정 담당자)가 읽는 문서라 기술 용어는 뜻을 붙이고, 수치는 근거와 함께 적는다.
 """
@@ -9,7 +9,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 
-REPO = Path("/home/team_b/camchat")
+REPO = Path(__file__).resolve().parents[1]
+REPORTS = REPO / "reports"
 DATE = "2026-09-02"
 # 측정 시점의 서비스 버전. HEAD 를 읽으면 문서만 고쳐도 값이 바뀌어 실제 측정 대상과
 # 어긋나므로, 재측정할 때만 손으로 갱신한다.
@@ -375,7 +376,7 @@ def build_md(path: Path):
 
 
 if __name__ == "__main__":
-    build_md(REPO / "REPORT_결과.md")
-    build_docx(REPO / "REPORT_결과.docx")
-    print("생성 완료:", (REPO / "REPORT_결과.md").stat().st_size,
-          (REPO / "REPORT_결과.docx").stat().st_size)
+    build_md(REPORTS / "REPORT_결과.md")
+    build_docx(REPORTS / "REPORT_결과.docx")
+    print("생성 완료:", (REPORTS / "REPORT_결과.md").stat().st_size,
+          (REPORTS / "REPORT_결과.docx").stat().st_size)

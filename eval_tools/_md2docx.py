@@ -5,7 +5,9 @@ from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-FILES = ["REPORT_결과.md", "REPORT_vs_BUFS.md"]
+REPORTS_DIR = "reports"
+DEFAULT_FILES = [f"{REPORTS_DIR}/REPORT_결과.md", f"{REPORTS_DIR}/REPORT_vs_BUFS.md",
+                 f"{REPORTS_DIR}/REPORT_장애대응.md"]
 
 
 def add_runs(p, text):
@@ -81,5 +83,7 @@ def convert(md_path):
     doc.save(out); return out
 
 
-for f in FILES:
-    print("wrote", convert(f))
+if __name__ == "__main__":
+    # Usage: python eval_tools/_md2docx.py [report.md ...]  (default: every report in reports/)
+    for f in sys.argv[1:] or DEFAULT_FILES:
+        print("wrote", convert(f))
