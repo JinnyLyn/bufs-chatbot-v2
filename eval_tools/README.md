@@ -59,7 +59,7 @@ python -m eval_tools.kpi baseline-update --profile h100-fast --from-predictions 
 - `_verify_fixes.py` / `_test_fastrefuse.py` — 학사일정/졸업 수정, 빠른거부 포커스 검증.
 - `_langfuse_drill.py` — 느린 트레이스 노드 타임라인 드릴다운.
 - `_eval_runner.py` — 초기 eval_ko 서브셋 러너.
-- `_md2docx.py` — `REPORT_*.md` → `.docx` 변환.
+- `_md2docx.py` — `reports/REPORT_*.md` → `.docx` 변환 (인자로 파일 지정 가능).
 
 ## 채점 메모
 - **qa100(1순위)** — 룰 레이어는 **`must_not_include` 가드만** 적용(금지어가 답변에 substring으로 있으면 `VIOLATION`, 없으면 `CLEAN`, 공백 무시). `must_include`는 룰 채점하지 않음 — 정확도는 RAGAS가 `expected_answer` 기준으로 판정. 거부 휴리스틱이 없어 "불가"/"없습니다"가 정답에 있어도 위반 처리 안 됨(false-refusal 버그 구조적 차단). **gold 자기일관성**: 모든 `expected_answer`가 자기 `must_not_include`를 통과해야 함(`tests/eval/`가 강제). `tokens_present`(어절 AND)는 `_answer_analysis` 귀인 진단 전용.
