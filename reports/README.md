@@ -7,6 +7,7 @@
 | `REPORT_결과.md` / `.docx` | 성능 점검 보고서 (정확도·RAGAS·부하 시험·타 대학 비교) |
 | `REPORT_vs_BUFS.md` / `.docx` | 신규 agentic-RAG vs 기존 BUFS-CHATBOT 비교 |
 | `REPORT_장애대응.md` / `.docx` | 장애 시나리오별 대응 방안과 시행 계획 |
+| `emergency_plan.md` | 장애 대응 보고서의 바탕이 된 팀 플랜 메모 (원본) |
 
 ## 다시 만들기
 
