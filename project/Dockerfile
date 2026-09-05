@@ -1,7 +1,7 @@
 # Pinned by digest, not by the `3.14` tag: a floating tag means two builds of this same
 # file can produce different base contents, so an upstream compromise or regression
 # propagates silently. Refresh the digest deliberately when bumping the base.
-FROM python:3.14@sha256:b0aed0e0059e9b1527ef57689a7206f32526627b0713e2228a916df62880188a
+FROM python:3.14@sha256:8edbf9e42c7fb168b9c523718ed907117e6d2e60f5889c0c499bbda3a787da53
 # NOTE: This image builds the LEGACY Gradio demo (project/app.py, port 7860).
 #       It is NOT the production FastAPI + Next.js stack.
 #
