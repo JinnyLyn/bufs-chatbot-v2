@@ -29,6 +29,34 @@ units_installed() {
     systemctl --user cat camchat.target >/dev/null 2>&1
 }
 
+# Interpreter for the backend: an explicit PYTHON wins, else the repo venv, else python3 —
+# and it must import fastapi, or the backend would crash at startup (bare python3 on this
+# box is miniconda without the app's deps). Sets PYTHON; returns 1 with a message otherwise.
+resolve_python() {
+    if [ -z "${PYTHON:-}" ] && [ -x "$REPO/.venv/bin/python" ]; then PYTHON="$REPO/.venv/bin/python"; fi
+    PYTHON="${PYTHON:-python3}"
+    if ! "$PYTHON" -c 'import fastapi' >/dev/null 2>&1; then
+        echo "[error] '$PYTHON' cannot import fastapi — the backend would crash at startup." >&2
+        echo "        Expected the repo venv at $REPO/.venv (create it, or set PYTHON=...)." >&2
+        return 1
+    fi
+    return 0
+}
+
+# The Next.js standalone bundle ships only server code; Next expects .next/static and
+# public/ copied in alongside server.js. Remove the previous copies first — `cp -r src dst`
+# nests into an existing dst (static/static) instead of replacing it.
+stage_standalone() {
+    local fe="$REPO/frontend" sa="$REPO/frontend/.next/standalone"
+    mkdir -p "$sa/.next"
+    rm -rf "$sa/.next/static"
+    cp -r "$fe/.next/static" "$sa/.next/static"
+    if [ -d "$fe/public" ]; then
+        rm -rf "$sa/public"
+        cp -r "$fe/public" "$sa/public"
+    fi
+}
+
 # Listening check with no external tools and no root: try to connect.
 port_open() {
     (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3<&- 3>&- && return 0

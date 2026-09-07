@@ -14,10 +14,7 @@ if [ ! -f "$SA/server.js" ]; then
     exit 1
 fi
 command -v node >/dev/null 2>&1 || { echo "[frontend] 'node' not on PATH (scripts/env.local PATH?)" >&2; exit 1; }
-mkdir -p "$SA/.next"
-rm -rf "$SA/.next/static"
-cp -r "$FRONTEND/.next/static" "$SA/.next/static"
-if [ -d "$FRONTEND/public" ]; then rm -rf "$SA/public"; cp -r "$FRONTEND/public" "$SA/public"; fi
+stage_standalone
 cd "$SA"
 echo "[frontend] starting standalone server on 127.0.0.1:$FRONTEND_PORT (build $(cat "$FRONTEND/.next/BUILD_ID" 2>/dev/null || echo '?'))"
 exec env PORT="$FRONTEND_PORT" HOSTNAME=127.0.0.1 node server.js

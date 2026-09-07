@@ -6,12 +6,7 @@ set -Eeuo pipefail
 # shellcheck source=scripts/_common.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
-if [ -z "${PYTHON:-}" ] && [ -x "$REPO/.venv/bin/python" ]; then PYTHON="$REPO/.venv/bin/python"; fi
-PYTHON="${PYTHON:-python3}"
-if ! "$PYTHON" -c 'import fastapi' >/dev/null 2>&1; then
-    echo "[backend] '$PYTHON' cannot import fastapi — expected the repo venv at $REPO/.venv" >&2
-    exit 1
-fi
+resolve_python || exit 1
 cd "$REPO"
 echo "[backend] starting on :$BACKEND_PORT ($(git rev-parse --short HEAD 2>/dev/null || echo '?'))"
 exec env PORT="$BACKEND_PORT" "$PYTHON" project/server.py
