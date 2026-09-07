@@ -13,6 +13,14 @@ host="$(hostname -s 2>/dev/null || echo host)"
 stamp="$(date '+%Y-%m-%d %H:%M:%S')"
 line="[$stamp] $title — ${body//$'\n'/ | }"
 echo "$line" >>"$LOG_DIR/alerts.log"
+# The same title within ALERT_DEDUPE_S (default 10 min) stays in the log only — a unit
+# crash-looping 10 times must not post 10 webhook messages.
+dedupe="${ALERT_DEDUPE_S:-600}"; last="$RUN_DIR/alert.last"; nowts="$(date +%s)"
+if [ -f "$last" ] && [ "$(sed -n 1p "$last")" = "$title" ] && [ $((nowts - $(sed -n 2p "$last"))) -lt "$dedupe" ]; then
+    echo "[alert] (deduped within ${dedupe}s) $line"
+    exit 0
+fi
+printf '%s\n%s\n' "$title" "$nowts" >"$last"
 url="${ALERT_WEBHOOK_URL:-}"
 if [ -z "$url" ]; then
     echo "[alert] (no ALERT_WEBHOOK_URL) $line"
