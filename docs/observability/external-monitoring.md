@@ -11,6 +11,7 @@
 | CamChat API | HTTP(s) | `https://maruvis.kr/api/health` | 200, 본문 `{"status":"ok"}` | Cloudflare → Tunnel → 백엔드 경로. 백엔드가 죽거나 뜨는 중이면 5xx/타임아웃 |
 
 - 알림 연락처: 운영 담당자 이메일 + 앱 푸시(UptimeRobot 앱). 필요하면 같은 Discord/Slack 웹훅(`ALERT_WEBHOOK_URL`)도 연결.
+- UptimeRobot 무료 플랜의 HTTP(s) 모니터는 **HEAD** 로 찍는다(요청 방식 변경 불가). `/api/health` 는 GET·HEAD 둘 다 200 을 준다(2026-09-08 수정 전에는 HEAD 가 405 라 계속 Down 으로 떴음).
 - 키워드 모니터를 쓸 경우 페이지 쪽은 `대학 학사정보 전용 안내 챗봇`(랜딩 문구), API 쪽은 `"status":"ok"`.
 - `/api/health` 는 **백엔드 프로세스가 살아 있으면** 200 이다 — ollama 가 멈춰 답변이 안 나오는 상황은 외부 모니터에 안 잡힌다. 그 부류는 서버 안의 healthcheck 타이머(`/health/llm` 검사 + 웹훅 알림)가 맡는다. 그래서 `ALERT_WEBHOOK_URL` 이 실제로 설정돼 있어야 한다.
 - `/api/health` 는 내부 정보를 노출하지 않는다. 모델·GPU·경로가 보이는 `/health`, `/health/llm` 은 터널 밖으로 나가지 않는다(`/api/` 만 백엔드로 라우팅).
