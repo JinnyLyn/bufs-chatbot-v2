@@ -31,11 +31,13 @@ id = "75dd6059612a42699d7c759cdc703872"
 # only. Keep this list in step with frontend/src/app.
 #
 # Route-pattern rules (Cloudflare): a wildcard may only START a hostname or END a path — no
-# infix wildcards — and the query string is part of the match, so "maruvis.kr/" alone would
-# not match "maruvis.kr/?utm=…". Hence the explicit pairs below.
+# infix wildcards, no "?" in a pattern — and the query string is part of the match. The
+# trailing "*" on the chat routes therefore covers "/ko/chat", "/ko/chat/" and "/ko/chat?x".
+# Accepted gap: "maruvis.kr/?utm=…" (root WITH a query string) cannot be expressed without
+# routing everything ("maruvis.kr/*"); students reach the site at the bare root or the chat
+# URL, so the narrow list wins. [lang] values other than ko/en are not listed either.
 routes = [
   { pattern = "maruvis.kr/", zone_name = "maruvis.kr" },
-  { pattern = "maruvis.kr/?*", zone_name = "maruvis.kr" },
   { pattern = "maruvis.kr/ko/chat*", zone_name = "maruvis.kr" },
   { pattern = "maruvis.kr/en/chat*", zone_name = "maruvis.kr" },
 ]

@@ -112,11 +112,22 @@ export async function handle(request, env, originFetch = fetch) {
   return res;
 }
 
+/** Fallback target for fail-open: the origin, or the request itself if even that fails. */
+function originOrSelf(request, env) {
+  try {
+    return toOrigin(request, env);
+  } catch {
+    return request;
+  }
+}
+
 export default {
   // Fail open: if the Worker itself throws (a bad edit, a binding swap), the request goes
   // straight to the origin instead of every maruvis.kr URL becoming a Cloudflare 1101.
-  // The route's own "fail open" switch (dashboard) covers the quota case — see README.
+  // Re-pointing at ORIGIN_HOST matters on the workers.dev preview, where fetching the raw
+  // request would be the Worker calling itself. The route's own "fail open" switch
+  // (dashboard) covers the quota case — see README.
   fetch(request, env) {
-    return handle(request, env).catch(() => fetch(request));
+    return handle(request, env).catch(() => fetch(originOrSelf(request, env)));
   },
 };

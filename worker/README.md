@@ -1,7 +1,7 @@
 # worker/ — maruvis.kr 장애 안내 Worker
 
-Cloudflare Worker 하나가 `maruvis.kr/*` 앞단에 서서, **서버(터널·프론트엔드) 자체에 접속할 수
-없을 때** 학생에게 Cloudflare 기본 영문 오류 화면 대신 한국어 안내 페이지를 보여 준다.
+Cloudflare Worker 하나가 maruvis.kr 의 **페이지 URL**(`/`, `/ko/chat*`, `/en/chat*`) 앞단에 서서, **서버(터널·
+프론트엔드) 자체에 접속할 수 없을 때** 학생에게 Cloudflare 기본 영문 오류 화면 대신 한국어 안내 페이지를 보여 준다.
 근거: `reports/CamChat-장애대응.pdf` §11–§12 (현재 요금제에서 Custom Errors 사용 불가). PDF 는 PR #289 와
 함께 들어오며, 그 전에는 초안 `reports/REPORT_장애대응.md` 의 "상황 2" 절을 본다.
 
@@ -9,7 +9,7 @@ Cloudflare Worker 하나가 `maruvis.kr/*` 앞단에 서서, **서버(터널·�
 
 | 요청 | 정상 | 원본 서버 응답 불가(fetch 실패 또는 502/503/504/52x/530) |
 |---|---|---|
-| 페이지 이동(GET/HEAD, `Sec-Fetch-Dest: document` 또는 `Accept: text/html`) | 그대로 전달 | **HTTP 503 + `Retry-After: 300` + 안내 HTML** |
+| 페이지 이동(GET/HEAD, `Sec-Fetch-Dest: document`/`iframe`/`frame` 또는 `Accept: text/html`) | 그대로 전달 | **HTTP 503 + `Retry-After: 300` + 안내 HTML** |
 | `/api/*`, `/_next/*`, 정적 파일, AI 답변 스트림 | 운영 라우트에 포함되지 않아 Worker 를 거치지 않음 (preview 에서는 그대로 전달) | 프론트엔드가 자체 안내를 띄운다 |
 
 - 안내 페이지: "챗봇 점검 중입니다 / 현재 일시적으로 서비스에 접속할 수 없습니다…" + 학사지원팀
@@ -81,7 +81,7 @@ npx wrangler kv key delete --binding OUTAGE --env "" --remote maintenance
 운영 라우트 바인딩(이 순간부터 maruvis.kr 트래픽이 Worker 를 거친다):
 
 ```bash
-npm run deploy            # = wrangler deploy --env production  (routes = maruvis.kr/*)
+npm run deploy            # = wrangler deploy --env production  (routes = /, /ko/chat*, /en/chat*)
 curl -sI https://maruvis.kr/ko/chat | head -1     # 200 이어야 한다
 curl -s -X POST -H 'Content-Type: application/json' -d '{"lang":"ko"}' https://maruvis.kr/api/session   # 백엔드 JSON 그대로
 ```
@@ -107,7 +107,9 @@ npm run tail                 # 실시간 로그 (X-CamChat-Outage 헤더로 사�
 - **Fail open**: Worker 코드가 예외를 던지면 요청을 그대로 원본으로 보낸다(`index.js` 기본 export). 무료 요금제
   일일 요청 한도(10만) 초과 시에도 사이트가 막히지 않도록, 대시보드 Workers Routes 의 해당 라우트에서
   **"Fail open"** 을 켜 둔다(기본은 fail closed = Error 1027). 라우트 바인딩 직후 1회 확인.
-- **라우트 범위**: 페이지 URL(`/`, `/?*`, `/ko/chat*`, `/en/chat*`)만 Worker 를 거친다. `/api/*`·`/_next/*`·정적
-  파일은 Worker 없이 터널로 직행하므로 답변 스트림은 재배포 유예의 영향을 받지 않는다. 프론트에 페이지
-  라우트가 늘면 `wrangler.toml` 의 routes 도 같이 늘린다. Cloudflare 라우트 패턴은 와일드카드를 경로 끝에만
-  둘 수 있고(중간 불가) 쿼리 문자열까지 매칭하므로 `/` 와 `/?*` 를 따로 적는다.
+- **라우트 범위**: 페이지 URL(`/`, `/ko/chat*`, `/en/chat*`)만 Worker 를 거친다. `/api/*`·`/_next/*`·정적 파일은
+  Worker 없이 터널로 직행하므로 답변 스트림은 재배포 유예의 영향을 받지 않는다. 프론트에 페이지 라우트가
+  늘면 `wrangler.toml` 의 routes 도 같이 늘린다. Cloudflare 라우트 패턴은 와일드카드를 경로 끝에만 둘 수 있고
+  (중간·`?` 불가) 쿼리 문자열까지 매칭한다 — 그래서 `/ko/chat*` 는 `/ko/chat/`·`/ko/chat?x` 까지 잡지만,
+  **`maruvis.kr/?utm=…` 처럼 루트에 쿼리가 붙은 URL 은 잡지 못한다**(전부 라우팅하는 `maruvis.kr/*` 로만 가능).
+  학생은 루트나 챗 URL 로 들어오므로 감수한다.

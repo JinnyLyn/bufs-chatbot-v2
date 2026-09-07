@@ -107,13 +107,18 @@ test("maintenance flag off / missing binding / KV failure → normal pass-throug
 
 test("fail open: if the handler throws, the request still reaches the origin", async () => {
   const original = globalThis.fetch;
-  globalThis.fetch = async () => new Response("origin", { status: 200 });
+  const seen = [];
+  globalThis.fetch = async (r) => { seen.push(r.url); return new Response("origin", { status: 200 }); };
   try {
-    // env without ORIGIN_HOST makes toOrigin a no-op; a KV binding whose get() is not a
-    // function throws synchronously inside handle() — outside its try blocks.
-    const res = await worker.fetch(req("/", { headers: PAGE }), { OUTAGE: {} });
+    // A binding whose mere property read throws ("binding swap") escapes every try block in
+    // handle(): maintenanceOn touches env.OUTAGE before its try, so handle() rejects.
+    const env = { ORIGIN_HOST: "maruvis.kr", get OUTAGE() { throw new Error("binding swap"); } };
+    await assert.rejects(() => handle(req("/", { headers: PAGE }), env, originReturning(200)));
+    const res = await worker.fetch(new Request("https://camchat-outage.example.workers.dev/ko/chat", { headers: PAGE }), env);
     assert.equal(res.status, 200);
     assert.equal(await res.text(), "origin");
+    // and the fallback went to the origin host, not back to the Worker's own hostname
+    assert.deepEqual(seen, ["https://maruvis.kr/ko/chat"]);
   } finally {
     globalThis.fetch = original;
   }
