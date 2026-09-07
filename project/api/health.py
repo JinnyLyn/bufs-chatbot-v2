@@ -36,6 +36,17 @@ def health():
     return {"status": "ok", **get_runtime_info()}
 
 
+@router.get("/api/health")
+def health_public():
+    """External-monitor probe (UptimeRobot etc.), reachable through the tunnel's /api/ ingress.
+
+    Deliberately says nothing beyond "up": no model name, paths, GPU or env details
+    (reports/CamChat-장애대응.pdf §5). Uvicorn only serves requests after startup, so a
+    200 here means the app finished loading (embedding model + graph).
+    """
+    return {"status": "ok"}
+
+
 @router.get("/health/llm")
 def health_llm():
     """Loaded models + GPU offload % from the configured Ollama (local :11435 vs remote)."""

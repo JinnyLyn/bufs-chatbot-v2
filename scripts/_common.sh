@@ -20,6 +20,15 @@ mkdir -p "$LOG_DIR"/{ollama,backend,frontend} "$RUN_DIR"
 # shellcheck disable=SC1091
 [ -f "$_COMMON_DIR/env.local" ] && . "$_COMMON_DIR/env.local"
 
+# True when the per-process systemd user units (scripts/systemd/, installed by
+# scripts/install-units.sh) are present. start/stop/restart-all.sh then delegate to
+# systemctl instead of spawning processes themselves, so there is exactly one way the
+# stack runs on a box: either the units own the processes, or the scripts do.
+units_installed() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    systemctl --user cat camchat.target >/dev/null 2>&1
+}
+
 # Listening check with no external tools and no root: try to connect.
 port_open() {
     (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3<&- 3>&- && return 0

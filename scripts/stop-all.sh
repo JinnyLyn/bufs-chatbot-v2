@@ -40,6 +40,16 @@ case "${1:-}" in
         echo "usage: $0 [--with-ollama]" >&2; exit 2 ;;
 esac
 
+# systemd units installed? stop through them (see start-all.sh / install-units.sh).
+if units_installed; then
+    units=(camchat-frontend.service camchat-backend.service)
+    [ "${1:-}" = "--with-ollama" ] && [ "$OLLAMA_LOCAL" = 1 ] && units+=(camchat-ollama.service)
+    echo "[units] stopping ${units[*]} via systemd"
+    systemctl --user stop "${units[@]}"
+    [ "${1:-}" = "--with-ollama" ] || echo "Note: Ollama left running (model stays warm in VRAM). Use --with-ollama to stop it too."
+    exit 0
+fi
+
 # What the recorded PID's command line must contain, per service (see start-all.sh):
 #   frontend → node server.js (standalone, renames argv to "next-server") or npm run dev;
 #   backend → python project/server.py.

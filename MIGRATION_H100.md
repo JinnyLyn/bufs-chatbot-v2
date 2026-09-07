@@ -238,42 +238,31 @@ cloudflared tunnel --config ~/.cloudflared/config.yml run <uuid>
 > 도메인이 다르므로 옛 터널과 경합하진 않지만, 옛 PC의 cloudflared 서비스가 살아
 > 있으면 `maruvis.co.kr`로 옛 배포가 계속 노출된다 — 2-1절대로 정지시킬 것.
 
-### 3-6. 자동 시작 (`register-autostart.ps1` 대체)
+### 3-6. 자동 시작·자동 복구 (`register-autostart.ps1` 대체)
 
-**root/sudo가 있으면** systemd 시스템 유닛, **없으면**(공유 서버에서 흔함) systemd `--user`:
-
-```bash
-loginctl enable-linger "$USER"     # 로그아웃 후에도 유지
-mkdir -p ~/.config/systemd/user
-```
-
-`~/.config/systemd/user/agentic-rag.service`:
-
-```ini
-[Unit]
-Description=Agentic RAG stack (Ollama + FastAPI + Next.js)
-# NOTE: user 매니저에는 network-online.target이 없어 네트워크 대기 지시가 사실상
-# 불가능하다. 부팅 직후 네트워크가 늦게 올라와 Langfuse/HF 접속이 실패하면
-# systemctl --user restart agentic-rag 로 재기동하면 된다 (스크립트는 멱등).
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=%h/agentic-rag-for-dummies-main
-ExecStart=%h/agentic-rag-for-dummies-main/scripts/start-all.sh
-ExecStop=%h/agentic-rag-for-dummies-main/scripts/stop-all.sh
-TimeoutStartSec=600
-
-[Install]
-WantedBy=default.target
-```
+프로세스별 systemd `--user` 유닛을 쓴다(2026-09, 장애 대응 보고서 §4). 유닛 파일은 레포의
+`scripts/systemd/` 에 있고 `scripts/install-units.sh` 가 `~/.config/systemd/user/` 로 복사·활성화한다.
 
 ```bash
-systemctl --user daemon-reload
-systemctl --user enable --now agentic-rag.service
+loginctl enable-linger "$USER"        # 로그아웃 후에도 유지 (1회)
+scripts/install-units.sh              # 유닛 복사 + daemon-reload + enable
+scripts/install-units.sh --switch     # 예전 one-shot agentic-rag.service 에서 갈아탈 때 (ollama 재로드 포함)
 ```
 
-systemd를 쓸 수 없으면 `tmux new -d -s rag './scripts/start-all.sh'`로도 충분하다.
+| 유닛 | 역할 | 복구 |
+|---|---|---|
+| `camchat.target` | 스택 전체 핸들 (`systemctl --user start/stop/status camchat.target`) | — |
+| `camchat-ollama.service` | 팀 소유 ollama(:11500, MIG 슬라이스) | `Restart=on-failure` |
+| `camchat-backend.service` | FastAPI :8000 (`scripts/run-backend.sh`) | `Restart=on-failure`, 10분에 5회 제한 |
+| `camchat-frontend.service` | Next.js standalone :3000 (`scripts/run-frontend.sh`, 시작 때 static 스테이징) | `Restart=on-failure`, 10분에 5회 제한 |
+| `camchat-healthcheck.timer` | 2분마다 `scripts/healthcheck-cron.sh` | 2회 연속 실패 → 백엔드·프론트 재기동, 1시간 3회 초과 시 중단 + 알림 |
+
+- 로그는 그대로 `logs/<svc>/` 에 append 되고(`journalctl --user -u camchat-backend` 도 됨), healthcheck 는 `logs/healthcheck.log`, 알림은 `logs/alerts.log`.
+- 알림 웹훅(Discord/Slack): `scripts/env.local` 에 `export ALERT_WEBHOOK_URL=https://…` 한 줄. 없으면 로그만 남긴다. 인증정보라 Git 에 넣지 않는다.
+- 기존 스크립트는 그대로 쓴다: 유닛이 깔려 있으면 `start-all.sh`/`stop-all.sh`/`restart-all.sh` 가 systemctl 로 위임하고, `doc_sync.sh --restart` 는 백엔드 유닛만 내렸다 올린다. **배포는 여전히 `./scripts/restart-all.sh`** (프론트 재빌드 → 유닛 재기동 → /health 확인).
+- user 매니저에는 network-online.target 이 없다. 부팅 직후 네트워크가 늦어 Langfuse/HF 접속이 실패하면 `Restart=on-failure` 가 다시 띄운다.
+
+systemd를 쓸 수 없으면 유닛 없이 `./scripts/start-all.sh` 가 예전처럼 프로세스를 직접 띄운다(`tmux new -d -s rag './scripts/start-all.sh'`).
 
 ---
 

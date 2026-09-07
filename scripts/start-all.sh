@@ -43,6 +43,26 @@ BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 derive_ollama_port
 START_OLLAMA="${START_OLLAMA:-auto}"
+
+# --- systemd units installed? then they own the processes ---------------------
+# (scripts/systemd/, see install-units.sh). Starting them here keeps this script the
+# one entry point; the readiness probes below still apply.
+if units_installed; then
+    echo "[units] camchat.target is installed — starting via systemd (per-process Restart=on-failure)"
+    systemctl --user start camchat.target
+    ok=0
+    curl -fsS -o /dev/null --max-time 5 "http://127.0.0.1:$BACKEND_PORT/health" 2>/dev/null || {
+        waited=0; while [ "$waited" -lt 300 ]; do
+            curl -fsS -o /dev/null --max-time 5 "http://127.0.0.1:$BACKEND_PORT/health" 2>/dev/null && break
+            systemctl --user is-active --quiet camchat-backend.service || { echo "[fail]  camchat-backend.service is not running — journalctl --user -u camchat-backend" >&2; ok=1; break; }
+            sleep 3; waited=$((waited + 3))
+        done
+        [ "$waited" -ge 300 ] && ok=1
+    }
+    wait_port "$FRONTEND_PORT" 90 || ok=1
+    systemctl --user --no-pager --no-legend list-units 'camchat-*' | sed 's/^/        /'
+    exit "$ok"
+fi
 FRONTEND_MODE="${FRONTEND_MODE:-auto}"
 # Prefer the repo's own venv over whatever `python3` happens to resolve to.
 # Bare `python3` on this box resolves to miniconda, which has none of the app's

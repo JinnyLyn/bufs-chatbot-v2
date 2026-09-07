@@ -1,0 +1,19 @@
+# FastAPI backend (:8000). Restart=on-failure brings a crashed process back within 5 s;
+# more than 5 failures in 10 min stops the loop (the healthcheck timer then alerts).
+[Unit]
+Description=camchat backend (FastAPI)
+PartOf=camchat.target
+After=camchat-ollama.service
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/camchat
+ExecStart=%h/camchat/scripts/run-backend.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+StandardOutput=append:%h/camchat/logs/backend/server.out
+StandardError=append:%h/camchat/logs/backend/server.err

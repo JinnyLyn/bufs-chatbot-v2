@@ -1,0 +1,19 @@
+# Team-owned ollama on the MIG slice (:11500 per project/.env). Kept as its own unit so a
+# backend/frontend bounce never reloads the model; exits 0 (and stays down) when
+# project/.env points at a remote ollama. CUDA_VISIBLE_DEVICES comes from scripts/env.local.
+[Unit]
+Description=camchat ollama (team-owned, MIG slice)
+PartOf=camchat.target
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/camchat
+ExecStart=%h/camchat/scripts/run-ollama.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+KillMode=mixed
+StandardOutput=append:%h/camchat/logs/ollama/ollama.out
+StandardError=append:%h/camchat/logs/ollama/ollama.err
