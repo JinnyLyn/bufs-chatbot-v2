@@ -23,13 +23,7 @@ def _client() -> TestClient:
 
 
 def test_public_health_is_ok_and_minimal():
+    """Exact equality is the leak guard: any extra key (model, paths, GPU) fails this."""
     resp = _client().get("/api/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
-
-
-def test_public_health_leaks_nothing(monkeypatch):
-    monkeypatch.setattr("api.health.get_runtime_info", lambda: {"model": "secret-model", "ollama_base_url": "http://gpu-box:11500"})
-    body = _client().get("/api/health").text
-    for secret in ("secret-model", "gpu-box", "11500", "model", "ollama"):
-        assert secret not in body

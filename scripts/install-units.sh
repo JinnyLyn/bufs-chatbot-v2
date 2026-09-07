@@ -32,7 +32,13 @@ for f in "$REPO"/scripts/systemd/*; do
     echo "[install] $(basename "$f")"
 done
 systemctl --user daemon-reload
-systemd-analyze --user verify "$UNIT_DIR"/camchat*.service "$UNIT_DIR"/camchat.target "$UNIT_DIR"/camchat-healthcheck.timer 2>&1 | grep -v "^$" || true
+# Verify before enabling. A unit that does not parse must not be enabled/started.
+verify_out="$(systemd-analyze --user verify "$UNIT_DIR"/camchat*.service "$UNIT_DIR"/camchat.target "$UNIT_DIR"/camchat*.timer 2>&1)" && verify_rc=0 || verify_rc=$?
+[ -n "$verify_out" ] && printf '%s\n' "$verify_out"
+if [ "$verify_rc" -ne 0 ]; then
+    echo "[error] systemd-analyze verify failed (rc=$verify_rc) — fix the unit files before enabling." >&2
+    exit 1
+fi
 systemctl --user enable camchat.target camchat-healthcheck.timer camchat-logrotate.timer >/dev/null
 echo "[enable]  camchat.target + camchat-healthcheck.timer + camchat-logrotate.timer"
 

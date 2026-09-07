@@ -41,9 +41,10 @@ case "${1:-}" in
 esac
 
 # systemd units installed? stop through them (see start-all.sh / install-units.sh).
+# Same `targets` list as the process path below, mapped to unit names.
 if units_installed; then
-    units=(camchat-frontend.service camchat-backend.service)
-    [ "${1:-}" = "--with-ollama" ] && [ "$OLLAMA_LOCAL" = 1 ] && units+=(camchat-ollama.service)
+    units=()
+    for name in "${targets[@]}"; do units+=("camchat-$name.service"); done
     echo "[units] stopping ${units[*]} via systemd"
     systemctl --user stop "${units[@]}"
     [ "${1:-}" = "--with-ollama" ] || echo "Note: Ollama left running (model stays warm in VRAM). Use --with-ollama to stop it too."
