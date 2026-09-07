@@ -21,7 +21,7 @@ from sse_starlette.sse import EventSourceResponse
 import config
 from api.agent_stream import run_agent_stream
 from api.qa_logger import get_qa_logger, set_skip_log
-from api.ratelimit import StreamSlot, check_rate_limit, reject_if_saturated
+from api.ratelimit import BUSY_RETRY_AFTER_S, StreamSlot, check_rate_limit, reject_if_saturated
 from api.runtime import ensure_session
 from api.trace_context import new_trace_id, set_trace_id
 
@@ -144,10 +144,17 @@ async def chat_stream(
             # The response has already begun, so a status code is no longer available —
             # report saturation as a stream error instead.
             logger.info("[chat-BUSY] tid=%s all stream slots in use", tid)
+            # `code`/`retry_after` mirror the 503 + Retry-After the endpoint would have
+            # sent before the stream began, so the frontend can lock its retry button for
+            # the same interval (reports/CamChat-장애대응.pdf §7.4).
             yield {
                 "event": "error",
                 "data": json.dumps(
-                    {"message": "지금 처리 중인 질문이 많습니다. 잠시 후 다시 시도해 주세요."},
+                    {
+                        "message": "지금 처리 중인 질문이 많습니다. 잠시 후 다시 시도해 주세요.",
+                        "code": "busy",
+                        "retry_after": BUSY_RETRY_AFTER_S,
+                    },
                     ensure_ascii=False,
                 ),
             }

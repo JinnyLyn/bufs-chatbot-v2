@@ -1,5 +1,5 @@
 "use client";
-import { Menu, Globe, MessageSquare } from "lucide-react";
+import { Menu, MessageSquare } from "lucide-react";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
 
@@ -7,10 +7,9 @@ interface ChatHeaderProps {
   lang: Lang;
   title?: string;
   onToggleSidebar: () => void;
-  onToggleLang: () => void;
 }
 
-export default function ChatHeader({ lang, title, onToggleSidebar, onToggleLang }: ChatHeaderProps) {
+export default function ChatHeader({ lang, title, onToggleSidebar }: ChatHeaderProps) {
   const displayTitle = title || t(lang, "brand.name");
 
   return (
@@ -19,6 +18,7 @@ export default function ChatHeader({ lang, title, onToggleSidebar, onToggleLang 
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
+          aria-label={t(lang, "a11y.menu")}
           className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
         >
           <Menu className="w-5 h-5" />
@@ -37,16 +37,6 @@ export default function ChatHeader({ lang, title, onToggleSidebar, onToggleLang 
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Right */}
-      <div className="flex items-center gap-2 md:gap-3">
-        <button
-          onClick={onToggleLang}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[11px] font-bold transition-all text-slate-700"
-        >
-          <Globe className="w-3.5 h-3.5" /> {lang === "ko" ? "EN" : "KO"}
-        </button>
       </div>
     </header>
   );

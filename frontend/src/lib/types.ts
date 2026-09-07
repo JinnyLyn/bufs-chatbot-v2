@@ -1,6 +1,14 @@
+// 답변 요청이 실패한 이유. 문구는 i18n `chat.err.*` 에 있고(보고서 §16 확정 문구),
+// `busy` 만 다시 시도 버튼을 Retry-After 동안 잠근다.
+export type ChatErrorKind = "busy" | "timeout" | "disconnect" | "server";
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /** 실패 안내 말풍선. content 는 표시 문구, 다시 시도는 마지막 메시지일 때만 붙는다. */
+  errorKind?: ChatErrorKind;
+  /** 연결이 끊기기 전까지 받은 부분 답변. 다시 시도가 성공하면 걷어낸다. */
+  partial?: boolean;
   rated?: boolean;
   rating?: number;
   sourceUrls?: SourceURL[];

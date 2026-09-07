@@ -41,6 +41,10 @@ RATE_LIMIT_EXEMPT_LOOPBACK = os.environ.get("RATE_LIMIT_EXEMPT_LOOPBACK", "true"
 # Ceiling on chat streams generating at once, across all clients. The GPU serves these
 # sequentially anyway, so admitting more only grows the queue and every user's latency.
 MAX_CONCURRENT_STREAMS = int(os.environ.get("MAX_CONCURRENT_STREAMS", "8"))
+# Retry-After (seconds) sent with every "all slots busy" refusal — as a header on the
+# 503 and as `retry_after` in the in-stream busy error. The frontend locks its retry
+# button and composer for exactly this long (reports/CamChat-장애대응.pdf §7.4).
+BUSY_RETRY_AFTER_S = 10
 # Cap on tracked clients, so the limiter's own bookkeeping cannot be turned into the
 # memory-exhaustion primitive it exists to prevent.
 _MAX_TRACKED_CLIENTS = int(os.environ.get("RATE_LIMIT_MAX_CLIENTS", "20000"))
@@ -169,7 +173,7 @@ class StreamSlot:
                 raise HTTPException(
                     status_code=503,
                     detail="지금 처리 중인 질문이 많습니다. 잠시 후 다시 시도해 주세요.",
-                    headers={"Retry-After": "10"},
+                    headers={"Retry-After": str(BUSY_RETRY_AFTER_S)},
                 )
             _streams += 1
             self._held = True
@@ -214,7 +218,7 @@ def reject_if_saturated() -> None:
         raise HTTPException(
             status_code=503,
             detail="지금 처리 중인 질문이 많습니다. 잠시 후 다시 시도해 주세요.",
-            headers={"Retry-After": "10"},
+            headers={"Retry-After": str(BUSY_RETRY_AFTER_S)},
         )
 
 

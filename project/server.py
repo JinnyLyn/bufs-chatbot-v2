@@ -86,6 +86,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # The frontend reads Retry-After on 503/429 to lock its retry button. Same-origin
+    # (the production path: cloudflared routes /api here) does not need this; it only
+    # matters if a deployment ever serves the API cross-origin, which today also
+    # requires relaxing the frontend CSP's connect-src 'self'.
+    expose_headers=["Retry-After"],
 )
 
 app.include_router(session_router.router)

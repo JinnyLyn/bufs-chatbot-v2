@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from "react";
 import { Send } from "lucide-react";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
+import { QUESTION_MAX_CHARS } from "@/lib/constants";
 
 interface ChatInputProps {
   lang: Lang;
@@ -48,6 +49,7 @@ export default function ChatInput({ lang, onSend, disabled }: ChatInputProps) {
               onKeyDown={handleKeyDown}
               placeholder={t(lang, "chat.input_ph")}
               rows={1}
+              maxLength={QUESTION_MAX_CHARS}
               disabled={disabled}
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-6 pr-14 py-4 text-[15px] font-semibold resize-none focus:outline-none focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-400 transition-all disabled:opacity-50"
               style={{ maxHeight: "6rem", minHeight: "3.5rem" }}

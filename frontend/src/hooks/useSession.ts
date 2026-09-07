@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { SESSION_LOAD_TIMEOUT_MS } from "@/lib/constants";
 import type { Lang, SessionInfo, UserProfile } from "@/lib/types";
 
 // 2026-04-28: 세션을 매 페이지 로드마다 새로 생성 (새로고침/새 창 = 새 대화).
@@ -20,10 +21,11 @@ export function useSession(lang: Lang) {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const createSession = useCallback(async () => {
+  const createSession = useCallback(async (signal?: AbortSignal) => {
     const data = await apiFetch<SessionInfo>("/api/session", {
       method: "POST",
       body: JSON.stringify({ lang }),
+      signal,
     });
     setSessionId(data.session_id);
     setSession(data);
@@ -37,7 +39,9 @@ export function useSession(lang: Lang) {
       // 페이지 로드마다 항상 새 session 생성 — 새로고침/새 창 = 새 대화 (이전 history 무관).
       _clearLegacyCookie();
       try {
-        await createSession();
+        // 백엔드가 연결은 받고 답을 안 주면 스피너에 갇힌다. 시간을 정해 두고 화면을 연다 —
+        // 세션은 첫 질문을 보낼 때 useChat 이 (무진행 타이머 안에서) 다시 만든다.
+        await createSession(AbortSignal.timeout(SESSION_LOAD_TIMEOUT_MS));
       } catch {
         // ignore — chat 첫 호출 시 다시 시도됨
       } finally {

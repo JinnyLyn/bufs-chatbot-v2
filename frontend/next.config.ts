@@ -55,6 +55,11 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // 2026-09 개편으로 한국어 단일 서비스가 됐다. 북마크·공유 링크로 /en/chat 에 들어온 학생이
+  // 돌아올 길이 없으므로 한국어 화면으로 보낸다(영어 문구 테이블은 코드에만 남아 있다).
+  async redirects() {
+    return [{ source: "/en/:path*", destination: "/ko/:path*", permanent: false }];
+  },
   async rewrites() {
     return [
       {

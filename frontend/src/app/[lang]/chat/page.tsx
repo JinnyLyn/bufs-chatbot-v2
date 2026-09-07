@@ -16,8 +16,11 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
   const { lang: rawLang } = use(params);
   const lang = (rawLang === "en" ? "en" : "ko") as Lang;
 
-  const { sessionId, loading } = useSession(lang);
-  const { messages, isStreaming, streamText, progress, sendMessage, clearMessages } = useChat(sessionId);
+  const { sessionId, loading, createSession } = useSession(lang);
+  const {
+    messages, isStreaming, streamText, progress, stalled,
+    canRetry, retryUntil, retry, sendMessage,
+  } = useChat(lang, sessionId, createSession);
 
   const [sidebarOpen, setSidebarOpen] = useState(
     typeof window !== "undefined" ? window.innerWidth >= 1024 : false
@@ -26,12 +29,7 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamText]);
-
-  const handleToggleLang = () => {
-    const newLang = lang === "ko" ? "en" : "ko";
-    window.location.href = `/${newLang}/chat`;
-  };
+  }, [messages, streamText, stalled]);
 
   if (loading) {
     return (
@@ -46,37 +44,32 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
   }
 
   const hasMessages = messages.length > 0 || isStreaming;
+  const lastIndex = messages.length - 1;
 
   return (
     <div className="flex h-dvh bg-white overflow-hidden">
-      <Sidebar
-        lang={lang}
-        messages={messages}
-        onSelectQuestion={sendMessage}
-        onClearChat={clearMessages}
-        onNewChat={clearMessages}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      <Sidebar lang={lang} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        <ChatHeader
-          lang={lang}
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          onToggleLang={handleToggleLang}
-        />
+        <ChatHeader lang={lang} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
         <main className="flex-1 overflow-y-auto pb-32">
           <div className="max-w-4xl mx-auto p-4 md:p-6">
             {!hasMessages ? (
-              <WelcomeScreen lang={lang} onSelect={sendMessage} />
+              <WelcomeScreen lang={lang} />
             ) : (
               <div className="space-y-6">
                 {messages.map((msg, i) => (
                   <div key={i}>
-                    <ChatMessage msg={msg} />
-                    {msg.role === "assistant" && (
+                    <ChatMessage
+                      msg={msg}
+                      lang={lang}
+                      showRetry={i === lastIndex && canRetry}
+                      retryUntil={i === lastIndex ? retryUntil : null}
+                      onRetry={retry}
+                    />
+                    {msg.role === "assistant" && !msg.errorKind && (
                       <div className="ml-13 mt-1">
                         <SourcePanel lang={lang} results={msg.results} sourceUrls={msg.sourceUrls} />
                       </div>
@@ -85,9 +78,9 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
                 ))}
                 {isStreaming &&
                   (streamText ? (
-                    <StreamingMessage text={streamText} />
+                    <StreamingMessage text={streamText} lang={lang} stalled={stalled} />
                   ) : (
-                    <ThinkingAnimation lang={lang} progress={progress} />
+                    <ThinkingAnimation lang={lang} progress={progress} stalled={stalled} />
                   ))}
                 <div ref={bottomRef} />
               </div>
@@ -95,7 +88,7 @@ export default function ChatPage({ params }: { params: Promise<{ lang: string }>
           </div>
         </main>
 
-        <ChatInput lang={lang} onSend={sendMessage} disabled={isStreaming} />
+        <ChatInput lang={lang} onSend={sendMessage} disabled={isStreaming || retryUntil !== null} />
       </div>
     </div>
   );
