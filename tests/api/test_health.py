@@ -27,3 +27,10 @@ def test_public_health_is_ok_and_minimal():
     resp = _client().get("/api/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
+
+
+def test_public_health_accepts_head():
+    """UptimeRobot (free plan) probes with HEAD; a 405 would read as an outage."""
+    resp = _client().head("/api/health")
+    assert resp.status_code == 200
+    assert resp.content == b""

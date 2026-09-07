@@ -36,13 +36,16 @@ def health():
     return {"status": "ok", **get_runtime_info()}
 
 
-@router.get("/api/health")
+@router.api_route("/api/health", methods=["GET", "HEAD"])
 def health_public():
     """External-monitor probe (UptimeRobot etc.), reachable through the tunnel's /api/ ingress.
 
     Deliberately says nothing beyond "up": no model name, paths, GPU or env details
     (reports/CamChat-장애대응.pdf §5). Uvicorn only serves requests after startup, so a
     200 here means the app finished loading (embedding model + graph).
+
+    HEAD is accepted explicitly: FastAPI does not add it for GET routes, and UptimeRobot's
+    free-plan HTTP monitor probes with HEAD — a 405 there shows up as "down".
     """
     return {"status": "ok"}
 
