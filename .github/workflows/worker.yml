@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'worker/**'
+      # contacts-sync.test.mjs compares worker/src/pages.js against this file, so a
+      # frontend-only contact edit must also trigger the drift check.
+      - 'frontend/src/lib/constants.ts'
   workflow_dispatch:
 
 jobs:
