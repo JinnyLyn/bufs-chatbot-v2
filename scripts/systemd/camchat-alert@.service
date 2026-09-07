@@ -6,4 +6,4 @@ Description=camchat failure alert for %i
 [Service]
 Type=oneshot
 WorkingDirectory=%h/camchat
-ExecStart=/bin/bash -c '%h/camchat/scripts/alert.sh "systemd 유닛 실패: %i" "$(systemctl --user status %i --no-pager -n 8 2>&1 | tail -n 12)"'
+ExecStart=/bin/bash -c '%h/camchat/scripts/alert.sh "systemd 유닛 실패: %i" "$$(systemctl --user status %i --no-pager -n 8 2>&1 | tail -n 12)"'
