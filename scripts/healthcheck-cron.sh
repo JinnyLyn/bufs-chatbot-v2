@@ -75,25 +75,45 @@ if [ "$count" -ge "$MAX" ]; then
     exit 1
 fi
 
-if [ "${HC_DRY_RUN:-0}" = 1 ]; then
-    echo "[$stamp] DRY RUN — would restart backend+frontend (restart $((count + 1))/$MAX this hour)"
+# A backend the operator stopped on purpose (`systemctl --user stop camchat-backend`)
+# is "inactive", not "failed"/"activating" — do not undo that; say so once.
+if [ -z "${HC_RESTART_CMD:-}" ] && units_installed \
+   && [ "$(systemctl --user is-active camchat-backend.service 2>/dev/null)" = inactive ]; then
+    if [ "$status" != stopped ]; then
+        "$REPO/scripts/alert.sh" "healthcheck 실패 — camchat-backend 가 수동으로 내려간 상태(inactive)라 자동 재기동하지 않음" "$down"
+    fi
+    status=stopped; save
+    echo "[$stamp] backend unit is inactive (stopped on purpose) — not restarting"
     exit 1
 fi
-# Restart what failed. Backend+frontend always; ollama too when the LLM probe is the
-# failure (restarting the others cannot fix an unreachable ollama). reset-failed first:
-# a unit that hit its StartLimitBurst stays "failed" and ignores a plain restart.
-with_ollama=0; grep -q '\[llm/gpu \]' <<<"$down" && with_ollama=1
+if [ "${HC_DRY_RUN:-0}" = 1 ]; then
+    echo "[$stamp] DRY RUN — would restart backend+frontend (restart $((count + 1))/$MAX this hour)"
+    status=down; save
+    exit 1
+fi
+# Restart what failed. Backend+frontend always; ollama too only when the backend itself
+# answered and just the LLM probe failed (a dead backend also prints an [llm/gpu ] line —
+# that is not ollama's fault, and bouncing it would evict the warm model). reset-failed
+# first: a unit that hit its StartLimitBurst stays "failed" and ignores a plain restart.
+with_ollama=0
+grep -q '^\[backend \] ok' <<<"$out" && grep -q '\[llm/gpu \]' <<<"$down" && with_ollama=1
+restart_rc=0
 if [ -n "${HC_RESTART_CMD:-}" ]; then
-    $HC_RESTART_CMD
+    $HC_RESTART_CMD || restart_rc=$?
 elif units_installed; then
     units=(camchat-backend.service camchat-frontend.service)
     [ "$with_ollama" = 1 ] && units+=(camchat-ollama.service)
     systemctl --user reset-failed "${units[@]}" 2>/dev/null || true
-    systemctl --user restart "${units[@]}"
+    systemctl --user restart "${units[@]}" || restart_rc=$?
 else
-    "$REPO/scripts/restart-all.sh" --no-build $([ "$with_ollama" = 1 ] && echo --with-ollama)
+    "$REPO/scripts/restart-all.sh" --no-build $([ "$with_ollama" = 1 ] && echo --with-ollama) || restart_rc=$?
 fi
 restarts="${restarts:+$restarts }$now"; fails=0; status=down; cooldown_until=$((now + GRACE)); save
-"$REPO/scripts/alert.sh" "healthcheck 2회 연속 실패 → 백엔드·프론트 재기동 ($((count + 1))/$MAX this hour)" "$down"
+if [ "$restart_rc" -ne 0 ]; then
+    "$REPO/scripts/alert.sh" "재기동 실패 (rc=$restart_rc) — 수동 확인 필요 ($((count + 1))/$MAX this hour)" "$down"$'\n'"systemctl --user status camchat.target"
+    echo "[$stamp] restart FAILED rc=$restart_rc ($((count + 1))/$MAX this hour)"
+    exit 1
+fi
+"$REPO/scripts/alert.sh" "healthcheck 2회 연속 실패 → 재기동: 백엔드·프론트$([ "$with_ollama" = 1 ] && echo '·ollama') ($((count + 1))/$MAX this hour)" "$down"
 echo "[$stamp] restarted ($((count + 1))/$MAX this hour)"
 exit 1

@@ -257,11 +257,13 @@ scripts/install-units.sh --switch     # 예전 one-shot agentic-rag.service 에�
 |---|---|---|
 | `camchat.target` | 스택 전체 핸들 (`systemctl --user start/stop/status camchat.target`) | — |
 | `camchat-ollama.service` | 팀 소유 ollama(:11500, MIG 슬라이스) | `Restart=on-failure` |
-| `camchat-backend.service` | FastAPI :8000 (`scripts/run-backend.sh`) | `Restart=on-failure`, 10분에 5회 제한 |
-| `camchat-frontend.service` | Next.js standalone :3000 (`scripts/run-frontend.sh`, 시작 때 static 스테이징) | `Restart=on-failure`, 10분에 5회 제한 |
-| `camchat-healthcheck.timer` | 2분마다 `scripts/healthcheck-cron.sh` | 2회 연속 실패 → 백엔드·프론트 재기동, 1시간 3회 초과 시 중단 + 알림 |
+| `camchat-backend.service` | FastAPI :8000 (`scripts/run-backend.sh`) | `Restart=on-failure` 15초 간격, 15분에 10회 제한(부팅 직후 네트워크 지연 흡수) |
+| `camchat-frontend.service` | Next.js standalone :3000 (`scripts/run-frontend.sh`, 시작 때 static 스테이징) | 위와 같음 |
+| `camchat-alert@.service` | 유닛 자체 실패(`OnFailure=`) 시 웹훅 알림 | — |
+| `camchat-healthcheck.timer` | 2분마다 `scripts/healthcheck-cron.sh` | 2회 연속 실패 → `reset-failed` + 백엔드·프론트(LLM 만 실패면 ollama 도) 재기동, 재기동 뒤 300초 유예, 1시간 3회 초과 시 중단 + 알림. `logs/run/maintenance` 플래그·수동 stop(inactive) 은 건드리지 않음 |
 | `camchat-logrotate.timer` | 매일 `logrotate`(`scripts/logrotate.conf`: 50 MB × 5, copytruncate) | 로그 무한 증가 방지 |
 
+- 유닛 파일 속 `%h/camchat` 은 설치 스크립트가 **실제 체크아웃 경로**로 바꿔 넣는다(워크트리·다른 이름의 클론도 자기 스크립트를 가리킨다).
 - 로그는 그대로 `logs/<svc>/` 에 append 되고(`journalctl --user -u camchat-backend` 도 됨), healthcheck 는 `logs/healthcheck.log`, 알림은 `logs/alerts.log`.
 - 알림 웹훅(Discord/Slack): `scripts/env.local` 에 `export ALERT_WEBHOOK_URL=https://…` 한 줄. 없으면 로그만 남긴다. 인증정보라 Git 에 넣지 않는다.
 - 기존 스크립트는 그대로 쓴다: 유닛이 깔려 있으면 `start-all.sh`/`stop-all.sh`/`restart-all.sh` 가 systemctl 로 위임하고, `doc_sync.sh --restart` 는 백엔드 유닛만 내렸다 올린다. **배포는 여전히 `./scripts/restart-all.sh`** (프론트 재빌드 → 유닛 재기동 → /health 확인).

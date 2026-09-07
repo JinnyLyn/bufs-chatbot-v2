@@ -5,7 +5,7 @@
 # scripts/install-units.sh (copies scripts/systemd/* to ~/.config/systemd/user).
 [Unit]
 Description=camchat stack (ollama + backend + frontend)
-Wants=camchat-ollama.service camchat-backend.service camchat-frontend.service
+Wants=camchat-ollama.service camchat-backend.service camchat-frontend.service camchat-healthcheck.timer camchat-logrotate.timer
 
 [Install]
 WantedBy=default.target

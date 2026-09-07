@@ -1,5 +1,8 @@
 [Unit]
 Description=camchat healthcheck every 2 minutes
+# Stops with the stack: `systemctl --user stop camchat.target` must not leave a watchdog
+# behind that restarts what the operator just stopped.
+PartOf=camchat.target
 
 [Timer]
 OnBootSec=3min

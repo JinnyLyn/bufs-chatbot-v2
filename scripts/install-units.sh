@@ -28,13 +28,20 @@ esac
 command -v systemctl >/dev/null 2>&1 || { echo "systemctl not found — this box has no systemd." >&2; exit 1; }
 UNIT_DIR="$HOME/.config/systemd/user"
 mkdir -p "$UNIT_DIR"
+# Units are written against %h/camchat; install them pointing at THIS checkout so a
+# worktree or a differently named clone gets units that actually run its own scripts.
 for f in "$REPO"/scripts/systemd/*; do
-    install -m 0644 "$f" "$UNIT_DIR/$(basename "$f")"
-    echo "[install] $(basename "$f")"
+    sed "s|%h/camchat|$REPO|g" "$f" >"$UNIT_DIR/$(basename "$f")"
+    chmod 0644 "$UNIT_DIR/$(basename "$f")"
+    echo "[install] $(basename "$f")  (paths → $REPO)"
 done
+if [ -z "${ALERT_WEBHOOK_URL:-}" ]; then
+    echo "[warn]    ALERT_WEBHOOK_URL is not set in scripts/env.local — alerts will only go to logs/alerts.log." >&2
+    echo "          Add: export ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/…  (or a Slack incoming webhook)" >&2
+fi
 systemctl --user daemon-reload
 # Verify before enabling. A unit that does not parse must not be enabled/started.
-verify_out="$(systemd-analyze --user verify "$UNIT_DIR"/camchat*.service "$UNIT_DIR"/camchat.target "$UNIT_DIR"/camchat*.timer 2>&1)" && verify_rc=0 || verify_rc=$?
+verify_out="$(systemd-analyze --user verify "$UNIT_DIR"/camchat*.service "$UNIT_DIR"/camchat.target "$UNIT_DIR"/camchat*.timer "$UNIT_DIR"/camchat-alert@.service 2>&1)" && verify_rc=0 || verify_rc=$?
 [ -n "$verify_out" ] && printf '%s\n' "$verify_out"
 if [ "$verify_rc" -ne 0 ]; then
     echo "[error] systemd-analyze verify failed (rc=$verify_rc) — fix the unit files before enabling." >&2
