@@ -50,14 +50,24 @@ fi
 systemctl --user enable camchat.target camchat-healthcheck.timer camchat-logrotate.timer >/dev/null
 echo "[enable]  camchat.target + camchat-healthcheck.timer + camchat-logrotate.timer"
 
-# Units installed but the old plane (agentic-rag.service / a shell-started stack) still owns
-# the ports → the units cannot bind and stop-all.sh's unit branch would stop nothing. Say so.
+# Plain install: start the stack too, unless the old plane (agentic-rag.service / a
+# shell-started stack) still owns the ports — then the units could not bind, so say so
+# and leave starting to --switch. Enabled-but-not-started units would otherwise sit idle
+# until the next reboot (linger keeps the user manager alive for months).
 if [ "$switch" != 1 ]; then
+    old_plane=0
     for name in backend frontend; do
         if [ -n "$(find_service_pids "$name")" ] && ! systemctl --user is-active --quiet "camchat-$name.service"; then
             echo "[warn]    a $name process not owned by camchat-$name.service is running — rerun with --switch to move it under systemd." >&2
+            old_plane=1
         fi
     done
+    if [ "$old_plane" = 0 ]; then
+        echo "[start]   camchat.target + timers"
+        systemctl --user start camchat.target camchat-healthcheck.timer camchat-logrotate.timer
+    else
+        echo "[note]    units installed and enabled but NOT started (old stack still running) — run: scripts/install-units.sh --switch" >&2
+    fi
 fi
 
 if [ "$switch" = 1 ]; then

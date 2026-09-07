@@ -17,7 +17,7 @@
 ## 공통 주의 (모든 절차 전에)
 
 - **백엔드를 먼저 내려라.** Qdrant는 embedded(단일 프로세스 락)라 서버가 살아있으면 ingest/reindex가 DB를 못 연다.
-  - H100 운영 서버: `systemctl --user stop agentic-rag` / 끝나면 `systemctl --user start agentic-rag`
+  - H100 운영 서버: `systemctl --user stop camchat-backend` / 끝나면 `systemctl --user start camchat-backend` (백엔드 유닛만 — 프론트·ollama 는 그대로. `scripts/doc_sync.sh … --restart` 가 이걸 자동으로 감싸고 healthcheck 자동복구도 잠시 멈춘다; 유닛 전환 전 구형 박스는 `agentic-rag`)
     (`start-all.sh` 재실행으로 올리지 말 것 — 살아있는 포트 위에 재실행하면 pidfile이 유실된다.)
 - 파이썬은 프로젝트 venv로: `~/camchat/.venv/bin/python` (conda python은 fastapi 등이 없다).
 
@@ -53,9 +53,9 @@ scripts/doc_sync.sh apply --restart
 ### 문서 추가
 
 ```bash
-systemctl --user stop agentic-rag            # 1. 서버 중지
+systemctl --user stop camchat-backend            # 1. 서버 중지
 .venv/bin/python project/ingest.py "새문서.pdf"   # 2. 변환+청킹+색인
-systemctl --user start agentic-rag           # 3. 서버 시작 (원본은 pdfs/에 보관)
+systemctl --user start camchat-backend           # 3. 서버 시작 (원본은 pdfs/에 보관)
 ```
 
 생성된 `markdown_docs/새문서.md`를 커밋한다.
@@ -64,9 +64,9 @@ systemctl --user start agentic-rag           # 3. 서버 시작 (원본은 pdfs/
 
 ```bash
 git mv "markdown_docs/문서이름.md" markdown_docs/archive/   # 1. 이동
-systemctl --user stop agentic-rag                           # 2. 서버 중지
+systemctl --user stop camchat-backend                           # 2. 서버 중지
 .venv/bin/python project/reindex.py                         # 3. 클린 재빌드
-systemctl --user start agentic-rag                          # 4. 서버 시작
+systemctl --user start camchat-backend                          # 4. 서버 시작
 ```
 
 `reindex.py`는 `qdrant_db/`를 물리 삭제 후 `markdown_docs/` 바로 아래 `*.md`만으로 재구축한다
