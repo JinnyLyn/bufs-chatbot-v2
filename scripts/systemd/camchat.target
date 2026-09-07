@@ -1,0 +1,11 @@
+# camchat.target — the whole maruvis.kr stack as one handle.
+#   systemctl --user start|stop|status camchat.target
+# Each member is its own supervised service (Restart=on-failure), so a crashed backend
+# or frontend comes back on its own without touching the others. Install with
+# scripts/install-units.sh (copies scripts/systemd/* to ~/.config/systemd/user).
+[Unit]
+Description=camchat stack (ollama + backend + frontend)
+Wants=camchat-ollama.service camchat-backend.service camchat-frontend.service camchat-healthcheck.timer camchat-logrotate.timer
+
+[Install]
+WantedBy=default.target

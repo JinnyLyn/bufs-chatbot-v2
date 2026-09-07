@@ -11,7 +11,7 @@
 #   scripts/doc_sync.sh [status]              # (기본) 페어링과 실행 계획만 출력, 아무것도 안 바꿈
 #   scripts/doc_sync.sh apply [--restart]     # 은퇴/복원 이동 + 변경 있으면 reindex
 #   scripts/doc_sync.sh add [--restart] <원본파일>...   # 새 문서를 ingest.py 로 변환+증분 색인
-#   --restart = systemd 유닛(agentic-rag)을 stop → 작업 → start 로 감싼다.
+#   --restart = systemd 유닛(camchat-backend, 없으면 agentic-rag)을 stop → 작업 → start 로 감싼다.
 #
 # 운영 규칙 (성능 보호 하드 가드):
 #   - 이미 존재하는 markdown_docs/*.md 는 절대 재변환/수정하지 않는다 (변환기 버전 차이로
@@ -83,12 +83,20 @@ require_backend_down_or_restart() {  # $1 = restart 플래그("1"|"")
     command -v lsof >/dev/null 2>&1 \
         || die "lsof 가 없어 백엔드 상태를 확인할 수 없습니다 — --restart 를 쓰거나 백엔드를 내린 뒤 DOC_SYNC_SKIP_PORT_CHECK=1 로 재실행하세요."
     if lsof -ti ":$PORT" >/dev/null 2>&1; then
-        die "백엔드가 :$PORT 에 떠 있습니다 (임베디드 Qdrant 락). --restart 를 붙이거나 먼저 내리세요: systemctl --user stop agentic-rag"
+        die "백엔드가 :$PORT 에 떠 있습니다 (임베디드 Qdrant 락). --restart 를 붙이거나 먼저 내리세요: systemctl --user stop $(svc_unit)"
     fi
 }
 
-svc_stop()  { echo ">> systemctl --user stop agentic-rag";  systemctl --user stop agentic-rag; }
-svc_start() { echo ">> systemctl --user start agentic-rag"; systemctl --user start agentic-rag; }
+# 유닛 이름: 프로세스별 유닛(scripts/systemd, install-units.sh)이 깔려 있으면 백엔드만 내렸다
+# 올린다(Qdrant 락을 쥔 건 백엔드뿐). 없으면 예전 one-shot 유닛(agentic-rag).
+svc_unit() {
+    if systemctl --user cat camchat-backend.service >/dev/null 2>&1; then echo camchat-backend; else echo agentic-rag; fi
+}
+# healthcheck 타이머(2분)가 내려간 백엔드를 "장애"로 보고 재기동해 reindex 중 Qdrant 락을 뺏지
+# 않도록, 내려 있는 동안 logs/run/maintenance 플래그를 둔다(healthcheck-cron.sh 가 건너뜀).
+MAINT_FLAG="$ROOT/logs/run/maintenance"
+svc_stop()  { local u; u="$(svc_unit)"; mkdir -p "$(dirname "$MAINT_FLAG")"; echo "$$ $(date '+%F %T') doc_sync" >"$MAINT_FLAG"; echo ">> systemctl --user stop $u";  systemctl --user stop "$u"; }
+svc_start() { local u; u="$(svc_unit)"; echo ">> systemctl --user start $u"; systemctl --user start "$u"; rm -f "$MAINT_FLAG"; }
 
 run_reindex() {
     if [ -n "${DOC_SYNC_REINDEX_CMD:-}" ]; then eval "$DOC_SYNC_REINDEX_CMD"; return; fi

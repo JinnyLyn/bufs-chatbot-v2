@@ -1,0 +1,12 @@
+# One functional healthcheck run (backend /health + /health/llm + frontend port).
+# Triggered by camchat-healthcheck.timer every 2 minutes; see scripts/healthcheck-cron.sh
+# for the 2-consecutive-failures → restart → 3-per-hour cap → webhook alert policy.
+[Unit]
+Description=camchat functional healthcheck
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/camchat
+ExecStart=%h/camchat/scripts/healthcheck-cron.sh
+StandardOutput=append:%h/camchat/logs/healthcheck.log
+StandardError=append:%h/camchat/logs/healthcheck.log

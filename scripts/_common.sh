@@ -20,6 +20,58 @@ mkdir -p "$LOG_DIR"/{ollama,backend,frontend} "$RUN_DIR"
 # shellcheck disable=SC1091
 [ -f "$_COMMON_DIR/env.local" ] && . "$_COMMON_DIR/env.local"
 
+# True when the per-process systemd user units (scripts/systemd/, installed by
+# scripts/install-units.sh) are present. start/stop/restart-all.sh then delegate to
+# systemctl instead of spawning processes themselves, so there is exactly one way the
+# stack runs on a box: either the units own the processes, or the scripts do.
+units_installed() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    systemctl --user cat camchat.target >/dev/null 2>&1
+}
+
+# Maintenance flag: while logs/run/maintenance exists, healthcheck-cron.sh skips its
+# checks (no auto-restart fights a deliberate stop — doc_sync reindex, a deploy bounce,
+# the unit switch-over). Callers pair maint_on with maint_off in an EXIT trap.
+MAINT_FLAG="$RUN_DIR/maintenance"
+maint_on()  { echo "$$ $(date '+%F %T') ${1:-}" >"$MAINT_FLAG"; }
+maint_off() { rm -f "$MAINT_FLAG"; }
+
+# Interpreter for the backend: an explicit PYTHON wins, else the repo venv, else python3 —
+# and it must import fastapi, or the backend would crash at startup (bare python3 on this
+# box is miniconda without the app's deps). Sets PYTHON; returns 1 with a message otherwise.
+resolve_python() {
+    if [ -z "${PYTHON:-}" ] && [ -x "$REPO/.venv/bin/python" ]; then PYTHON="$REPO/.venv/bin/python"; fi
+    PYTHON="${PYTHON:-python3}"
+    if ! "$PYTHON" -c 'import fastapi' >/dev/null 2>&1; then
+        echo "[error] '$PYTHON' cannot import fastapi — the backend would crash at startup." >&2
+        echo "        Expected the repo venv at $REPO/.venv (create it, or set PYTHON=...)." >&2
+        return 1
+    fi
+    return 0
+}
+
+# The Next.js standalone bundle ships only server code; Next expects .next/static and
+# public/ copied in alongside server.js. Remove the previous copies first — `cp -r src dst`
+# nests into an existing dst (static/static) instead of replacing it.
+# Skipped when the staged copy already matches the current BUILD_ID, so a crash-looping
+# unit does not recopy the whole bundle on every restart.
+stage_standalone() {
+    local fe="$REPO/frontend" sa="$REPO/frontend/.next/standalone" build staged
+    build="$(cat "$fe/.next/BUILD_ID" 2>/dev/null || echo unknown)"
+    staged="$(cat "$sa/.next/STAGED_BUILD_ID" 2>/dev/null || true)"
+    if [ "$build" != unknown ] && [ "$build" = "$staged" ] && [ -d "$sa/.next/static" ]; then
+        return 0
+    fi
+    mkdir -p "$sa/.next"
+    rm -rf "$sa/.next/static"
+    cp -r "$fe/.next/static" "$sa/.next/static"
+    if [ -d "$fe/public" ]; then
+        rm -rf "$sa/public"
+        cp -r "$fe/public" "$sa/public"
+    fi
+    echo "$build" >"$sa/.next/STAGED_BUILD_ID"
+}
+
 # Listening check with no external tools and no root: try to connect.
 port_open() {
     (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3<&- 3>&- && return 0

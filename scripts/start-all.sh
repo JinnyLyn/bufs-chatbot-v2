@@ -44,24 +44,12 @@ FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 derive_ollama_port
 START_OLLAMA="${START_OLLAMA:-auto}"
 FRONTEND_MODE="${FRONTEND_MODE:-auto}"
-# Prefer the repo's own venv over whatever `python3` happens to resolve to.
-# Bare `python3` on this box resolves to miniconda, which has none of the app's
-# dependencies — so starting the stack from a shell without the venv activated crashed
-# the backend at import with "ModuleNotFoundError: No module named 'fastapi'", while a
-# shell that happened to have it activated worked. That made the failure look
-# intermittent and unrelated to the script. Resolve it here instead of relying on the
-# caller's environment. An explicit PYTHON= still wins.
-if [ -z "${PYTHON:-}" ] && [ -x "$REPO/.venv/bin/python" ]; then
-    PYTHON="$REPO/.venv/bin/python"
-fi
-PYTHON="${PYTHON:-python3}"
 
-# Fail loudly and early rather than launching an interpreter that cannot import the app.
-if ! "$PYTHON" -c 'import fastapi' >/dev/null 2>&1; then
-    echo "[error] '$PYTHON' cannot import fastapi — the backend would crash at startup."
-    echo "        Expected the repo venv at $REPO/.venv (create it, or set PYTHON=...)."
-    exit 1
-fi
+# Prefer the repo's own venv over whatever `python3` happens to resolve to (bare python3
+# on this box is miniconda without the app's deps — the backend crashed at import with
+# "No module named 'fastapi'" from shells without the venv activated). resolve_python in
+# _common.sh is shared with the systemd wrapper so both paths pick the same interpreter.
+resolve_python || exit 1
 
 # Each service is launched under setsid so it gets its OWN process group/session:
 # stop-all.sh group-kills per service, and without setsid all three would share this
@@ -71,8 +59,10 @@ SETSID="$(command -v setsid || true)"
 
 # Poll a URL for 200; if a pidfile is given, bail out as soon as that process dies
 # (a backend that crashes at boot should fail in seconds, not after the full timeout).
+# 4th arg: a systemd unit to watch instead of a pidfile — bail out as soon as it is
+# "failed" or "inactive" ("activating" = still coming up or in a Restart= cycle).
 wait_http_200() {
-    local url="$1" timeout="${2:-180}" pidfile="${3:-}" waited=0 pid=""
+    local url="$1" timeout="${2:-180}" pidfile="${3:-}" unit="${4:-}" waited=0 pid="" state
     [ -n "$pidfile" ] && [ -f "$pidfile" ] && pid="$(cat "$pidfile")"
     while [ "$waited" -lt "$timeout" ]; do
         if curl -fsS -o /dev/null --max-time 5 "$url" 2>/dev/null; then return 0; fi
@@ -80,11 +70,42 @@ wait_http_200() {
             echo "[fail]  process $pid (from $(basename "$pidfile")) exited during startup." >&2
             return 1
         fi
+        if [ -n "$unit" ]; then
+            state="$(systemctl --user is-active "$unit" 2>/dev/null || true)"
+            case "$state" in
+                failed|inactive)
+                    echo "[fail]  $unit is $state during startup — journalctl --user -u ${unit%.service} -n 50" >&2
+                    return 1 ;;
+            esac
+        fi
         sleep 3
         waited=$((waited + 3))
     done
     return 1
 }
+
+# --- systemd units installed? then they own the processes ---------------------
+# (scripts/systemd/, see install-units.sh). Starting them here keeps this script the
+# one entry point; the same readiness probes apply.
+if units_installed; then
+    # The units read scripts/env.local, not this shell: a port/mode override given on the
+    # command line would make us probe one port while the unit binds another.
+    unit_env() { ( unset "$1"; [ -f "$_COMMON_DIR/env.local" ] && . "$_COMMON_DIR/env.local"; echo "${!1:-$2}" ); }
+    for spec in BACKEND_PORT:8000 FRONTEND_PORT:3000 START_OLLAMA:auto FRONTEND_MODE:auto; do
+        var="${spec%%:*}"; def="${spec#*:}"
+        if [ "${!var}" != "$(unit_env "$var" "$def")" ]; then
+            echo "[error] $var=${!var} is a shell override, but the systemd units use scripts/env.local — set it there instead." >&2
+            exit 2
+        fi
+    done
+    echo "[units] camchat.target is installed — starting via systemd (per-process Restart=on-failure)"
+    systemctl --user start camchat.target
+    ok=0
+    wait_http_200 "http://127.0.0.1:$BACKEND_PORT/health" 300 "" camchat-backend.service || ok=1
+    wait_port "$FRONTEND_PORT" 90 || ok=1
+    systemctl --user --no-pager --no-legend list-units 'camchat-*' | sed 's/^/        /'
+    exit "$ok"
+fi
 
 # Record a PID so stop-all.sh can shut down exactly what we started — never kill by port
 # on a shared machine.
@@ -175,20 +196,6 @@ fi
 # server must be run directly, with static assets staged beside it.
 FRONTEND="$REPO/frontend"
 STANDALONE="$FRONTEND/.next/standalone/server.js"
-
-stage_standalone() {
-    # The standalone bundle ships only server code; Next expects .next/static and public/
-    # to be copied in alongside it. Remove the previous copies first — `cp -r src dst` nests
-    # into an existing dst (static/static) instead of replacing it.
-    local sa="$FRONTEND/.next/standalone"
-    mkdir -p "$sa/.next"
-    rm -rf "$sa/.next/static"
-    cp -r "$FRONTEND/.next/static" "$sa/.next/static"
-    if [ -d "$FRONTEND/public" ]; then
-        rm -rf "$sa/public"
-        cp -r "$FRONTEND/public" "$sa/public"
-    fi
-}
 
 if port_open "$FRONTEND_PORT"; then
     echo "[ok]    frontend already on :$FRONTEND_PORT"

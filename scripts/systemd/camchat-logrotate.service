@@ -1,0 +1,9 @@
+# Rotates the units' append: logs (logs/<svc>/*.out|err, healthcheck.log, alerts.log) so
+# they cannot grow without bound on the shared disk. State file lives in logs/run/.
+[Unit]
+Description=camchat log rotation
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/camchat
+ExecStart=/usr/sbin/logrotate -s %h/camchat/logs/run/logrotate.state %h/camchat/logs/run/logrotate.conf

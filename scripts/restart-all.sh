@@ -71,9 +71,12 @@ if [ "$build" = yes ]; then
 fi
 
 # --- 3+4) bounce -----------------------------------------------------------
+# The healthcheck timer must not "recover" the stack while we are deliberately bouncing it.
+maint_on "restart-all"; trap maint_off EXIT
 "$REPO/scripts/stop-all.sh" ${with_ollama:+"$with_ollama"}
 echo
 "$REPO/scripts/start-all.sh"
+maint_off; trap - EXIT
 
 # --- 5) end-to-end probe ---------------------------------------------------
 echo

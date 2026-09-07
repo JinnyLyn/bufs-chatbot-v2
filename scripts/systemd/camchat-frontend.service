@@ -1,0 +1,22 @@
+# Next.js standalone server (:3000). The wrapper stages .next/static + public/ beside
+# server.js on every start, so "deploy" = npm run build + restart this unit.
+[Unit]
+Description=camchat frontend (Next.js standalone)
+PartOf=camchat.target
+After=camchat-backend.service
+StartLimitIntervalSec=900
+StartLimitBurst=10
+# The unit's OWN failures (start limit hit, 203/EXEC, OOM) — things a port probe cannot
+# see — go to the webhook through the alert template.
+OnFailure=camchat-alert@%n.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/camchat/frontend
+ExecStart=%h/camchat/scripts/run-frontend.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=30
+KillMode=mixed
+StandardOutput=append:%h/camchat/logs/frontend/frontend.out
+StandardError=append:%h/camchat/logs/frontend/frontend.err

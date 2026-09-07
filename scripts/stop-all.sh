@@ -82,6 +82,17 @@ kill_pid() {
     echo "$name: stopped (pid $pid)"
 }
 
+# systemd units installed? stop through them (see start-all.sh / install-units.sh), then
+# fall through to the identity-based sweep below: a stack the units do not own (the old
+# one-shot agentic-rag plane, a shell-started process) would otherwise keep the ports and
+# make the next start-all.sh report old code as live.
+if units_installed; then
+    units=()
+    for name in "${targets[@]}"; do units+=("camchat-$name.service"); done
+    echo "[units] stopping ${units[*]} via systemd"
+    systemctl --user stop "${units[@]}"
+fi
+
 for name in "${targets[@]}"; do
     pidfile="$RUN_DIR/$name.pid"
     stopped_any=0
@@ -120,7 +131,7 @@ for name in "${targets[@]}"; do
     if [ -n "$port" ] && port_open "$port"; then
         echo "$name: WARNING — something is still listening on :$port (another user's process?)." >&2
         echo "$name: start-all.sh will treat it as 'already up'; investigate before restarting." >&2
-    elif [ "$stopped_any" = 0 ]; then
+    elif [ "$stopped_any" = 0 ] && ! units_installed; then
         echo "$name: nothing to stop"
     fi
 done
