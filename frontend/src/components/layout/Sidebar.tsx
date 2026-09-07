@@ -2,7 +2,10 @@
 import { MessageSquare, X, Phone, ExternalLink, Calendar, Megaphone, Monitor, BarChart3, Home } from "lucide-react";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
-import { EMERGENCY_CONTACTS, PORTAL_LINKS, UNIVERSITY_HOME_URL } from "@/lib/constants";
+import {
+  CONTACT_GROUPS, PHONE_AREA_PREFIX, PORTAL_LINKS, UNIVERSITY_HOME_URL, fullNumber,
+} from "@/lib/constants";
+import type { ContactLine } from "@/lib/constants";
 
 interface SidebarProps {
   lang: Lang;
@@ -11,6 +14,21 @@ interface SidebarProps {
 }
 
 const LINK_ICONS = { Monitor, BarChart3, Calendar, Megaphone, Home } as const;
+
+/** 내선 하나 = 탭 가능한 칩. 스크린리더에는 전체 번호를 읽어 준다. */
+function extChip(l: ContactLine) {
+  const number = fullNumber(l.ext);
+  return (
+    <a
+      key={l.ext}
+      href={`tel:${number}`}
+      aria-label={number}
+      className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold tabular-nums hover:bg-blue-100 active:bg-blue-200 transition-colors"
+    >
+      {l.ext}
+    </a>
+  );
+}
 const QUICK_LINKS = [
   ...PORTAL_LINKS,
   { key: "link.home", url: UNIVERSITY_HOME_URL, iconName: "Home" },
@@ -49,27 +67,41 @@ export default function Sidebar({ lang, isOpen, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-grow px-4 overflow-y-auto space-y-6">
-          {/* Contacts */}
+          {/* Contacts — 부서별 내선. 국번은 한 번만 적고 번호마다 tel: 링크(모바일에서 바로 통화). */}
           <section>
             <p className="px-2 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               {t(lang, "sidebar.contacts")}
             </p>
-            <ul className="space-y-1">
-              {Object.values(EMERGENCY_CONTACTS).map((c) => (
-                <li key={c.key}>
-                  <a
-                    href={`tel:${c.tel}`}
-                    className="flex items-start gap-3 px-3 py-2.5 bg-white border border-slate-200 rounded-xl hover:border-blue-400 transition-colors shadow-sm"
-                  >
-                    <Phone className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-bold text-slate-800">{t(lang, c.key)}</span>
-                      <span className="block text-sm font-semibold text-blue-700">{c.display}</span>
-                      <span className="block text-[11px] text-slate-400">{t(lang, `${c.key}_desc`)}</span>
-                    </span>
-                  </a>
-                </li>
-              ))}
+            <p className="px-2 pb-2 text-[11px] text-slate-500 flex items-center gap-1.5">
+              <Phone className="w-3 h-3 text-blue-600 shrink-0" aria-hidden="true" />
+              {t(lang, "contact.prefix_hint", { prefix: PHONE_AREA_PREFIX })}
+            </p>
+            <ul className="bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 shadow-sm">
+              {CONTACT_GROUPS.map((g) => {
+                const flat = g.lines.every((l) => !l.labelKey);
+                return (
+                  <li key={g.key} className="px-3 py-2.5">
+                    {flat ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-bold text-slate-800">{t(lang, g.key)}</span>
+                        <span className="flex gap-1.5 shrink-0">{g.lines.map((l) => extChip(l))}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="block text-sm font-bold text-slate-800 mb-1.5">{t(lang, g.key)}</span>
+                        <ul className="space-y-1.5">
+                          {g.lines.map((l) => (
+                            <li key={l.ext} className="flex items-center justify-between gap-2 pl-2">
+                              <span className="text-xs text-slate-600">{t(lang, l.labelKey!)}</span>
+                              {extChip(l)}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
 

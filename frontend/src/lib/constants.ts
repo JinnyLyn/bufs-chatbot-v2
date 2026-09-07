@@ -70,18 +70,35 @@ export const QUESTION_MAX_CHARS = 2000;      // 백엔드 /api/chat/stream 의 q
 export const SESSION_LOAD_TIMEOUT_MS = 15_000; // 페이지 로드 시 세션 생성. 넘기면 화면은 열고 전송 때 다시 만든다.
 export const RETRY_AFTER_MAX_S = 60;   // Retry-After 가 이보다 크면 UI 에서는 여기까지만 잠근다.
 
-// 오류 문구 하단·사이드바의 대체 문의 경로. 게시 전 학사지원팀과 최종 확인(보고서 §7.5).
-export interface EmergencyContact {
-  /** i18n 키. `${key}_desc` 가 설명 문구다. */
-  key: string;
-  /** tel: 링크용 (대표 번호 하나). */
-  tel: string;
-  /** 화면 표기 (예: 5182~5183 범위). */
-  display: string;
+// 사이드바 연락처. 전부 051-509 국번이라 내선만 적고, 오류 문구·랜딩 고지에는 학사지원팀
+// 대표 번호를 보고서 §7.5 확정 표기(5182~5183)로 쓴다. 게시 전 각 부서와 최종 확인.
+export const PHONE_AREA_PREFIX = "051-509";
+export interface ContactLine {
+  /** 부서 안의 세부 창구 (없으면 부서 이름만 보인다). */
+  labelKey?: string;
+  ext: string;
 }
-export const EMERGENCY_CONTACTS: Record<"academic" | "main", EmergencyContact> = {
-  academic: { key: "contact.academic", tel: "051-509-5182", display: "051-509-5182~5183" },
-  main: { key: "contact.main", tel: "051-509-5000", display: "051-509-5000" },
+export interface ContactGroup {
+  /** 부서 이름 i18n 키. */
+  key: string;
+  lines: ContactLine[];
+}
+export const CONTACT_GROUPS: ContactGroup[] = [
+  { key: "contact.academic", lines: [{ ext: "5182" }, { ext: "5183" }] },
+  { key: "contact.admissions", lines: [{ ext: "5305" }, { ext: "5306" }] },
+  { key: "contact.welfare", lines: [{ labelKey: "contact.welfare_clinic", ext: "5444" }] },
+  {
+    key: "contact.campus",
+    lines: [
+      { labelKey: "contact.campus_parking", ext: "5412" },
+      { labelKey: "contact.campus_lab_d", ext: "5431" },
+      { labelKey: "contact.campus_lab_i", ext: "5434" },
+    ],
+  },
+];
+export const fullNumber = (ext: string) => `${PHONE_AREA_PREFIX}-${ext}`;
+export const EMERGENCY_CONTACTS = {
+  academic: { key: "contact.academic", tel: fullNumber("5182"), display: `${PHONE_AREA_PREFIX}-5182~5183` },
 };
 export const UNIVERSITY_HOME_URL = "https://www.bufs.ac.kr/";
 // 목록에서 항목이 빠져도 오류 안내 자체는 떠야 하므로 홈페이지로 물러난다(모듈 로드 시 throw 금지).
