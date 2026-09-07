@@ -62,12 +62,19 @@ if [ "${HC_DRY_RUN:-0}" = 1 ]; then
     echo "[$stamp] DRY RUN — would restart backend+frontend (restart $((count + 1))/$MAX this hour)"
     exit 1
 fi
+# Restart what failed. Backend+frontend always; ollama too when the LLM probe is the
+# failure (restarting the others cannot fix an unreachable ollama). reset-failed first:
+# a unit that hit its StartLimitBurst stays "failed" and ignores a plain restart.
+with_ollama=0; grep -q '\[llm/gpu \]' <<<"$down" && with_ollama=1
 if [ -n "${HC_RESTART_CMD:-}" ]; then
     $HC_RESTART_CMD
 elif units_installed; then
-    systemctl --user restart camchat-backend.service camchat-frontend.service
+    units=(camchat-backend.service camchat-frontend.service)
+    [ "$with_ollama" = 1 ] && units+=(camchat-ollama.service)
+    systemctl --user reset-failed "${units[@]}" 2>/dev/null || true
+    systemctl --user restart "${units[@]}"
 else
-    "$REPO/scripts/restart-all.sh" --no-build
+    "$REPO/scripts/restart-all.sh" --no-build $([ "$with_ollama" = 1 ] && echo --with-ollama)
 fi
 restarts="${restarts:+$restarts }$now"; fails=0; status=down; save
 "$REPO/scripts/alert.sh" "healthcheck 2회 연속 실패 → 백엔드·프론트 재기동 ($((count + 1))/$MAX this hour)" "$down"

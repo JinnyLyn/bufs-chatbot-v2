@@ -40,17 +40,6 @@ case "${1:-}" in
         echo "usage: $0 [--with-ollama]" >&2; exit 2 ;;
 esac
 
-# systemd units installed? stop through them (see start-all.sh / install-units.sh).
-# Same `targets` list as the process path below, mapped to unit names.
-if units_installed; then
-    units=()
-    for name in "${targets[@]}"; do units+=("camchat-$name.service"); done
-    echo "[units] stopping ${units[*]} via systemd"
-    systemctl --user stop "${units[@]}"
-    [ "${1:-}" = "--with-ollama" ] || echo "Note: Ollama left running (model stays warm in VRAM). Use --with-ollama to stop it too."
-    exit 0
-fi
-
 # What the recorded PID's command line must contain, per service (see start-all.sh):
 #   frontend → node server.js (standalone, renames argv to "next-server") or npm run dev;
 #   backend → python project/server.py.
@@ -93,6 +82,17 @@ kill_pid() {
     echo "$name: stopped (pid $pid)"
 }
 
+# systemd units installed? stop through them (see start-all.sh / install-units.sh), then
+# fall through to the identity-based sweep below: a stack the units do not own (the old
+# one-shot agentic-rag plane, a shell-started process) would otherwise keep the ports and
+# make the next start-all.sh report old code as live.
+if units_installed; then
+    units=()
+    for name in "${targets[@]}"; do units+=("camchat-$name.service"); done
+    echo "[units] stopping ${units[*]} via systemd"
+    systemctl --user stop "${units[@]}"
+fi
+
 for name in "${targets[@]}"; do
     pidfile="$RUN_DIR/$name.pid"
     stopped_any=0
@@ -131,7 +131,7 @@ for name in "${targets[@]}"; do
     if [ -n "$port" ] && port_open "$port"; then
         echo "$name: WARNING — something is still listening on :$port (another user's process?)." >&2
         echo "$name: start-all.sh will treat it as 'already up'; investigate before restarting." >&2
-    elif [ "$stopped_any" = 0 ]; then
+    elif [ "$stopped_any" = 0 ] && ! units_installed; then
         echo "$name: nothing to stop"
     fi
 done

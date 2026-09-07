@@ -16,6 +16,7 @@
 set -Eeuo pipefail
 # shellcheck source=scripts/_common.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
+derive_ollama_port   # find_service_pids ollama needs OLLAMA_PORT to recognise the old instance
 
 switch=0
 case "${1:-}" in
@@ -41,6 +42,16 @@ if [ "$verify_rc" -ne 0 ]; then
 fi
 systemctl --user enable camchat.target camchat-healthcheck.timer camchat-logrotate.timer >/dev/null
 echo "[enable]  camchat.target + camchat-healthcheck.timer + camchat-logrotate.timer"
+
+# Units installed but the old plane (agentic-rag.service / a shell-started stack) still owns
+# the ports → the units cannot bind and stop-all.sh's unit branch would stop nothing. Say so.
+if [ "$switch" != 1 ]; then
+    for name in backend frontend; do
+        if [ -n "$(find_service_pids "$name")" ] && ! systemctl --user is-active --quiet "camchat-$name.service"; then
+            echo "[warn]    a $name process not owned by camchat-$name.service is running — rerun with --switch to move it under systemd." >&2
+        fi
+    done
+fi
 
 if [ "$switch" = 1 ]; then
     if systemctl --user cat agentic-rag.service >/dev/null 2>&1; then

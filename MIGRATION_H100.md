@@ -249,6 +249,10 @@ scripts/install-units.sh              # 유닛 복사 + daemon-reload + enable
 scripts/install-units.sh --switch     # 예전 one-shot agentic-rag.service 에서 갈아탈 때 (ollama 재로드 포함)
 ```
 
+이미 돌고 있는 서버에서는 **반드시 `--switch`** 로: 유닛만 깔면 옛 프로세스가 포트를 쥔 채 유닛은 바인드에
+실패한다(설치 스크립트가 경고한다). `stop-all.sh` 는 유닛을 내린 뒤에도 레포 소속 프로세스를 식별해 정리하므로
+섞인 상태에서 `restart-all.sh` 를 돌려도 옛 코드가 남지 않는다.
+
 | 유닛 | 역할 | 복구 |
 |---|---|---|
 | `camchat.target` | 스택 전체 핸들 (`systemctl --user start/stop/status camchat.target`) | — |
