@@ -5,6 +5,7 @@ backups/
 docs/*
 !docs/observability/
 !docs/CAPACITY.md
+!docs/OUTAGE_DRILLS.md
 !docs/debugging/
 __pycache__/
 .vscode/
