@@ -43,24 +43,15 @@ function retryAfterSeconds(env) {
   return Number.isInteger(n) && n > 0 ? n : DEFAULT_RETRY_AFTER_S;
 }
 
-// One KV read per page view is the price of a redeploy-free toggle; a warm isolate remembers
-// the answer for a short while so bursts of page loads do not each hit KV. Edge caching of the
-// key itself (~60 s) is what bounds toggle latency, not this memo.
-const MAINTENANCE_MEMO_MS = 30_000;
-let maintenanceMemo = { value: false, until: 0 };
-
+// One KV read per page view (edge-cached ~60 s by KV itself) is the price of a
+// redeploy-free toggle. Page views are the only requests routed here, so this is cheap.
 async function maintenanceOn(env) {
   if (!env.OUTAGE) return false;
-  const now = Date.now();
-  if (now < maintenanceMemo.until) return maintenanceMemo.value;
-  let value = false;
   try {
-    value = (await env.OUTAGE.get("maintenance")) === "on";
+    return (await env.OUTAGE.get("maintenance")) === "on";
   } catch {
-    value = false; // a KV hiccup must not turn into a fake maintenance page
+    return false; // a KV hiccup must not turn into a fake maintenance page
   }
-  maintenanceMemo = { value, until: now + MAINTENANCE_MEMO_MS };
-  return value;
 }
 
 /** Point the request at ORIGIN_HOST (a no-op on the production route, where host == origin). */
@@ -120,13 +111,11 @@ export async function handle(request, env, originFetch = fetch) {
   return res;
 }
 
-/** Test hook: forget the maintenance memo (each test starts from a cold isolate). */
-export function _resetMaintenanceMemo() {
-  maintenanceMemo = { value: false, until: 0 };
-}
-
 export default {
+  // Fail open: if the Worker itself throws (a bad edit, a binding swap), the request goes
+  // straight to the origin instead of every maruvis.kr URL becoming a Cloudflare 1101.
+  // The route's own "fail open" switch (dashboard) covers the quota case — see README.
   fetch(request, env) {
-    return handle(request, env);
+    return handle(request, env).catch(() => fetch(request));
   },
 };

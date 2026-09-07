@@ -25,7 +25,15 @@ binding = "OUTAGE"
 id = "75dd6059612a42699d7c759cdc703872"
 
 [env.production]
-routes = [{ pattern = "maruvis.kr/*", zone_name = "maruvis.kr" }]
+# Only the app's page URLs go through the Worker (landing and the chat page, with or without a
+# trailing slash). /api/*, /_next/* and static files never touch it: no Worker invocation per
+# asset, the answer stream is not subject to the 30 s redeploy grace, and the free-plan
+# request quota is spent on page views only. Keep this list in step with frontend/src/app.
+routes = [
+  { pattern = "maruvis.kr/", zone_name = "maruvis.kr" },
+  { pattern = "maruvis.kr/*/chat", zone_name = "maruvis.kr" },
+  { pattern = "maruvis.kr/*/chat/", zone_name = "maruvis.kr" },
+]
 # No workers.dev front door for the production script: everything must enter through the
 # maruvis.kr route so zone-level protections apply (workers_dev is inherited otherwise).
 workers_dev = false

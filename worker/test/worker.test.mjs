@@ -1,9 +1,7 @@
 // Run: cd worker && npm test  (node's built-in runner; Request/Response come from Node 22+)
-import { test, beforeEach } from "node:test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
-import { handle, isPageRequest, toOrigin, _resetMaintenanceMemo } from "../src/index.js";
-
-beforeEach(() => _resetMaintenanceMemo());
+import worker, { handle, isPageRequest, toOrigin } from "../src/index.js";
 
 const ENV = { ORIGIN_HOST: "maruvis.kr", RETRY_AFTER_S: "300" };
 const PAGE = { accept: "text/html,application/xhtml+xml", "sec-fetch-dest": "document" };
@@ -102,17 +100,23 @@ test("maintenance flag in KV → maintenance page for pages, pass-through for AP
 
 test("maintenance flag off / missing binding / KV failure → normal pass-through", async () => {
   for (const env of [{ ...ENV, OUTAGE: kv("off") }, { ...ENV }, { ...ENV, OUTAGE: { get: async () => { throw new Error("kv down"); } } }]) {
-    _resetMaintenanceMemo();
     const res = await handle(req("/", { headers: PAGE }), env, originReturning(200, "fine"));
     assert.equal(res.status, 200);
   }
 });
 
-test("maintenance flag is read from KV at most once per 30 s within an isolate", async () => {
-  let reads = 0;
-  const env = { ...ENV, OUTAGE: { get: async () => { reads += 1; return "on"; } } };
-  for (let i = 0; i < 5; i += 1) await handle(req("/", { headers: PAGE }), env, originReturning(200));
-  assert.equal(reads, 1);
+test("fail open: if the handler throws, the request still reaches the origin", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response("origin", { status: 200 });
+  try {
+    // env without ORIGIN_HOST makes toOrigin a no-op; a KV binding whose get() is not a
+    // function throws synchronously inside handle() — outside its try blocks.
+    const res = await worker.fetch(req("/", { headers: PAGE }), { OUTAGE: {} });
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), "origin");
+  } finally {
+    globalThis.fetch = original;
+  }
 });
 
 test("outage page HTML is built once and reused", async () => {

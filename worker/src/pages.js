@@ -11,7 +11,8 @@ const HOME_URL = "https://www.bufs.ac.kr/";
 const AREA = "051-509";
 
 // Either `exts` (department-level numbers) or `items` (named counters inside the department).
-const CONTACTS = [
+// Exported so test/contacts-sync.test.mjs can compare it with the frontend's CONTACT_GROUPS.
+export const CONTACTS = [
   { dept: "학사지원팀", exts: ["5182", "5183"] },
   { dept: "입학관리팀", exts: ["5305", "5306"] },
   { dept: "학생복지팀", items: [["보건진료소", "5444"]] },
