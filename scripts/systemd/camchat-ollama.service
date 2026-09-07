@@ -16,6 +16,9 @@ WorkingDirectory=%h/camchat
 ExecStart=%h/camchat/scripts/run-ollama.sh
 Restart=on-failure
 RestartSec=15
+# node/python exit 143 on SIGTERM; without this every deliberate stop counts as a failure
+# and OnFailure= fires a spurious alert.
+SuccessExitStatus=143
 TimeoutStopSec=60
 KillMode=mixed
 StandardOutput=append:%h/camchat/logs/ollama/ollama.out

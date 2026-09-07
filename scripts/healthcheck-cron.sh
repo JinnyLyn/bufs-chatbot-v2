@@ -53,9 +53,29 @@ if [ "$rc" -eq 0 ]; then
 fi
 
 down="$(grep -E 'DOWN|unreachable' <<<"$out" | head -3)"
-if [ "$now" -lt "${cooldown_until:-0}" ]; then
-    # Just restarted: give the cold start its full budget before counting failures.
-    echo "[$stamp] still starting (grace $((cooldown_until - now))s left): ${down//$'\n'/ | }"
+
+# A unit that systemd itself is (re)starting, or that became active less than GRACE ago,
+# is still inside its cold-start budget — do not pile a second restart on top of it.
+# (Seen on 2026-09-08: the timer's first tick after the unit switch counted a backend
+# that was 16 ms old as failure #1, and a later frontend crash became "2 in a row".)
+unit_starting() {  # $1 = unit → 0 when activating or active for < GRACE seconds
+    local st ts age
+    st="$(systemctl --user is-active "$1" 2>/dev/null || true)"
+    [ "$st" = activating ] && return 0
+    [ "$st" = active ] || return 1
+    ts="$(systemctl --user show -p ActiveEnterTimestamp --value "$1" 2>/dev/null || true)"
+    [ -n "$ts" ] || return 1
+    age=$(( now - $(date -d "$ts" +%s 2>/dev/null || echo 0) ))
+    [ "$age" -lt "$GRACE" ]
+}
+starting=""
+if units_installed; then
+    for u in camchat-ollama camchat-backend camchat-frontend; do
+        unit_starting "$u.service" && starting="$starting $u"
+    done
+fi
+if [ "$now" -lt "${cooldown_until:-0}" ] || [ -n "$starting" ]; then
+    echo "[$stamp] still starting (${starting:+units:$starting }grace): ${down//$'\n'/ | }"
     status=down; save
     exit 1
 fi
