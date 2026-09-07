@@ -1,0 +1,11 @@
+[Unit]
+Description=camchat log rotation, daily
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30min
+Persistent=true
+Unit=camchat-logrotate.service
+
+[Install]
+WantedBy=timers.target

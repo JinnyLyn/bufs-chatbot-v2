@@ -46,8 +46,15 @@ resolve_python() {
 # The Next.js standalone bundle ships only server code; Next expects .next/static and
 # public/ copied in alongside server.js. Remove the previous copies first — `cp -r src dst`
 # nests into an existing dst (static/static) instead of replacing it.
+# Skipped when the staged copy already matches the current BUILD_ID, so a crash-looping
+# unit does not recopy the whole bundle on every restart.
 stage_standalone() {
-    local fe="$REPO/frontend" sa="$REPO/frontend/.next/standalone"
+    local fe="$REPO/frontend" sa="$REPO/frontend/.next/standalone" build staged
+    build="$(cat "$fe/.next/BUILD_ID" 2>/dev/null || echo unknown)"
+    staged="$(cat "$sa/.next/STAGED_BUILD_ID" 2>/dev/null || true)"
+    if [ "$build" != unknown ] && [ "$build" = "$staged" ] && [ -d "$sa/.next/static" ]; then
+        return 0
+    fi
     mkdir -p "$sa/.next"
     rm -rf "$sa/.next/static"
     cp -r "$fe/.next/static" "$sa/.next/static"
@@ -55,6 +62,7 @@ stage_standalone() {
         rm -rf "$sa/public"
         cp -r "$fe/public" "$sa/public"
     fi
+    echo "$build" >"$sa/.next/STAGED_BUILD_ID"
 }
 
 # Listening check with no external tools and no root: try to connect.

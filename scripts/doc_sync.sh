@@ -92,8 +92,8 @@ require_backend_down_or_restart() {  # $1 = restart 플래그("1"|"")
 svc_unit() {
     if systemctl --user cat camchat-backend.service >/dev/null 2>&1; then echo camchat-backend; else echo agentic-rag; fi
 }
-svc_stop()  { echo ">> systemctl --user stop $(svc_unit)";  systemctl --user stop "$(svc_unit)"; }
-svc_start() { echo ">> systemctl --user start $(svc_unit)"; systemctl --user start "$(svc_unit)"; }
+svc_stop()  { local u; u="$(svc_unit)"; echo ">> systemctl --user stop $u";  systemctl --user stop "$u"; }
+svc_start() { local u; u="$(svc_unit)"; echo ">> systemctl --user start $u"; systemctl --user start "$u"; }
 
 run_reindex() {
     if [ -n "${DOC_SYNC_REINDEX_CMD:-}" ]; then eval "$DOC_SYNC_REINDEX_CMD"; return; fi

@@ -256,6 +256,7 @@ scripts/install-units.sh --switch     # 예전 one-shot agentic-rag.service 에�
 | `camchat-backend.service` | FastAPI :8000 (`scripts/run-backend.sh`) | `Restart=on-failure`, 10분에 5회 제한 |
 | `camchat-frontend.service` | Next.js standalone :3000 (`scripts/run-frontend.sh`, 시작 때 static 스테이징) | `Restart=on-failure`, 10분에 5회 제한 |
 | `camchat-healthcheck.timer` | 2분마다 `scripts/healthcheck-cron.sh` | 2회 연속 실패 → 백엔드·프론트 재기동, 1시간 3회 초과 시 중단 + 알림 |
+| `camchat-logrotate.timer` | 매일 `logrotate`(`scripts/logrotate.conf`: 50 MB × 5, copytruncate) | 로그 무한 증가 방지 |
 
 - 로그는 그대로 `logs/<svc>/` 에 append 되고(`journalctl --user -u camchat-backend` 도 됨), healthcheck 는 `logs/healthcheck.log`, 알림은 `logs/alerts.log`.
 - 알림 웹훅(Discord/Slack): `scripts/env.local` 에 `export ALERT_WEBHOOK_URL=https://…` 한 줄. 없으면 로그만 남긴다. 인증정보라 Git 에 넣지 않는다.

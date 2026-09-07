@@ -9,6 +9,7 @@
 #   - one service per process (ollama / backend / frontend), Restart=on-failure, 5-per-10-min
 #     start limit, logs appended to logs/<svc>/ as before
 #   - camchat-healthcheck.timer: scripts/healthcheck-cron.sh every 2 min
+#   - camchat-logrotate.timer: daily logrotate of logs/ (50 MB × 5, copytruncate)
 #   - the existing scripts keep working: start/stop/restart-all.sh delegate to systemctl
 #     when the units are present, doc_sync.sh --restart bounces only the backend
 # Requires `loginctl enable-linger $USER` once (already the case on the H100 box).
@@ -32,8 +33,8 @@ for f in "$REPO"/scripts/systemd/*; do
 done
 systemctl --user daemon-reload
 systemd-analyze --user verify "$UNIT_DIR"/camchat*.service "$UNIT_DIR"/camchat.target "$UNIT_DIR"/camchat-healthcheck.timer 2>&1 | grep -v "^$" || true
-systemctl --user enable camchat.target camchat-healthcheck.timer >/dev/null
-echo "[enable]  camchat.target + camchat-healthcheck.timer"
+systemctl --user enable camchat.target camchat-healthcheck.timer camchat-logrotate.timer >/dev/null
+echo "[enable]  camchat.target + camchat-healthcheck.timer + camchat-logrotate.timer"
 
 if [ "$switch" = 1 ]; then
     if systemctl --user cat agentic-rag.service >/dev/null 2>&1; then
@@ -51,7 +52,7 @@ if [ "$switch" = 1 ]; then
     fi
     echo "[switch]  starting camchat.target"
     systemctl --user start camchat.target
-    systemctl --user start camchat-healthcheck.timer
+    systemctl --user start camchat-healthcheck.timer camchat-logrotate.timer
 fi
 echo
 systemctl --user --no-pager --no-legend list-units 'camchat-*' 'camchat.target' 2>/dev/null || true
