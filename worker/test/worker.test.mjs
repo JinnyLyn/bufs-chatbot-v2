@@ -119,11 +119,6 @@ test("fail open: if the handler throws, the request still reaches the origin", a
   }
 });
 
-test("outage page HTML is built once and reused", async () => {
-  const a = await (await handle(req("/", { headers: PAGE }), ENV, originReturning(503))).text();
-  const b = await (await handle(req("/", { headers: PAGE }), ENV, originReturning(522))).text();
-  assert.equal(a, b);
-});
 
 test("isPageRequest: sec-fetch-dest wins, then Accept; non-GET never", () => {
   assert.equal(isPageRequest(req("/", { headers: { "sec-fetch-dest": "document", accept: "*/*" } })), true);

@@ -2,7 +2,8 @@
 
 Cloudflare Worker 하나가 `maruvis.kr/*` 앞단에 서서, **서버(터널·프론트엔드) 자체에 접속할 수
 없을 때** 학생에게 Cloudflare 기본 영문 오류 화면 대신 한국어 안내 페이지를 보여 준다.
-근거: `reports/CamChat-장애대응.pdf` §11–§12 (현재 요금제에서 Custom Errors 사용 불가).
+근거: `reports/CamChat-장애대응.pdf` §11–§12 (현재 요금제에서 Custom Errors 사용 불가). PDF 는 PR #289 와
+함께 들어오며, 그 전에는 초안 `reports/REPORT_장애대응.md` 의 "상황 2" 절을 본다.
 
 ## 동작
 

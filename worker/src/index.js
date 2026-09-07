@@ -1,4 +1,5 @@
-// Outage page Worker for maruvis.kr (reports/CamChat-장애대응.pdf §11–§12).
+// Outage page Worker for maruvis.kr (reports/CamChat-장애대응.pdf §11–§12; the PDF lands with
+// PR #289 — until then see the tracked draft reports/REPORT_장애대응.md, "상황 2").
 //
 // Normal state: every request is passed to the origin untouched — including the AI
 // answer stream, which is returned as the origin's own streaming body (no buffering).
