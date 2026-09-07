@@ -33,16 +33,6 @@ interface Run {
   reason: "timeout" | "user" | null;
 }
 
-/** `signal` 이 abort 되면 promise 결과를 기다리지 않고 거부한다(세션 생성 fetch 는 signal 을 못 받는다). */
-function raceAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) return Promise.reject(signal.reason);
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(signal.reason);
-    signal.addEventListener("abort", onAbort, { once: true });
-    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
-  });
-}
-
 function parseRetryAfter(raw: string | null): number | null {
   const s = raw?.trim();
   if (!s) return null;
@@ -56,8 +46,12 @@ function parseRetryAfter(raw: string | null): number | null {
 export function useChat(
   lang: Lang,
   sessionId: string | null,
-  /** 세션이 아직 없을 때(페이지 로드 시 백엔드가 죽어 있었을 때) 다시 만든다. */
-  ensureSession: () => Promise<string>,
+  /**
+   * 세션이 아직 없을 때(페이지 로드 시 백엔드가 죽어 있었을 때) 다시 만든다.
+   * `signal` 을 실제 요청까지 넘겨야 한다 — 기다리기만 포기하면 타임아웃 뒤에 늦게 온 응답이
+   * 재시도로 만든 최신 세션을 낡은 세션으로 덮어쓴다.
+   */
+  ensureSession: (signal?: AbortSignal) => Promise<string>,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -166,7 +160,7 @@ export function useChat(
       armTimers();
       let sid: string;
       try {
-        sid = sessionId ?? (await raceAbort(ensureSession(), run.controller.signal));
+        sid = sessionId ?? (await ensureSession(run.controller.signal));
       } catch {
         if (run.controller.signal.aborted) failAborted();
         else fail({ kind: "disconnect" });
