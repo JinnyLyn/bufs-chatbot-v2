@@ -107,6 +107,7 @@ npm run tail                 # 실시간 로그 (X-CamChat-Outage 헤더로 사�
 - **Fail open**: Worker 코드가 예외를 던지면 요청을 그대로 원본으로 보낸다(`index.js` 기본 export). 무료 요금제
   일일 요청 한도(10만) 초과 시에도 사이트가 막히지 않도록, 대시보드 Workers Routes 의 해당 라우트에서
   **"Fail open"** 을 켜 둔다(기본은 fail closed = Error 1027). 라우트 바인딩 직후 1회 확인.
-- **라우트 범위**: 페이지 URL(`/`, `/*/chat`, `/*/chat/`)만 Worker 를 거친다. `/api/*`·`/_next/*`·정적 파일은
-  Worker 없이 터널로 직행하므로 답변 스트림은 재배포 유예의 영향을 받지 않는다. 프론트에 페이지 라우트가
-  늘면 `wrangler.toml` 의 routes 도 같이 늘린다.
+- **라우트 범위**: 페이지 URL(`/`, `/?*`, `/ko/chat*`, `/en/chat*`)만 Worker 를 거친다. `/api/*`·`/_next/*`·정적
+  파일은 Worker 없이 터널로 직행하므로 답변 스트림은 재배포 유예의 영향을 받지 않는다. 프론트에 페이지
+  라우트가 늘면 `wrangler.toml` 의 routes 도 같이 늘린다. Cloudflare 라우트 패턴은 와일드카드를 경로 끝에만
+  둘 수 있고(중간 불가) 쿼리 문자열까지 매칭하므로 `/` 와 `/?*` 를 따로 적는다.

@@ -25,14 +25,19 @@ binding = "OUTAGE"
 id = "75dd6059612a42699d7c759cdc703872"
 
 [env.production]
-# Only the app's page URLs go through the Worker (landing and the chat page, with or without a
-# trailing slash). /api/*, /_next/* and static files never touch it: no Worker invocation per
-# asset, the answer stream is not subject to the 30 s redeploy grace, and the free-plan
-# request quota is spent on page views only. Keep this list in step with frontend/src/app.
+# Only the app's page URLs go through the Worker (landing and the chat page). /api/*, /_next/*
+# and static files never touch it: no Worker invocation per asset, the answer stream is not
+# subject to the 30 s redeploy grace, and the free-plan request quota is spent on page views
+# only. Keep this list in step with frontend/src/app.
+#
+# Route-pattern rules (Cloudflare): a wildcard may only START a hostname or END a path — no
+# infix wildcards — and the query string is part of the match, so "maruvis.kr/" alone would
+# not match "maruvis.kr/?utm=…". Hence the explicit pairs below.
 routes = [
   { pattern = "maruvis.kr/", zone_name = "maruvis.kr" },
-  { pattern = "maruvis.kr/*/chat", zone_name = "maruvis.kr" },
-  { pattern = "maruvis.kr/*/chat/", zone_name = "maruvis.kr" },
+  { pattern = "maruvis.kr/?*", zone_name = "maruvis.kr" },
+  { pattern = "maruvis.kr/ko/chat*", zone_name = "maruvis.kr" },
+  { pattern = "maruvis.kr/en/chat*", zone_name = "maruvis.kr" },
 ]
 # No workers.dev front door for the production script: everything must enter through the
 # maruvis.kr route so zone-level protections apply (workers_dev is inherited otherwise).
