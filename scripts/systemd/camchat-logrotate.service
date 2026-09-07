@@ -6,4 +6,4 @@ Description=camchat log rotation
 [Service]
 Type=oneshot
 WorkingDirectory=%h/camchat
-ExecStart=/usr/sbin/logrotate -s %h/camchat/logs/run/logrotate.state %h/camchat/scripts/logrotate.conf
+ExecStart=/usr/sbin/logrotate -s %h/camchat/logs/run/logrotate.state %h/camchat/logs/run/logrotate.conf

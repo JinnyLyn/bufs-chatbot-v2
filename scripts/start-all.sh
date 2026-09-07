@@ -43,6 +43,7 @@ BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 derive_ollama_port
 START_OLLAMA="${START_OLLAMA:-auto}"
+FRONTEND_MODE="${FRONTEND_MODE:-auto}"
 
 # Prefer the repo's own venv over whatever `python3` happens to resolve to (bare python3
 # on this box is miniconda without the app's deps — the backend crashed at import with
@@ -58,14 +59,24 @@ SETSID="$(command -v setsid || true)"
 
 # Poll a URL for 200; if a pidfile is given, bail out as soon as that process dies
 # (a backend that crashes at boot should fail in seconds, not after the full timeout).
+# 4th arg: a systemd unit to watch instead of a pidfile — bail out as soon as it is
+# "failed" or "inactive" ("activating" = still coming up or in a Restart= cycle).
 wait_http_200() {
-    local url="$1" timeout="${2:-180}" pidfile="${3:-}" waited=0 pid=""
+    local url="$1" timeout="${2:-180}" pidfile="${3:-}" unit="${4:-}" waited=0 pid="" state
     [ -n "$pidfile" ] && [ -f "$pidfile" ] && pid="$(cat "$pidfile")"
     while [ "$waited" -lt "$timeout" ]; do
         if curl -fsS -o /dev/null --max-time 5 "$url" 2>/dev/null; then return 0; fi
         if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
             echo "[fail]  process $pid (from $(basename "$pidfile")) exited during startup." >&2
             return 1
+        fi
+        if [ -n "$unit" ]; then
+            state="$(systemctl --user is-active "$unit" 2>/dev/null || true)"
+            case "$state" in
+                failed|inactive)
+                    echo "[fail]  $unit is $state during startup — journalctl --user -u ${unit%.service} -n 50" >&2
+                    return 1 ;;
+            esac
         fi
         sleep 3
         waited=$((waited + 3))
@@ -90,8 +101,7 @@ if units_installed; then
     echo "[units] camchat.target is installed — starting via systemd (per-process Restart=on-failure)"
     systemctl --user start camchat.target
     ok=0
-    wait_http_200 "http://127.0.0.1:$BACKEND_PORT/health" 300 || ok=1
-    systemctl --user is-active --quiet camchat-backend.service || { echo "[fail]  camchat-backend.service is not running — journalctl --user -u camchat-backend" >&2; ok=1; }
+    wait_http_200 "http://127.0.0.1:$BACKEND_PORT/health" 300 "" camchat-backend.service || ok=1
     wait_port "$FRONTEND_PORT" 90 || ok=1
     systemctl --user --no-pager --no-legend list-units 'camchat-*' | sed 's/^/        /'
     exit "$ok"

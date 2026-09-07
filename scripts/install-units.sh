@@ -35,6 +35,9 @@ for f in "$REPO"/scripts/systemd/*; do
     chmod 0644 "$UNIT_DIR/$(basename "$f")"
     echo "[install] $(basename "$f")  (paths → $REPO)"
 done
+# logrotate needs absolute log paths: render the template for this checkout into logs/run/.
+sed "s|%h/camchat|$REPO|g" "$REPO/scripts/logrotate.conf" >"$RUN_DIR/logrotate.conf"
+echo "[install] logrotate.conf → $RUN_DIR/logrotate.conf"
 if [ -z "${ALERT_WEBHOOK_URL:-}" ]; then
     echo "[warn]    ALERT_WEBHOOK_URL is not set in scripts/env.local — alerts will only go to logs/alerts.log." >&2
     echo "          Add: export ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/…  (or a Slack incoming webhook)" >&2
@@ -56,12 +59,18 @@ echo "[enable]  camchat.target + camchat-healthcheck.timer + camchat-logrotate.t
 # until the next reboot (linger keeps the user manager alive for months).
 if [ "$switch" != 1 ]; then
     old_plane=0
-    for name in backend frontend; do
+    for name in backend frontend ollama; do
+        [ "$name" = ollama ] && [ "$OLLAMA_LOCAL" != 1 ] && continue
         if [ -n "$(find_service_pids "$name")" ] && ! systemctl --user is-active --quiet "camchat-$name.service"; then
             echo "[warn]    a $name process not owned by camchat-$name.service is running — rerun with --switch to move it under systemd." >&2
             old_plane=1
         fi
     done
+    # An ollama we cannot identify but that holds the port would still make the unit crash-loop.
+    if [ "$OLLAMA_LOCAL" = 1 ] && port_open "$OLLAMA_PORT" && ! systemctl --user is-active --quiet camchat-ollama.service; then
+        echo "[warn]    something is listening on :$OLLAMA_PORT outside camchat-ollama.service — rerun with --switch." >&2
+        old_plane=1
+    fi
     if [ "$old_plane" = 0 ]; then
         echo "[start]   camchat.target + timers"
         systemctl --user start camchat.target camchat-healthcheck.timer camchat-logrotate.timer
