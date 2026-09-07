@@ -101,3 +101,7 @@ npm run tail                 # 실시간 로그 (X-CamChat-Outage 헤더로 사�
 - 이전 버전으로 되돌리기: `npx wrangler rollback --env production`.
 - **재배포 시점**: Worker 를 새로 배포하면 진행 중이던 요청은 30초 유예 뒤 끊긴다(Cloudflare 동작).
   긴 답변 스트림(부하 시 p95 78초)이 잘릴 수 있으니 운영 재배포는 이용이 적은 시간에 한다.
+- **선택 최적화**: `maruvis.kr/*` 라우트는 `/api/*`·`/_next/static/*` 요청까지 Worker 를 거치게 한다(판별 후
+  그대로 통과시키지만 호출 수·CPU 는 든다). 대시보드 Workers Routes 에서 `maruvis.kr/api/*` 와
+  `maruvis.kr/_next/*` 를 **Worker 없음(None)** 으로 더 구체적인 라우트로 등록하면 그 경로는 Worker 를
+  건너뛰어 스트림이 재배포 유예의 영향도 받지 않는다. wrangler.toml 로는 표현할 수 없어 대시보드에서만.

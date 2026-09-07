@@ -27,9 +27,9 @@ const STATIC_EXT = /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|ot
 const PAGE_DESTS = new Set(["document", "iframe", "frame"]);
 
 /** Only top-level page loads get the HTML page. Everything else is passed through as-is. */
-export function isPageRequest(request) {
+export function isPageRequest(request, url = new URL(request.url)) {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
-  const { pathname } = new URL(request.url);
+  const { pathname } = url;
   if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) return false;
   if (STATIC_EXT.test(pathname)) return false;
   const dest = request.headers.get("sec-fetch-dest");
@@ -43,18 +43,28 @@ function retryAfterSeconds(env) {
   return Number.isInteger(n) && n > 0 ? n : DEFAULT_RETRY_AFTER_S;
 }
 
+// One KV read per page view is the price of a redeploy-free toggle; a warm isolate remembers
+// the answer for a short while so bursts of page loads do not each hit KV. Edge caching of the
+// key itself (~60 s) is what bounds toggle latency, not this memo.
+const MAINTENANCE_MEMO_MS = 30_000;
+let maintenanceMemo = { value: false, until: 0 };
+
 async function maintenanceOn(env) {
+  if (!env.OUTAGE) return false;
+  const now = Date.now();
+  if (now < maintenanceMemo.until) return maintenanceMemo.value;
+  let value = false;
   try {
-    if (!env.OUTAGE) return false;
-    return (await env.OUTAGE.get("maintenance")) === "on";
+    value = (await env.OUTAGE.get("maintenance")) === "on";
   } catch {
-    return false; // a KV hiccup must not turn into a fake maintenance page
+    value = false; // a KV hiccup must not turn into a fake maintenance page
   }
+  maintenanceMemo = { value, until: now + MAINTENANCE_MEMO_MS };
+  return value;
 }
 
 /** Point the request at ORIGIN_HOST (a no-op on the production route, where host == origin). */
-export function toOrigin(request, env) {
-  const url = new URL(request.url);
+export function toOrigin(request, env, url = new URL(request.url)) {
   const originHost = env.ORIGIN_HOST;
   if (!originHost || url.host === originHost) return request;
   url.host = originHost;
@@ -84,7 +94,8 @@ function htmlResponse(body, request, retry, reason) {
  * @param {typeof fetch} originFetch - injectable for tests
  */
 export async function handle(request, env, originFetch = fetch) {
-  const page = isPageRequest(request);
+  const url = new URL(request.url);
+  const page = isPageRequest(request, url);
   const retry = retryAfterSeconds(env);
 
   if (page && (await maintenanceOn(env))) {
@@ -93,7 +104,7 @@ export async function handle(request, env, originFetch = fetch) {
 
   let res;
   try {
-    res = await originFetch(toOrigin(request, env));
+    res = await originFetch(toOrigin(request, env, url));
   } catch (err) {
     if (page) return htmlResponse(outagePage(retry), request, retry, "origin-unreachable");
     // API/asset callers get a plain 502; the frontend turns it into its own notice.
@@ -107,6 +118,11 @@ export async function handle(request, env, originFetch = fetch) {
     return htmlResponse(outagePage(retry), request, retry, `origin-${res.status}`);
   }
   return res;
+}
+
+/** Test hook: forget the maintenance memo (each test starts from a cold isolate). */
+export function _resetMaintenanceMemo() {
+  maintenanceMemo = { value: false, until: 0 };
 }
 
 export default {

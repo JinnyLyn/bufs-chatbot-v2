@@ -105,24 +105,37 @@ function shell({ title, badge, headline, lines, retryAfterS }) {
 `;
 }
 
+// Built once per isolate and reused: the outage page is requested exactly when traffic to it
+// spikes (every affected student, plus the 5-minute auto-refresh), and its inputs never change
+// within a deploy.
+const cache = new Map();
+function memo(key, build) {
+  let html = cache.get(key);
+  if (html === undefined) {
+    html = build();
+    cache.set(key, html);
+  }
+  return html;
+}
+
 /** 서버(터널·프론트엔드) 자체에 닿을 수 없을 때. */
 export function outagePage(retryAfterS) {
-  return shell({
+  return memo(`outage:${retryAfterS}`, () => shell({
     title: "챗봇 점검 중 · BUFS CamChat",
     badge: "일시적인 접속 장애",
     headline: "챗봇 점검 중입니다.",
     lines: ["현재 일시적으로 서비스에 접속할 수 없습니다. 잠시 후 다시 접속해 주세요."],
     retryAfterS,
-  });
+  }));
 }
 
 /** 운영자가 점검 모드를 켰을 때(계획 점검, 장시간 장애). */
 export function maintenancePage(retryAfterS) {
-  return shell({
+  return memo(`maintenance:${retryAfterS}`, () => shell({
     title: "챗봇 점검 중 · BUFS CamChat",
     badge: "점검 진행 중",
     headline: "챗봇 점검 중입니다.",
     lines: ["예정된 점검으로 잠시 이용할 수 없습니다. 점검이 끝나면 다시 접속해 주세요."],
     retryAfterS,
-  });
+  }));
 }

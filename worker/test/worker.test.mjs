@@ -1,7 +1,9 @@
 // Run: cd worker && npm test  (node's built-in runner; Request/Response come from Node 22+)
-import { test } from "node:test";
+import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { handle, isPageRequest, toOrigin } from "../src/index.js";
+import { handle, isPageRequest, toOrigin, _resetMaintenanceMemo } from "../src/index.js";
+
+beforeEach(() => _resetMaintenanceMemo());
 
 const ENV = { ORIGIN_HOST: "maruvis.kr", RETRY_AFTER_S: "300" };
 const PAGE = { accept: "text/html,application/xhtml+xml", "sec-fetch-dest": "document" };
@@ -100,9 +102,23 @@ test("maintenance flag in KV → maintenance page for pages, pass-through for AP
 
 test("maintenance flag off / missing binding / KV failure → normal pass-through", async () => {
   for (const env of [{ ...ENV, OUTAGE: kv("off") }, { ...ENV }, { ...ENV, OUTAGE: { get: async () => { throw new Error("kv down"); } } }]) {
+    _resetMaintenanceMemo();
     const res = await handle(req("/", { headers: PAGE }), env, originReturning(200, "fine"));
     assert.equal(res.status, 200);
   }
+});
+
+test("maintenance flag is read from KV at most once per 30 s within an isolate", async () => {
+  let reads = 0;
+  const env = { ...ENV, OUTAGE: { get: async () => { reads += 1; return "on"; } } };
+  for (let i = 0; i < 5; i += 1) await handle(req("/", { headers: PAGE }), env, originReturning(200));
+  assert.equal(reads, 1);
+});
+
+test("outage page HTML is built once and reused", async () => {
+  const a = await (await handle(req("/", { headers: PAGE }), ENV, originReturning(503))).text();
+  const b = await (await handle(req("/", { headers: PAGE }), ENV, originReturning(522))).text();
+  assert.equal(a, b);
 });
 
 test("isPageRequest: sec-fetch-dest wins, then Accept; non-GET never", () => {
