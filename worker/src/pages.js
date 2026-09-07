@@ -6,17 +6,21 @@
 // (CONTACT_GROUPS / EMERGENCY_CONTACTS / PORTAL_LINKS, added in PR #289) on purpose —
 // the Worker has no build step and must not import the app. Change both places together.
 
-export const CALENDAR_URL = "https://m.bufs.ac.kr/popup/Haksa_Iljeong.aspx?gbn=";
-export const HOME_URL = "https://www.bufs.ac.kr/";
-export const ACADEMIC_TEL = "051-509-5182";
-export const ACADEMIC_DISPLAY = "051-509-5182~5183";
+const CALENDAR_URL = "https://m.bufs.ac.kr/popup/Haksa_Iljeong.aspx?gbn=";
+const HOME_URL = "https://www.bufs.ac.kr/";
+const AREA = "051-509";
 
+// Either `exts` (department-level numbers) or `items` (named counters inside the department).
 const CONTACTS = [
-  ["학사지원팀", [["", "5182"], ["", "5183"]]],
-  ["입학관리팀", [["", "5305"], ["", "5306"]]],
-  ["학생복지팀", [["보건진료소", "5444"]]],
-  ["캠퍼스관리팀", [["주차", "5412"], ["D동 멀강실", "5431"], ["I동 멀강실", "5434"]]],
+  { dept: "학사지원팀", exts: ["5182", "5183"] },
+  { dept: "입학관리팀", exts: ["5305", "5306"] },
+  { dept: "학생복지팀", items: [["보건진료소", "5444"]] },
+  { dept: "캠퍼스관리팀", items: [["주차", "5412"], ["D동 멀강실", "5431"], ["I동 멀강실", "5434"]] },
 ];
+// The emergency line in the notice is the academic office; derived, not retyped.
+const ACADEMIC = CONTACTS[0];
+const ACADEMIC_TEL = `${AREA}-${ACADEMIC.exts[0]}`;
+const ACADEMIC_DISPLAY = `${AREA}-${ACADEMIC.exts.join("~")}`;
 
 const CSS = `
 :root{color-scheme:light}
@@ -55,15 +59,14 @@ function esc(s) {
 }
 
 function contactRows() {
-  return CONTACTS.map(([dept, lines]) => {
-    const flat = lines.every(([label]) => !label);
-    const ext = (n) => `<a href="tel:051-509-${n}" aria-label="051-509-${n}">${n}</a>`;
-    if (flat) {
-      return `<li><span>${esc(dept)}</span><span class="ext">${lines.map(([, n]) => ext(n)).join("")}</span></li>`;
+  const ext = (n) => `<a href="tel:${AREA}-${n}" aria-label="${AREA}-${n}">${n}</a>`;
+  return CONTACTS.map((c) => {
+    if (c.exts) {
+      return `<li><span>${esc(c.dept)}</span><span class="ext">${c.exts.map(ext).join("")}</span></li>`;
     }
     return (
-      `<li><span>${esc(dept)}</span></li>` +
-      lines.map(([label, n]) => `<li><span class="sub">${esc(label)}</span><span class="ext">${ext(n)}</span></li>`).join("")
+      `<li><span>${esc(c.dept)}</span></li>` +
+      c.items.map(([label, n]) => `<li><span class="sub">${esc(label)}</span><span class="ext">${ext(n)}</span></li>`).join("")
     );
   }).join("");
 }
@@ -92,7 +95,7 @@ function shell({ title, badge, headline, lines, retryAfterS }) {
   </div>
   <section class="contacts">
     <h2>주요 연락처</h2>
-    <p class="hint">051-509-내선 · 번호를 누르면 바로 연결돼요</p>
+    <p class="hint">${AREA}-내선 · 번호를 누르면 바로 연결돼요</p>
     <ul>${contactRows()}</ul>
   </section>
   <footer>BUFS CamChat · 이 페이지는 ${Math.round(retryAfterS / 60)}분 뒤 자동으로 다시 접속을 시도합니다.</footer>

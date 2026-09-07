@@ -38,13 +38,14 @@ export function isPageRequest(request) {
 }
 
 function retryAfterSeconds(env) {
-  const n = Number(env?.RETRY_AFTER_S);
-  return Number.isFinite(n) && n > 0 ? Math.round(n) : DEFAULT_RETRY_AFTER_S;
+  const n = Number(env.RETRY_AFTER_S);
+  // Anything but a positive whole number of seconds is a config typo: fall back, don't coerce.
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_RETRY_AFTER_S;
 }
 
 async function maintenanceOn(env) {
   try {
-    if (!env?.OUTAGE) return false;
+    if (!env.OUTAGE) return false;
     return (await env.OUTAGE.get("maintenance")) === "on";
   } catch {
     return false; // a KV hiccup must not turn into a fake maintenance page
@@ -54,15 +55,14 @@ async function maintenanceOn(env) {
 /** Point the request at ORIGIN_HOST (a no-op on the production route, where host == origin). */
 export function toOrigin(request, env) {
   const url = new URL(request.url);
-  const originHost = env?.ORIGIN_HOST;
+  const originHost = env.ORIGIN_HOST;
   if (!originHost || url.host === originHost) return request;
   url.host = originHost;
   url.protocol = "https:";
   return new Request(url.toString(), request);
 }
 
-function htmlResponse(body, request, env, reason) {
-  const retry = retryAfterSeconds(env);
+function htmlResponse(body, request, retry, reason) {
   return new Response(request.method === "HEAD" ? null : body, {
     status: 503,
     headers: {
@@ -88,14 +88,14 @@ export async function handle(request, env, originFetch = fetch) {
   const retry = retryAfterSeconds(env);
 
   if (page && (await maintenanceOn(env))) {
-    return htmlResponse(maintenancePage(retry), request, env, "maintenance");
+    return htmlResponse(maintenancePage(retry), request, retry, "maintenance");
   }
 
   let res;
   try {
     res = await originFetch(toOrigin(request, env));
   } catch (err) {
-    if (page) return htmlResponse(outagePage(retry), request, env, "origin-unreachable");
+    if (page) return htmlResponse(outagePage(retry), request, retry, "origin-unreachable");
     // API/asset callers get a plain 502; the frontend turns it into its own notice.
     return new Response(JSON.stringify({ detail: "origin unreachable" }), {
       status: 502,
@@ -104,7 +104,7 @@ export async function handle(request, env, originFetch = fetch) {
   }
 
   if (page && ORIGIN_DOWN_STATUSES.has(res.status)) {
-    return htmlResponse(outagePage(retry), request, env, `origin-${res.status}`);
+    return htmlResponse(outagePage(retry), request, retry, `origin-${res.status}`);
   }
   return res;
 }
