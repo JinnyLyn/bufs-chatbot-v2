@@ -54,22 +54,21 @@ if [ "$switch" != 1 ]; then
 fi
 
 if [ "$switch" = 1 ]; then
+    maint_on "install-units --switch"; trap maint_off EXIT
     if systemctl --user cat agentic-rag.service >/dev/null 2>&1; then
-        echo "[switch]  stopping agentic-rag.service (backend+frontend) and its ollama"
+        # Its ExecStop is stop-all.sh, which (units now installed) stops the inactive units
+        # and then sweeps the old backend+frontend by identity — process-group TERM, 10 s,
+        # KILL, port-freed check. Exactly the path a normal deploy uses.
+        echo "[switch]  stopping + disabling agentic-rag.service"
         systemctl --user disable --now agentic-rag.service || true
-        # stop-all.sh sees the new units now and would delegate — kill the old processes
-        # by identity instead (this is the one place the two planes legitimately meet).
-        for name in frontend backend ollama; do
-            for pid in $(find_service_pids "$name"); do
-                echo "[switch]  stopping old $name pid $pid"
-                kill -TERM "$pid" 2>/dev/null || true
-            done
-        done
-        sleep 5
     fi
+    # The old ollama too (stop-all leaves it alone by default); idempotent for the rest.
+    echo "[switch]  stopping the old ollama (model reloads under the unit)"
+    "$REPO/scripts/stop-all.sh" --with-ollama
     echo "[switch]  starting camchat.target"
     systemctl --user start camchat.target
     systemctl --user start camchat-healthcheck.timer camchat-logrotate.timer
+    maint_off; trap - EXIT
 fi
 echo
 systemctl --user --no-pager --no-legend list-units 'camchat-*' 'camchat.target' 2>/dev/null || true

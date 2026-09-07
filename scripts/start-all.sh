@@ -77,6 +77,16 @@ wait_http_200() {
 # (scripts/systemd/, see install-units.sh). Starting them here keeps this script the
 # one entry point; the same readiness probes apply.
 if units_installed; then
+    # The units read scripts/env.local, not this shell: a port/mode override given on the
+    # command line would make us probe one port while the unit binds another.
+    unit_env() { ( unset "$1"; [ -f "$_COMMON_DIR/env.local" ] && . "$_COMMON_DIR/env.local"; echo "${!1:-$2}" ); }
+    for spec in BACKEND_PORT:8000 FRONTEND_PORT:3000 START_OLLAMA:auto FRONTEND_MODE:auto; do
+        var="${spec%%:*}"; def="${spec#*:}"
+        if [ "${!var}" != "$(unit_env "$var" "$def")" ]; then
+            echo "[error] $var=${!var} is a shell override, but the systemd units use scripts/env.local — set it there instead." >&2
+            exit 2
+        fi
+    done
     echo "[units] camchat.target is installed — starting via systemd (per-process Restart=on-failure)"
     systemctl --user start camchat.target
     ok=0

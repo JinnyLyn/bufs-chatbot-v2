@@ -29,6 +29,13 @@ units_installed() {
     systemctl --user cat camchat.target >/dev/null 2>&1
 }
 
+# Maintenance flag: while logs/run/maintenance exists, healthcheck-cron.sh skips its
+# checks (no auto-restart fights a deliberate stop — doc_sync reindex, a deploy bounce,
+# the unit switch-over). Callers pair maint_on with maint_off in an EXIT trap.
+MAINT_FLAG="$RUN_DIR/maintenance"
+maint_on()  { echo "$$ $(date '+%F %T') ${1:-}" >"$MAINT_FLAG"; }
+maint_off() { rm -f "$MAINT_FLAG"; }
+
 # Interpreter for the backend: an explicit PYTHON wins, else the repo venv, else python3 —
 # and it must import fastapi, or the backend would crash at startup (bare python3 on this
 # box is miniconda without the app's deps). Sets PYTHON; returns 1 with a message otherwise.

@@ -92,8 +92,11 @@ require_backend_down_or_restart() {  # $1 = restart 플래그("1"|"")
 svc_unit() {
     if systemctl --user cat camchat-backend.service >/dev/null 2>&1; then echo camchat-backend; else echo agentic-rag; fi
 }
-svc_stop()  { local u; u="$(svc_unit)"; echo ">> systemctl --user stop $u";  systemctl --user stop "$u"; }
-svc_start() { local u; u="$(svc_unit)"; echo ">> systemctl --user start $u"; systemctl --user start "$u"; }
+# healthcheck 타이머(2분)가 내려간 백엔드를 "장애"로 보고 재기동해 reindex 중 Qdrant 락을 뺏지
+# 않도록, 내려 있는 동안 logs/run/maintenance 플래그를 둔다(healthcheck-cron.sh 가 건너뜀).
+MAINT_FLAG="$ROOT/logs/run/maintenance"
+svc_stop()  { local u; u="$(svc_unit)"; mkdir -p "$(dirname "$MAINT_FLAG")"; echo "$$ $(date '+%F %T') doc_sync" >"$MAINT_FLAG"; echo ">> systemctl --user stop $u";  systemctl --user stop "$u"; }
+svc_start() { local u; u="$(svc_unit)"; echo ">> systemctl --user start $u"; systemctl --user start "$u"; rm -f "$MAINT_FLAG"; }
 
 run_reindex() {
     if [ -n "${DOC_SYNC_REINDEX_CMD:-}" ]; then eval "$DOC_SYNC_REINDEX_CMD"; return; fi
