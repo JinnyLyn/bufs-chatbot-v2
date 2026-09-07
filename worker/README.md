@@ -27,8 +27,9 @@ Cloudflare Worker 하나가 `maruvis.kr/*` 앞단에 서서, **서버(터널·�
 - `wrangler.toml` — 이름·계정·KV 바인딩·라우트. 라우트는 `[env.production]` 에만 있고, 운영 스크립트는
   `workers_dev = false` 라 maruvis.kr 라우트로만 들어온다(workers.dev 우회 입구 없음).
 - `src/index.js` — 판별·전달·503 응답. `handle(request, env, originFetch)` 로 테스트 주입 가능.
-- `src/pages.js` — 안내 HTML(인라인 CSS, 외부 자원 없음). **연락처는 `frontend/src/lib/constants.ts`
-  와 수동 동기화** — 바꿀 때 둘 다.
+- `src/pages.js` — 안내 HTML(인라인 CSS, 외부 자원 없음). **연락처·학사일정 링크는 `frontend/src/lib/constants.ts`
+  (`CONTACT_GROUPS`, `EMERGENCY_CONTACTS`, `PORTAL_LINKS` — PR #289 에서 추가)와 수동 동기화** — 바꿀 때 둘 다.
+  Worker 는 빌드 단계가 없어 프론트 모듈을 import 할 수 없다.
 - `test/worker.test.mjs` — node 내장 러너. `npm test`.
 
 ## 준비 (1회)
@@ -61,7 +62,8 @@ preview 확인(URL 은 3) 출력에 나온다):
 ```bash
 P=https://camchat-outage.<subdomain>.workers.dev
 curl -sI -H 'Accept: text/html' "$P/ko/chat" | head -1        # 정상: HTTP/2 200 (원본 통과)
-curl -s "$P/api/health"                                        # 정상: {"status":"ok"}
+curl -s -X POST -H 'Content-Type: application/json' -d '{"lang":"ko"}' "$P/api/session"   # 정상: 세션 JSON
+# (/api/health 는 시행계획 3번에서 추가되기 전까지 백엔드 404 JSON 이 그대로 통과한다 — Worker 는 정상)
 # 장애 페이지 미리보기: preview 만 죽은 원본으로 향하게 한 뒤
 npx wrangler deploy --env "" --var ORIGIN_HOST:origin-down.invalid
 curl -s -H 'Accept: text/html' "$P/" | grep -o '챗봇 점검 중입니다'   # 503 + 안내 페이지
@@ -78,7 +80,7 @@ npx wrangler kv key delete --binding OUTAGE --env "" --remote maintenance
 ```bash
 npm run deploy            # = wrangler deploy --env production  (routes = maruvis.kr/*)
 curl -sI https://maruvis.kr/ko/chat | head -1     # 200 이어야 한다
-curl -s https://maruvis.kr/api/health             # 백엔드 응답 그대로
+curl -s -X POST -H 'Content-Type: application/json' -d '{"lang":"ko"}' https://maruvis.kr/api/session   # 백엔드 JSON 그대로
 ```
 
 ## 운영
@@ -97,3 +99,5 @@ npm run tail                 # 실시간 로그 (X-CamChat-Outage 헤더로 사�
 - **긴급 해제**(Worker 자체가 문제일 때): `npx wrangler delete --env production` 으로 Worker 와
   라우트를 제거하면 트래픽이 다시 터널로 직행한다. 또는 대시보드 Workers Routes 에서 라우트만 삭제.
 - 이전 버전으로 되돌리기: `npx wrangler rollback --env production`.
+- **재배포 시점**: Worker 를 새로 배포하면 진행 중이던 요청은 30초 유예 뒤 끊긴다(Cloudflare 동작).
+  긴 답변 스트림(부하 시 p95 78초)이 잘릴 수 있으니 운영 재배포는 이용이 적은 시간에 한다.

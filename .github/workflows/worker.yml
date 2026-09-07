@@ -1,0 +1,29 @@
+name: Worker CI
+
+on:
+  pull_request:
+    paths:
+      - 'worker/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      # No dependencies: the Worker is plain ESM and the tests use node's built-in runner.
+      - name: Syntax check
+        run: node --check src/index.js && node --check src/pages.js
+
+      - name: Unit tests
+        run: npm test

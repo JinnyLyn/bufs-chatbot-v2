@@ -2,9 +2,9 @@
 // render when nothing else does, and it is served under a CSP that allows only inline
 // styles. Wording follows reports/CamChat-장애대응.pdf §11.2 / §16 ("서버 전체 장애").
 //
-// Contacts are duplicated from frontend/src/lib/constants.ts (CONTACT_GROUPS /
-// EMERGENCY_CONTACTS) on purpose — the Worker has no build step and must not import
-// the app. Change both places together.
+// Contacts and the calendar link are duplicated from frontend/src/lib/constants.ts
+// (CONTACT_GROUPS / EMERGENCY_CONTACTS / PORTAL_LINKS, added in PR #289) on purpose —
+// the Worker has no build step and must not import the app. Change both places together.
 
 export const CALENDAR_URL = "https://m.bufs.ac.kr/popup/Haksa_Iljeong.aspx?gbn=";
 export const HOME_URL = "https://www.bufs.ac.kr/";
