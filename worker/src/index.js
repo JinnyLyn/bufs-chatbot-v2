@@ -23,6 +23,8 @@ const DEFAULT_RETRY_AFTER_S = 300;
 export const ORIGIN_DOWN_STATUSES = new Set([502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 530]);
 
 const STATIC_EXT = /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|json|txt|xml|webmanifest)$/i;
+// Navigations that render a whole page: a top-level document, or the chat embedded in a frame.
+const PAGE_DESTS = new Set(["document", "iframe", "frame"]);
 
 /** Only top-level page loads get the HTML page. Everything else is passed through as-is. */
 export function isPageRequest(request) {
@@ -31,7 +33,7 @@ export function isPageRequest(request) {
   if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) return false;
   if (STATIC_EXT.test(pathname)) return false;
   const dest = request.headers.get("sec-fetch-dest");
-  if (dest) return dest === "document"; // modern browsers state it outright
+  if (dest) return PAGE_DESTS.has(dest); // modern browsers state it outright
   return (request.headers.get("accept") || "").includes("text/html");
 }
 

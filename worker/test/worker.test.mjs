@@ -107,6 +107,7 @@ test("maintenance flag off / missing binding / KV failure → normal pass-throug
 
 test("isPageRequest: sec-fetch-dest wins, then Accept; non-GET never", () => {
   assert.equal(isPageRequest(req("/", { headers: { "sec-fetch-dest": "document", accept: "*/*" } })), true);
+  assert.equal(isPageRequest(req("/", { headers: { "sec-fetch-dest": "iframe", accept: "text/html" } })), true);
   assert.equal(isPageRequest(req("/", { headers: { "sec-fetch-dest": "empty", accept: "text/html" } })), false);
   assert.equal(isPageRequest(req("/", { headers: { accept: "text/html" } })), true);
   assert.equal(isPageRequest(req("/", { headers: { accept: "application/json" } })), false);

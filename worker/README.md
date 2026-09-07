@@ -24,7 +24,8 @@ Cloudflare Worker 하나가 `maruvis.kr/*` 앞단에 서서, **서버(터널·�
 
 ## 파일
 
-- `wrangler.toml` — 이름·계정·KV 바인딩·라우트. 라우트는 `[env.production]` 에만 있다.
+- `wrangler.toml` — 이름·계정·KV 바인딩·라우트. 라우트는 `[env.production]` 에만 있고, 운영 스크립트는
+  `workers_dev = false` 라 maruvis.kr 라우트로만 들어온다(workers.dev 우회 입구 없음).
 - `src/index.js` — 판별·전달·503 응답. `handle(request, env, originFetch)` 로 테스트 주입 가능.
 - `src/pages.js` — 안내 HTML(인라인 CSS, 외부 자원 없음). **연락처는 `frontend/src/lib/constants.ts`
   와 수동 동기화** — 바꿀 때 둘 다.
@@ -38,9 +39,13 @@ Cloudflare Worker 하나가 `maruvis.kr/*` 앞단에 서서, **서버(터널·�
 ```bash
 source ~/.config/cloudflare/env
 cd worker
-npx wrangler whoami                      # 계정 확인
-npx wrangler kv namespace create OUTAGE  # 출력된 id 를 wrangler.toml 두 곳(id = …)에 기입
+npx wrangler whoami                              # 계정 확인
+npx wrangler kv namespace create OUTAGE          # 운영용  → [env.production] 의 id
+npx wrangler kv namespace create OUTAGE_PREVIEW  # preview 용 → 최상위 [[kv_namespaces]] 의 id
 ```
+
+preview 와 운영은 **다른** 네임스페이스를 쓴다. preview 에서 점검 모드를 연습해도 운영 학생
+화면에는 절대 영향이 없다. (이미 생성돼 `wrangler.toml` 에 id 가 들어 있다.)
 
 ## 배포 순서 — 운영 앞에 두기 전에 preview 로 검증
 

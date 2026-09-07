@@ -17,14 +17,18 @@ ORIGIN_HOST = "maruvis.kr"
 RETRY_AFTER_S = "300"
 
 # Maintenance flag lives in KV so operators can flip it without a redeploy:
-#   npx wrangler kv key put --binding OUTAGE --remote maintenance on   (off: ... delete ...)
-# Create the namespace once with `npx wrangler kv namespace create OUTAGE` and paste the id.
+#   npx wrangler kv key put --binding OUTAGE --remote --env production maintenance on
+# Preview and production use DIFFERENT namespaces (OUTAGE_PREVIEW / OUTAGE) so rehearsing
+# the flag on the preview can never put the maintenance page in front of real students.
 [[kv_namespaces]]
 binding = "OUTAGE"
-id = "8b7494de431747fe9af7faa6d6104d02"
+id = "75dd6059612a42699d7c759cdc703872"
 
 [env.production]
 routes = [{ pattern = "maruvis.kr/*", zone_name = "maruvis.kr" }]
+# No workers.dev front door for the production script: everything must enter through the
+# maruvis.kr route so zone-level protections apply (workers_dev is inherited otherwise).
+workers_dev = false
 [env.production.vars]
 ORIGIN_HOST = "maruvis.kr"
 RETRY_AFTER_S = "300"
