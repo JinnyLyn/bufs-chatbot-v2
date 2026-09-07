@@ -1,0 +1,52 @@
+# Cloudflare Worker in front of maruvis.kr — outage / maintenance page for HTML navigations.
+# Plan: reports/CamChat-장애대응.pdf §11–§12. Deploy steps: worker/README.md.
+name = "camchat-outage"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+account_id = "4b2e471a8798a4591d95d2857b2736a6"
+
+# workers.dev preview stays on so the Worker can be exercised BEFORE it is put in front of
+# production (see README "배포 순서"). The production route is bound only in [env.production].
+workers_dev = true
+
+[vars]
+# Where pass-through requests go. On the production route this equals the request host;
+# on the workers.dev preview it points the preview at the real origin.
+ORIGIN_HOST = "maruvis.kr"
+# Seconds a client should wait before retrying after an outage page (Retry-After).
+RETRY_AFTER_S = "300"
+
+# Maintenance flag lives in KV so operators can flip it without a redeploy:
+#   npx wrangler kv key put --binding OUTAGE --remote --env production maintenance on
+# Preview and production use DIFFERENT namespaces (OUTAGE_PREVIEW / OUTAGE) so rehearsing
+# the flag on the preview can never put the maintenance page in front of real students.
+[[kv_namespaces]]
+binding = "OUTAGE"
+id = "75dd6059612a42699d7c759cdc703872"
+
+[env.production]
+# Only the app's page URLs go through the Worker (landing and the chat page). /api/*, /_next/*
+# and static files never touch it: no Worker invocation per asset, the answer stream is not
+# subject to the 30 s redeploy grace, and the free-plan request quota is spent on page views
+# only. Keep this list in step with frontend/src/app.
+#
+# Route-pattern rules (Cloudflare): a wildcard may only START a hostname or END a path — no
+# infix wildcards, no "?" in a pattern — and the query string is part of the match. The
+# trailing "*" on the chat routes therefore covers "/ko/chat", "/ko/chat/" and "/ko/chat?x".
+# Accepted gap: "maruvis.kr/?utm=…" (root WITH a query string) cannot be expressed without
+# routing everything ("maruvis.kr/*"); students reach the site at the bare root or the chat
+# URL, so the narrow list wins. [lang] values other than ko/en are not listed either.
+routes = [
+  { pattern = "maruvis.kr/", zone_name = "maruvis.kr" },
+  { pattern = "maruvis.kr/ko/chat*", zone_name = "maruvis.kr" },
+  { pattern = "maruvis.kr/en/chat*", zone_name = "maruvis.kr" },
+]
+# No workers.dev front door for the production script: everything must enter through the
+# maruvis.kr route so zone-level protections apply (workers_dev is inherited otherwise).
+workers_dev = false
+[env.production.vars]
+ORIGIN_HOST = "maruvis.kr"
+RETRY_AFTER_S = "300"
+[[env.production.kv_namespaces]]
+binding = "OUTAGE"
+id = "8b7494de431747fe9af7faa6d6104d02"

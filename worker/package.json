@@ -1,0 +1,15 @@
+{
+  "name": "camchat-outage-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "check": "wrangler deploy --dry-run --env \"\"",
+    "deploy:preview": "wrangler deploy --env \"\"",
+    "deploy": "wrangler deploy --env production",
+    "tail": "wrangler tail --env production --format pretty",
+    "maintenance:on": "wrangler kv key put --binding OUTAGE --remote --env production maintenance on",
+    "maintenance:off": "wrangler kv key delete --binding OUTAGE --remote --env production maintenance",
+    "maintenance:status": "wrangler kv key get --binding OUTAGE --remote --env production maintenance"
+  }
+}
