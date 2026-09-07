@@ -83,3 +83,6 @@ htmlcov/
 
 # box-local service env for scripts/ (CUDA MIG slice etc.) — never commit
 scripts/env.local
+
+# Cloudflare Worker local state (miniflare KV/cache, cf.json)
+worker/.wrangler/

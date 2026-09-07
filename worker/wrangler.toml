@@ -1,0 +1,33 @@
+# Cloudflare Worker in front of maruvis.kr — outage / maintenance page for HTML navigations.
+# Plan: reports/CamChat-장애대응.pdf §11–§12. Deploy steps: worker/README.md.
+name = "camchat-outage"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+account_id = "4b2e471a8798a4591d95d2857b2736a6"
+
+# workers.dev preview stays on so the Worker can be exercised BEFORE it is put in front of
+# production (see README "배포 순서"). The production route is bound only in [env.production].
+workers_dev = true
+
+[vars]
+# Where pass-through requests go. On the production route this equals the request host;
+# on the workers.dev preview it points the preview at the real origin.
+ORIGIN_HOST = "maruvis.kr"
+# Seconds a client should wait before retrying after an outage page (Retry-After).
+RETRY_AFTER_S = "300"
+
+# Maintenance flag lives in KV so operators can flip it without a redeploy:
+#   npx wrangler kv key put --binding OUTAGE --remote maintenance on   (off: ... delete ...)
+# Create the namespace once with `npx wrangler kv namespace create OUTAGE` and paste the id.
+[[kv_namespaces]]
+binding = "OUTAGE"
+id = "8b7494de431747fe9af7faa6d6104d02"
+
+[env.production]
+routes = [{ pattern = "maruvis.kr/*", zone_name = "maruvis.kr" }]
+[env.production.vars]
+ORIGIN_HOST = "maruvis.kr"
+RETRY_AFTER_S = "300"
+[[env.production.kv_namespaces]]
+binding = "OUTAGE"
+id = "8b7494de431747fe9af7faa6d6104d02"
