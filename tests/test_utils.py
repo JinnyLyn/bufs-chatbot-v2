@@ -213,6 +213,14 @@ class TestPdfToMarkdownContainment:
         utils.pdf_to_markdown(tmp_path / "1. 공고.pdf", out)
         assert (out / "1. 공고.md").read_text(encoding="utf-8") == "# converted"
 
+    def test_out_name_overrides_the_derived_name(self, tmp_path, monkeypatch):
+        utils = _import_utils()
+        self._mock_conversion(monkeypatch, utils)
+        out = tmp_path / "kb"
+        out.mkdir()
+        utils.pdf_to_markdown(tmp_path / "real-name.pdf", out, out_name="a.md")
+        assert sorted(p.name for p in out.iterdir()) == ["a.md"]
+
     def test_refuses_dangling_symlink_target_out_of_dir(self, tmp_path, monkeypatch):
         utils = _import_utils()
         self._mock_conversion(monkeypatch, utils)

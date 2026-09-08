@@ -129,9 +129,9 @@ def test_add_pdf_converts_resolved_source_into_kb_dir(kb, tmp_path, monkeypatch)
 
     calls = []
 
-    def fake_pdf_to_markdown(pdf_path, output_dir):
-        calls.append((pdf_path, output_dir))
-        (output_dir / "doc.md").write_text("# pdf")
+    def fake_pdf_to_markdown(pdf_path, output_dir, out_name=None):
+        calls.append((pdf_path, output_dir, out_name))
+        (output_dir / out_name).write_text("# pdf")
 
     monkeypatch.setattr(dm_mod, "pdf_to_markdown", fake_pdf_to_markdown)
     uploads = tmp_path / "uploads"
@@ -140,5 +140,25 @@ def test_add_pdf_converts_resolved_source_into_kb_dir(kb, tmp_path, monkeypatch)
     src.write_bytes(b"%PDF-1.4")
 
     assert kb.manager.add_documents([str(src)], source_root=str(uploads)) == (1, 0)
-    assert calls == [(os.path.realpath(src), kb.dir)]
+    assert calls == [(os.path.realpath(src), kb.dir, "doc.md")]
     assert (kb.dir / "doc.md").read_text() == "# pdf"
+
+
+def test_add_pdf_via_symlink_inside_source_root_keeps_the_link_name(kb, tmp_path, monkeypatch):
+    """A symlink inside the upload root is read through its target, but the KB file is named
+    after the link (what the caller asked for), so md_path and the written file agree and
+    the chunker finds it — no orphan ``<target-stem>.md``."""
+    import core.document_manager as dm_mod
+
+    def fake_pdf_to_markdown(pdf_path, output_dir, out_name=None):
+        (output_dir / out_name).write_text("# pdf")
+
+    monkeypatch.setattr(dm_mod, "pdf_to_markdown", fake_pdf_to_markdown)
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    (uploads / "real-name.pdf").write_bytes(b"%PDF-1.4")
+    (uploads / "a.pdf").symlink_to(uploads / "real-name.pdf")
+
+    assert kb.manager.add_documents([str(uploads / "a.pdf")], source_root=str(uploads)) == (1, 0)
+    assert sorted(p.name for p in kb.dir.iterdir()) == ["a.md"]
+    kb.rag.chunker.create_chunks_single.assert_called_once_with(kb.dir / "a.md")

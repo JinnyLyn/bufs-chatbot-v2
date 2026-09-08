@@ -76,7 +76,9 @@ class DocumentManager:
                 if Path(doc_path).suffix.lower() == ".md":
                     shutil.copy(source, md_path)
                 else:
-                    pdf_to_markdown(source, self.markdown_dir)
+                    # Read from the resolved source, but name the output after doc_path (which
+                    # md_path was derived from) so the two never diverge on a symlinked upload.
+                    pdf_to_markdown(source, self.markdown_dir, out_name=md_path.name)
                 parent_chunks, child_chunks = self.rag_system.chunker.create_chunks_single(md_path)
                 
                 if not child_chunks:

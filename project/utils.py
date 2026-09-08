@@ -98,7 +98,13 @@ def _supplement_dropped_pages(md: str, pdf_path, dl_doc) -> str:
     return md + "".join(extra)
 
 
-def pdf_to_markdown(pdf_path, output_dir):
+def pdf_to_markdown(pdf_path, output_dir, out_name=None):
+    """Convert one PDF to ``output_dir/<out_name>`` (default ``<stem of pdf_path>.md``).
+
+    ``out_name`` lets a caller that has already decided the KB file name (add_documents,
+    which names by the caller-supplied path, not the symlink-resolved one it reads from)
+    keep the write and its own bookkeeping on the same name.
+    """
     # Docling reconstructs table cell structure (TableFormer) and reading order far
     # better than a flat text dump, so merged-cell / multi-column / page-spanning
     # tables survive into the markdown the chunker consumes.
@@ -117,7 +123,7 @@ def pdf_to_markdown(pdf_path, output_dir):
     # would treat the text after the first dot as an extension and truncate it.
     # The write goes through confined_path so a symlink planted under output_dir cannot
     # redirect it outside the KB directory — the guard lives with the write, not in a caller.
-    target = confined_path(output_dir, Path(pdf_path).stem + ".md")
+    target = confined_path(output_dir, out_name or (Path(pdf_path).stem + ".md"))
     if target is None:
         raise ValueError(f"markdown target for {pdf_path!r} escapes {output_dir!r}")
     Path(target).write_bytes(md_cleaned.encode('utf-8'))
