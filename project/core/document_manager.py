@@ -1,7 +1,25 @@
+import os
 from pathlib import Path
 import shutil
 import config
 from utils import pdfs_to_markdowns, clear_directory_contents
+
+
+def confined_path(root, path):
+    """Return ``path`` (joined under ``root`` when relative) as a real, normalized string if it
+    lies strictly inside ``root``; ``None`` if it would escape.
+
+    Symlinks are resolved before the check, so a link *inside* ``root`` that points outside
+    (or a dangling one that a copy would write through) is rejected as well. This is the one
+    place that decides whether a document path may be read from or written to on behalf of
+    a caller — the Gradio upload handler and the KB markdown target both go through it.
+    """
+    real_root = os.path.realpath(root)
+    candidate = os.path.realpath(os.path.join(real_root, os.fspath(path)))
+    if candidate.startswith(real_root.rstrip(os.sep) + os.sep):
+        return candidate
+    return None
+
 
 class DocumentManager:
 
@@ -38,7 +56,15 @@ class DocumentManager:
                 skipped += 1
                 continue
 
-            md_path = self.markdown_dir / f"{doc_name}.md"
+            # ``stem`` already drops any directory part of the source name, so the target is a
+            # direct child of markdown_dir by construction; the explicit containment check makes
+            # that property local and verifiable (CodeQL py/path-injection) and additionally
+            # refuses to write through a symlink that leaves the KB directory.
+            md_target = confined_path(self.markdown_dir, f"{doc_name}.md")
+            if md_target is None:
+                skipped += 1
+                continue
+            md_path = Path(md_target)
 
             if md_path.exists():
                 skipped += 1

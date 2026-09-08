@@ -59,7 +59,13 @@ def health_llm():
         resp.raise_for_status()
         models = resp.json().get("models", [])
     except Exception as exc:  # noqa: BLE001
-        return {"status": "error", "ollama_base_url": base, "error": str(exc)}
+        # Detail goes to the log only. requests' messages embed the URL, proxy settings and
+        # the raw socket/SSL error, which is more than a health probe should hand back
+        # (CodeQL py/stack-trace-exposure). Consumers (scripts/healthcheck.*) only read
+        # ``status`` and ``ollama_base_url``; the class name still tells an operator
+        # ConnectionError from Timeout from HTTPError at a glance.
+        logger.warning("/health/llm: Ollama at %s unreachable: %s", base, exc)
+        return {"status": "error", "ollama_base_url": base, "error": type(exc).__name__}
 
     loaded = []
     for m in models:
