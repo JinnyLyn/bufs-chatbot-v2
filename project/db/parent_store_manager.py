@@ -1,7 +1,7 @@
 import re
 import json
 import config
-from utils import clear_directory_contents
+from utils import clear_directory_contents, confined_path
 from pathlib import Path
 from typing import List, Dict
 
@@ -16,11 +16,10 @@ class ParentStoreManager:
         if not parent_id or not parent_id.strip():
             raise ValueError(f"parent_id must be a non-empty string: {parent_id!r}")
         name = parent_id if parent_id.lower().endswith(".json") else f"{parent_id}.json"
-        candidate = (self.__store_path / name).resolve()
-        store_root = self.__store_path.resolve()
-        if not candidate.is_relative_to(store_root):
+        resolved = confined_path(self.__store_path, name)
+        if resolved is None:
             raise ValueError(f"parent_id escapes store directory: {parent_id!r}")
-        return candidate
+        return Path(resolved)
 
     def save(self, parent_id: str, content: str, metadata: Dict) -> None:
         file_path = self._resolve_within_store(parent_id)

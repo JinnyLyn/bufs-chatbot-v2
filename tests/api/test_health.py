@@ -37,9 +37,8 @@ def test_public_health_accepts_head():
 
 
 def test_health_llm_error_keeps_exception_detail_out_of_response(monkeypatch, caplog):
-    """CodeQL py/stack-trace-exposure: the probe must not echo the exception text (requests
-    embeds URL, proxy and socket detail). Detail belongs in the log; the body keeps the
-    keys scripts/healthcheck.* read (``status``, ``ollama_base_url``) plus the class name."""
+    """Error responses never echo exception text; it goes to the log, the body keeps the
+    keys scripts/healthcheck.* read plus the exception class name."""
     import logging
 
     requests = pytest.importorskip("requests")

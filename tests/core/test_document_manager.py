@@ -1,133 +1,144 @@
-"""DocumentManager — path containment of the KB markdown target (CodeQL py/path-injection).
+"""DocumentManager.add_documents — source/target path containment (CodeQL py/path-injection).
 
-``add_documents`` derives the target file name from a caller-supplied source path. Every
-write must land as a direct child of ``config.MARKDOWN_DIR``; nothing outside it may be
-created or overwritten, not even through a symlink that sits inside the directory.
+The target file name is derived from a caller-supplied source path. Every write must land as
+a direct child of ``config.MARKDOWN_DIR`` and, when ``source_root`` is given, every read must
+come from inside that root. ``utils.confined_path`` itself is unit-tested in
+tests/test_utils.py; these tests cover how add_documents applies it.
 """
 
 from __future__ import annotations
 
+import logging
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
 pytest.importorskip("tiktoken", reason="utils imports tiktoken")
 
-from core.document_manager import DocumentManager, confined_path  # noqa: E402
 
-
-# ---------------------------------------------------------------------------
-# confined_path
-# ---------------------------------------------------------------------------
-
-def test_confined_path_accepts_relative_child(tmp_path):
-    root = tmp_path / "kb"
-    root.mkdir()
-    assert confined_path(root, "notice.md") == os.path.join(os.path.realpath(root), "notice.md")
-
-
-def test_confined_path_accepts_absolute_child_after_normalization(tmp_path):
-    root = tmp_path / "kb"
-    (root / "sub").mkdir(parents=True)
-    messy = str(root / "sub" / ".." / "b.md")
-    assert confined_path(root, messy) == os.path.join(os.path.realpath(root), "b.md")
-
-
-@pytest.mark.parametrize("escape", ["../x.md", "/etc/passwd", "..", "."])
-def test_confined_path_rejects_escapes_and_root_itself(tmp_path, escape):
-    root = tmp_path / "kb"
-    root.mkdir()
-    assert confined_path(root, escape) is None
-
-
-def test_confined_path_rejects_symlink_pointing_outside(tmp_path):
-    root = tmp_path / "kb"
-    root.mkdir()
-    outside = tmp_path / "outside.md"
-    outside.write_text("secret")
-    (root / "link.md").symlink_to(outside)
-    assert confined_path(root, "link.md") is None
-
-
-def test_confined_path_rejects_sibling_with_root_as_prefix(tmp_path):
-    """``/kb-evil/x`` starts with ``/kb`` as a string; the separator-terminated check must
-    not be fooled by that."""
-    root = tmp_path / "kb"
-    root.mkdir()
-    sibling = tmp_path / "kb-evil"
-    sibling.mkdir()
-    assert confined_path(root, str(sibling / "x.md")) is None
-
-
-# ---------------------------------------------------------------------------
-# add_documents
-# ---------------------------------------------------------------------------
-
-def _manager(tmp_path, monkeypatch):
+@pytest.fixture()
+def kb(tmp_path, monkeypatch):
+    """A DocumentManager over a fresh KB dir with a fake RAG system: ``.manager``, ``.rag``, ``.dir``."""
     import config
     import core.document_manager as dm_mod
 
-    kb = tmp_path / "kb"
-    monkeypatch.setattr(config, "MARKDOWN_DIR", str(kb))
+    kb_dir = tmp_path / "kb"
+    monkeypatch.setattr(config, "MARKDOWN_DIR", str(kb_dir))
     monkeypatch.setattr(config, "KB_EXCLUDE_SOURCES", frozenset())
-    # The lazy rag_agent import is cache hygiene, not under test; keep the test offline.
-    monkeypatch.setattr(dm_mod, "_invalidate_parent_scope_cache", lambda: None)
+    monkeypatch.setattr(dm_mod, "_invalidate_parent_scope_cache", lambda: None)  # cache hygiene, offline
 
     rag = MagicMock()
     rag.collection_name = "test"
     rag.chunker.create_chunks_single.return_value = (["parent"], ["child"])
-    return DocumentManager(rag), rag, kb
+    return SimpleNamespace(manager=dm_mod.DocumentManager(rag), rag=rag, dir=kb_dir)
 
 
-def test_add_md_copies_into_kb_dir_and_indexes(tmp_path, monkeypatch):
-    manager, rag, kb = _manager(tmp_path, monkeypatch)
+def test_add_md_copies_into_kb_dir_and_indexes(kb, tmp_path):
     src = tmp_path / "notice.md"
     src.write_text("# hello")
 
-    assert manager.add_documents([str(src)]) == (1, 0)
-    assert (kb / "notice.md").read_text() == "# hello"
-    rag.chunker.create_chunks_single.assert_called_once()
-    rag.vector_db.get_collection.return_value.add_documents.assert_called_once_with(["child"])
-    rag.parent_store.save_many.assert_called_once_with(["parent"])
+    assert kb.manager.add_documents([str(src)]) == (1, 0)
+    assert (kb.dir / "notice.md").read_text() == "# hello"
+    kb.rag.chunker.create_chunks_single.assert_called_once()
+    kb.rag.vector_db.get_collection.return_value.add_documents.assert_called_once_with(["child"])
+    kb.rag.parent_store.save_many.assert_called_once_with(["parent"])
 
 
-def test_add_md_with_odd_name_still_lands_inside_kb_dir(tmp_path, monkeypatch):
-    """A source name full of dots and backslashes is a single path component on POSIX; the
-    target must still be a direct child of the KB dir, never anything above it."""
-    manager, _, kb = _manager(tmp_path, monkeypatch)
+def test_add_md_with_odd_name_still_lands_inside_kb_dir(kb, tmp_path):
+    """Dots and backslashes in a name are one path component on POSIX; the target must still
+    be a direct child of the KB dir, never anything above it."""
     src = tmp_path / "..\\..\\evil.md"
     src.write_text("x")
     before = {p.name for p in tmp_path.iterdir()}
 
-    added, _skipped = manager.add_documents([str(src)])
+    added, _skipped = kb.manager.add_documents([str(src)])
 
     assert added == 1
-    written = list(kb.iterdir())
-    assert len(written) == 1 and written[0].parent == kb
+    written = list(kb.dir.iterdir())
+    assert len(written) == 1 and written[0].parent == kb.dir
     assert {p.name for p in tmp_path.iterdir()} == before  # nothing new beside kb/ itself
 
 
-def test_add_md_refuses_to_write_through_dangling_symlink_out_of_kb(tmp_path, monkeypatch):
-    """A dangling ``kb/notice.md`` → outside would pass ``exists()`` (False) and the copy would
-    create the outside file. The containment check rejects the resolved path instead."""
-    manager, rag, kb = _manager(tmp_path, monkeypatch)
+def test_add_md_refuses_to_write_through_dangling_symlink_out_of_kb(kb, tmp_path, caplog):
+    """A dangling ``kb/notice.md`` → outside passes ``exists()`` (False) and a plain copy would
+    create the outside file. The containment check rejects the resolved path and logs it."""
     outside = tmp_path / "escaped.md"
-    (kb / "notice.md").symlink_to(outside)  # dangling: target does not exist yet
+    (kb.dir / "notice.md").symlink_to(outside)  # dangling: target does not exist yet
     src = tmp_path / "notice.md"
     src.write_text("payload")
 
-    assert manager.add_documents([str(src)]) == (0, 1)
+    with caplog.at_level(logging.WARNING, logger="core.document_manager"):
+        assert kb.manager.add_documents([str(src)]) == (0, 1)
     assert not outside.exists()
-    rag.chunker.create_chunks_single.assert_not_called()
+    assert "markdown target escapes" in caplog.text
+    kb.rag.chunker.create_chunks_single.assert_not_called()
 
 
-def test_add_skips_existing_target(tmp_path, monkeypatch):
-    manager, rag, kb = _manager(tmp_path, monkeypatch)
-    (kb / "notice.md").write_text("old")
+def test_add_skips_existing_target(kb, tmp_path):
+    (kb.dir / "notice.md").write_text("old")
     src = tmp_path / "notice.md"
     src.write_text("new")
 
-    assert manager.add_documents([str(src)]) == (0, 1)
-    assert (kb / "notice.md").read_text() == "old"
-    rag.chunker.create_chunks_single.assert_not_called()
+    assert kb.manager.add_documents([str(src)]) == (0, 1)
+    assert (kb.dir / "notice.md").read_text() == "old"
+    kb.rag.chunker.create_chunks_single.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# source_root — the read side (Gradio passes its upload cache)
+# ---------------------------------------------------------------------------
+
+def test_source_root_accepts_paths_inside_it(kb, tmp_path):
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    src = uploads / "notice.md"
+    src.write_text("# up")
+
+    assert kb.manager.add_documents([str(src)], source_root=str(uploads)) == (1, 0)
+    assert (kb.dir / "notice.md").read_text() == "# up"
+
+
+def test_source_root_rejects_path_outside_it_and_logs(kb, tmp_path, caplog):
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    secret = tmp_path / "secret.md"  # e.g. a server file a crafted upload value points at
+    secret.write_text("keep out")
+
+    with caplog.at_level(logging.WARNING, logger="core.document_manager"):
+        assert kb.manager.add_documents([str(secret)], source_root=str(uploads)) == (0, 1)
+    assert list(kb.dir.iterdir()) == []
+    assert "outside source root" in caplog.text and str(secret) in caplog.text
+
+
+def test_source_root_rejects_symlink_leading_out_of_it(kb, tmp_path):
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    secret = tmp_path / "secret.md"
+    secret.write_text("keep out")
+    (uploads / "link.md").symlink_to(secret)
+
+    assert kb.manager.add_documents([str(uploads / "link.md")], source_root=str(uploads)) == (0, 1)
+    assert list(kb.dir.iterdir()) == []
+
+
+def test_add_pdf_converts_resolved_source_into_kb_dir(kb, tmp_path, monkeypatch):
+    """PDFs go straight to pdf_to_markdown (no glob expansion) with the checked source path."""
+    import core.document_manager as dm_mod
+
+    calls = []
+
+    def fake_pdf_to_markdown(pdf_path, output_dir):
+        calls.append((pdf_path, output_dir))
+        (output_dir / "doc.md").write_text("# pdf")
+
+    monkeypatch.setattr(dm_mod, "pdf_to_markdown", fake_pdf_to_markdown)
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    src = uploads / "doc.pdf"
+    src.write_bytes(b"%PDF-1.4")
+
+    assert kb.manager.add_documents([str(src)], source_root=str(uploads)) == (1, 0)
+    assert calls == [(os.path.realpath(src), kb.dir)]
+    assert (kb.dir / "doc.md").read_text() == "# pdf"

@@ -1,7 +1,7 @@
 import gradio as gr
 from gradio.utils import get_upload_folder
 from core.chat_interface import ChatInterface
-from core.document_manager import DocumentManager, confined_path
+from core.document_manager import DocumentManager
 from core.rag_system import RAGSystem
 import os
 
@@ -24,18 +24,13 @@ def create_gradio_ui():
         if not files:
             return None, format_file_list()
 
-        # Gradio hands over paths inside its upload cache. Only accept those: a value that
-        # points anywhere else (Gradio validates this itself, but it has had several path
-        # bypass CVEs) must never become a read of an arbitrary server file into the KB.
-        upload_root = get_upload_folder()
-        accepted = [p for p in (confined_path(upload_root, f) for f in files) if p]
-        rejected = len(files) - len(accepted)
-
+        # Gradio hands over paths inside its upload cache; add_documents refuses anything
+        # else (Gradio checks this itself, but it has had several path-bypass CVEs).
         added, skipped = doc_manager.add_documents(
-            accepted,
-            progress_callback=lambda p, desc: progress(p, desc=desc)
+            files,
+            progress_callback=lambda p, desc: progress(p, desc=desc),
+            source_root=get_upload_folder(),
         )
-        skipped += rejected
 
         gr.Info(f"✅ Added: {added} | Skipped: {skipped}")
         return None, format_file_list()

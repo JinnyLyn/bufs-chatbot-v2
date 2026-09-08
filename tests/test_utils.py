@@ -1,11 +1,11 @@
-"""Unit tests for project/utils.py — estimate_context_tokens and clear_directory_contents.
+"""Unit tests for project/utils.py — estimate_context_tokens, clear_directory_contents,
+confined_path, and the guarded write at the end of pdf_to_markdown.
 
-Note: utils.py also defines pdf_to_markdown, which lazily imports docling inside
-_get_converter(); that function is NOT exercised here (it requires real PDF files
-and the heavy docling/torch deps, out of scope for offline unit tests). We test
-only the two offline-safe functions.
+Note: pdf_to_markdown lazily imports docling inside _get_converter(); the conversion itself
+is NOT exercised here (real PDFs + heavy docling/torch deps). The containment tests mock the
+converter and only check where the markdown lands.
 """
-import sys
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -134,3 +134,92 @@ class TestGetConverter:
             mock_cls.assert_called_once()  # constructor invoked exactly once
         finally:
             utils._converter = saved  # don't leak the mock into other tests
+
+
+class TestConfinedPath:
+    """confined_path is the one containment primitive (KB target, upload source, parent store)."""
+
+    def test_accepts_relative_child(self, tmp_path):
+        utils = _import_utils()
+        root = tmp_path / "kb"
+        root.mkdir()
+        assert utils.confined_path(root, "notice.md") == os.path.join(os.path.realpath(root), "notice.md")
+
+    def test_accepts_absolute_child_after_normalization(self, tmp_path):
+        utils = _import_utils()
+        root = tmp_path / "kb"
+        (root / "sub").mkdir(parents=True)
+        messy = str(root / "sub" / ".." / "b.md")
+        assert utils.confined_path(root, messy) == os.path.join(os.path.realpath(root), "b.md")
+
+    @pytest.mark.parametrize("escape", ["../x.md", "/etc/passwd", "..", "."])
+    def test_rejects_escapes_and_root_itself(self, tmp_path, escape):
+        utils = _import_utils()
+        root = tmp_path / "kb"
+        root.mkdir()
+        assert utils.confined_path(root, escape) is None
+
+    def test_rejects_symlink_pointing_outside(self, tmp_path):
+        utils = _import_utils()
+        root = tmp_path / "kb"
+        root.mkdir()
+        outside = tmp_path / "outside.md"
+        outside.write_text("secret")
+        (root / "link.md").symlink_to(outside)
+        assert utils.confined_path(root, "link.md") is None
+
+    def test_rejects_sibling_whose_name_has_root_as_prefix(self, tmp_path):
+        """``/kb-evil/x`` starts with ``/kb`` as a string; the separator-terminated check
+        must not be fooled by that."""
+        utils = _import_utils()
+        root = tmp_path / "kb"
+        root.mkdir()
+        sibling = tmp_path / "kb-evil"
+        sibling.mkdir()
+        assert utils.confined_path(root, str(sibling / "x.md")) is None
+
+    def test_root_slash_rejects_everything(self):
+        """No containment exists under ``/``; fail closed instead of accepting every path."""
+        utils = _import_utils()
+        assert utils.confined_path("/", "/etc/passwd") is None
+        assert utils.confined_path("/", "etc/passwd") is None
+
+    def test_accepts_bytes_and_pathlike_inputs(self, tmp_path):
+        utils = _import_utils()
+        root = tmp_path / "kb"
+        root.mkdir()
+        expected = os.path.join(os.path.realpath(root), "a.md")
+        assert utils.confined_path(root, b"a.md") == expected
+        assert utils.confined_path(str(root), Path("a.md")) == expected
+
+
+class TestPdfToMarkdownContainment:
+    """The write at the end of pdf_to_markdown is where PDF text lands on disk; it must refuse
+    a target that resolves outside output_dir. Conversion is mocked."""
+
+    def _mock_conversion(self, monkeypatch, utils, text="# converted"):
+        result = MagicMock()
+        result.document.export_to_markdown.return_value = text
+        converter = MagicMock()
+        converter.convert.return_value = result
+        monkeypatch.setattr(utils, "_get_converter", lambda: converter)
+        monkeypatch.setattr(utils, "_supplement_dropped_pages", lambda md, *_args: md)
+
+    def test_writes_stem_plus_md_inside_output_dir(self, tmp_path, monkeypatch):
+        utils = _import_utils()
+        self._mock_conversion(monkeypatch, utils)
+        out = tmp_path / "kb"
+        out.mkdir()
+        utils.pdf_to_markdown(tmp_path / "1. 공고.pdf", out)
+        assert (out / "1. 공고.md").read_text(encoding="utf-8") == "# converted"
+
+    def test_refuses_dangling_symlink_target_out_of_dir(self, tmp_path, monkeypatch):
+        utils = _import_utils()
+        self._mock_conversion(monkeypatch, utils)
+        out = tmp_path / "kb"
+        out.mkdir()
+        outside = tmp_path / "escaped.md"
+        (out / "notice.md").symlink_to(outside)  # dangling: a plain write would create outside
+        with pytest.raises(ValueError):
+            utils.pdf_to_markdown(tmp_path / "notice.pdf", out)
+        assert not outside.exists()
