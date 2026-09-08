@@ -9,7 +9,9 @@ import tiktoken
 
 def confined_path(root, path):
     """Return ``path`` (joined under ``root`` when relative) as a real, normalized string if it
-    lies strictly inside ``root``; ``None`` if it would escape.
+    lies strictly inside ``root``; ``None`` if it would escape. ``path`` may be relative (a
+    file name to place under ``root``) or absolute (a path to check against ``root``) — an
+    absolute ``path`` makes ``os.path.join`` drop ``root``, and the prefix check then decides.
 
     The single containment primitive for every file the app reads or writes on a caller's
     behalf: the KB markdown target, the Gradio upload source, the parent store. Symlinks are
