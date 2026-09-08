@@ -1,4 +1,5 @@
 import gradio as gr
+from gradio.utils import get_upload_folder
 from core.chat_interface import ChatInterface
 from core.document_manager import DocumentManager
 from core.rag_system import RAGSystem
@@ -22,12 +23,15 @@ def create_gradio_ui():
     def upload_handler(files, progress=gr.Progress()):
         if not files:
             return None, format_file_list()
-            
+
+        # Gradio hands over paths inside its upload cache; add_documents refuses anything
+        # else (Gradio checks this itself, but it has had several path-bypass CVEs).
         added, skipped = doc_manager.add_documents(
-            files, 
-            progress_callback=lambda p, desc: progress(p, desc=desc)
+            files,
+            progress_callback=lambda p, desc: progress(p, desc=desc),
+            source_root=get_upload_folder(),
         )
-        
+
         gr.Info(f"✅ Added: {added} | Skipped: {skipped}")
         return None, format_file_list()
     

@@ -59,7 +59,10 @@ def health_llm():
         resp.raise_for_status()
         models = resp.json().get("models", [])
     except Exception as exc:  # noqa: BLE001
-        return {"status": "error", "ollama_base_url": base, "error": str(exc)}
+        # CodeQL py/stack-trace-exposure: detail (URL, proxy, socket error) goes to the log;
+        # the body carries only the class name. healthcheck.* read status/ollama_base_url.
+        logger.warning("/health/llm: Ollama at %s unreachable: %s", base, exc)
+        return {"status": "error", "ollama_base_url": base, "error": type(exc).__name__}
 
     loaded = []
     for m in models:

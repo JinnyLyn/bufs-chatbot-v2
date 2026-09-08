@@ -1,7 +1,12 @@
+import logging
+import os
 from pathlib import Path
 import shutil
 import config
-from utils import pdfs_to_markdowns, clear_directory_contents
+from utils import confined_path, pdf_to_markdown, clear_directory_contents
+
+logger = logging.getLogger(__name__)
+
 
 class DocumentManager:
 
@@ -10,7 +15,14 @@ class DocumentManager:
         self.markdown_dir = Path(config.MARKDOWN_DIR)
         self.markdown_dir.mkdir(parents=True, exist_ok=True)
         
-    def add_documents(self, document_paths, progress_callback=None):
+    def add_documents(self, document_paths, progress_callback=None, source_root=None):
+        """Copy (.md) or convert (.pdf) each source into the KB directory and index it.
+
+        ``source_root``: when given, only sources that resolve inside this directory are
+        read; anything else is skipped and logged. The Gradio UI passes its upload cache so
+        a client-supplied path can never pull an arbitrary server file into the KB. The
+        operator CLI (ingest.py) leaves it ``None`` — its paths are the operator's own.
+        """
         if not document_paths:
             return 0, 0
             
@@ -26,7 +38,16 @@ class DocumentManager:
         for i, doc_path in enumerate(document_paths):
             if progress_callback:
                 progress_callback((i + 1) / len(document_paths), f"Processing {Path(doc_path).name}")
-                
+
+            if source_root is None:
+                source = os.fspath(doc_path)
+            else:
+                source = confined_path(source_root, doc_path)
+                if source is None:
+                    logger.warning("add_documents: refusing %r — outside source root %s", doc_path, source_root)
+                    skipped += 1
+                    continue
+
             doc_name = Path(doc_path).stem
 
             # KB scope guard (#108): skip out-of-scope sources BEFORE materializing markdown.
@@ -38,7 +59,14 @@ class DocumentManager:
                 skipped += 1
                 continue
 
-            md_path = self.markdown_dir / f"{doc_name}.md"
+            # See confined_path(): the target must be a direct child of markdown_dir; a symlink
+            # there that leads outside is refused rather than written through.
+            md_target = confined_path(self.markdown_dir, f"{doc_name}.md")
+            if md_target is None:
+                logger.warning("add_documents: refusing %r — markdown target escapes %s", doc_path, self.markdown_dir)
+                skipped += 1
+                continue
+            md_path = Path(md_target)
 
             if md_path.exists():
                 skipped += 1
@@ -46,9 +74,11 @@ class DocumentManager:
                 
             try:            
                 if Path(doc_path).suffix.lower() == ".md":
-                    shutil.copy(doc_path, md_path)
+                    shutil.copy(source, md_path)
                 else:
-                    pdfs_to_markdowns(str(doc_path), overwrite=False)            
+                    # Read from the resolved source, but name the output after doc_path (which
+                    # md_path was derived from) so the two never diverge on a symlinked upload.
+                    pdf_to_markdown(source, self.markdown_dir, out_name=md_path.name)
                 parent_chunks, child_chunks = self.rag_system.chunker.create_chunks_single(md_path)
                 
                 if not child_chunks:

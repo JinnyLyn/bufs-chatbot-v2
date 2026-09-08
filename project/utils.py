@@ -7,6 +7,28 @@ import glob
 import tiktoken
 
 
+def confined_path(root, path):
+    """Return ``path`` (joined under ``root`` when relative) as a real, normalized string if it
+    lies strictly inside ``root``; ``None`` if it would escape. ``path`` may be relative (a
+    file name to place under ``root``) or absolute (a path to check against ``root``) — an
+    absolute ``path`` makes ``os.path.join`` drop ``root``, and the prefix check then decides.
+
+    The single containment primitive for every file the app reads or writes on a caller's
+    behalf: the KB markdown target, the Gradio upload source, the parent store. Symlinks are
+    resolved before the check, so a link inside ``root`` that points outside (or a dangling
+    one a write would follow) is rejected. ``root`` itself is never accepted, and a root of
+    ``/`` rejects everything rather than accepting everything — there is no containment to
+    enforce there. Written as realpath + ``startswith`` because that is the normalization /
+    guard pair CodeQL's py/path-injection query recognizes; ``Path.resolve`` +
+    ``is_relative_to`` is equivalent in effect but invisible to it.
+    """
+    real_root = os.path.realpath(root)
+    candidate = os.path.realpath(os.path.join(real_root, os.fsdecode(path)))
+    if candidate.startswith(real_root + os.sep):
+        return candidate
+    return None
+
+
 def clear_directory_contents(directory: Path) -> None:
     """Delete everything under directory but not the directory itself (safe for Docker volume / bind mount roots)."""
     directory = Path(directory)
@@ -78,7 +100,13 @@ def _supplement_dropped_pages(md: str, pdf_path, dl_doc) -> str:
     return md + "".join(extra)
 
 
-def pdf_to_markdown(pdf_path, output_dir):
+def pdf_to_markdown(pdf_path, output_dir, out_name=None):
+    """Convert one PDF to ``output_dir/<out_name>`` (default ``<stem of pdf_path>.md``).
+
+    ``out_name`` lets a caller that has already decided the KB file name (add_documents,
+    which names by the caller-supplied path, not the symlink-resolved one it reads from)
+    keep the write and its own bookkeeping on the same name.
+    """
     # Docling reconstructs table cell structure (TableFormer) and reading order far
     # better than a flat text dump, so merged-cell / multi-column / page-spanning
     # tables survive into the markdown the chunker consumes.
@@ -95,8 +123,12 @@ def pdf_to_markdown(pdf_path, output_dir):
     # Build the output name as stem + ".md" (string), NOT Path.with_suffix(): real
     # notice filenames often contain dots ("1. 공고", "매뉴얼24.5.23.") and with_suffix
     # would treat the text after the first dot as an extension and truncate it.
-    output_path = Path(output_dir) / (Path(pdf_path).stem + ".md")
-    output_path.write_bytes(md_cleaned.encode('utf-8'))
+    # The write goes through confined_path so a symlink planted under output_dir cannot
+    # redirect it outside the KB directory — the guard lives with the write, not in a caller.
+    target = confined_path(output_dir, out_name or (Path(pdf_path).stem + ".md"))
+    if target is None:
+        raise ValueError(f"markdown target for {pdf_path!r} escapes {output_dir!r}")
+    Path(target).write_bytes(md_cleaned.encode('utf-8'))
 
 def pdfs_to_markdowns(path_pattern, overwrite: bool = False):
     output_dir = Path(config.MARKDOWN_DIR)

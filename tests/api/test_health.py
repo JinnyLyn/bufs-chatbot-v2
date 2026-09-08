@@ -34,3 +34,28 @@ def test_public_health_accepts_head():
     resp = _client().head("/api/health")
     assert resp.status_code == 200
     assert resp.content == b""
+
+
+def test_health_llm_error_keeps_exception_detail_out_of_response(monkeypatch, caplog):
+    """Error responses never echo exception text; it goes to the log, the body keeps the
+    keys scripts/healthcheck.* read plus the exception class name."""
+    import logging
+
+    requests = pytest.importorskip("requests")
+    import api.health as health
+
+    def boom(*_args, **_kwargs):
+        raise requests.ConnectionError("HTTPConnectionPool(host='internal-gpu-box') secret-detail")
+
+    monkeypatch.setattr(health.requests, "get", boom)
+    with caplog.at_level(logging.WARNING, logger="api.health"):
+        resp = _client().get("/health/llm")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "error"
+    assert body["error"] == "ConnectionError"
+    assert "ollama_base_url" in body
+    assert "secret-detail" not in resp.text
+    assert "internal-gpu-box" not in resp.text
+    assert "secret-detail" in caplog.text
