@@ -18,8 +18,10 @@ SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 # 종료 코드는 레포 루트의 STUB_RC 첫 줄을 한 번 쓰고 지운다 — "첫 호출 실패, 롤백 호출 성공" 시나리오.
 STUB_RESTART = """#!/usr/bin/env bash
 root="$(cd "$(dirname "$0")/.." && pwd)"
-echo "restart $(git -C "$root" rev-parse --short HEAD)" >>"$root/logs/run/restart-calls"
+m=0; [ -f "$root/logs/run/maintenance" ] && m=1
+echo "restart $(git -C "$root" rev-parse --short HEAD) maint=$m" >>"$root/logs/run/restart-calls"
 rm -f "$root/logs/run/maintenance"
+[ -f "$root/STUB_TOUCH" ] && echo blocker >"$root/$(cat "$root/STUB_TOUCH")"
 rc="$(sed -n 1p "$root/STUB_RC" 2>/dev/null || true)"
 [ -f "$root/STUB_RC" ] && sed -i 1d "$root/STUB_RC"
 exit "${rc:-0}"
@@ -52,7 +54,7 @@ def prod(tmp_path):
     _executable(src / "scripts" / "deploy.sh", (SCRIPTS / "deploy.sh").read_text(encoding="utf-8"))
     _executable(src / "scripts" / "restart-all.sh", STUB_RESTART)
     _executable(src / "scripts" / "healthcheck.sh", STUB_HEALTH)
-    (src / ".gitignore").write_text("logs/\nSTUB_RC\n")
+    (src / ".gitignore").write_text("logs/\nSTUB_RC\nSTUB_TOUCH\n")
     (src / "app.txt").write_text("first\n")
     git(src, "add", "-A")
     git(src, "commit", "-qm", "first")
@@ -75,6 +77,7 @@ def prod(tmp_path):
 def run(root, *args, check=True, env=None):
     e = os.environ.copy()
     e["DEPLOY_SKIP_UNIT_CHECK"] = "1"
+    e.pop("CLOUDFLARE_API_TOKEN", None)          # the Worker step must never run from tests
     e.update(env or {})
     p = subprocess.run(
         ["bash", str(root / "scripts" / "deploy.sh"), *args],
@@ -111,6 +114,10 @@ def deployed(root):
     return ok[-1][2:4] if ok else []
 
 
+def origin(root):
+    return root.parent / "origin.git"
+
+
 def log_rows(root):
     f = root / "logs" / "run" / "deploys.log"
     return [line.split("\t") for line in f.read_text().splitlines()] if f.exists() else []
@@ -122,10 +129,23 @@ class TestDeploy:
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
         assert on_branch(prod) == ""                                     # detached at the tag
         assert deployed(prod)[:2] == ["v0.1.0-beta", tag_sha(prod, "v0.1.0-beta")]
-        assert len(restart_calls(prod)) == 1
+        assert restart_calls(prod) == [f"restart {tag_sha(prod, 'v0.1.0-beta')[:7]} maint=1"]
+        assert not (prod / "logs" / "run" / "maintenance").exists()
         rows = log_rows(prod)
         assert rows[-1][1:3] == ["deploy", "v0.1.0-beta"] and rows[-1][4] == "ok"
         assert "is live" in p.stdout
+
+    def test_more_than_40_commits_does_not_kill_the_script(self, prod):
+        # `git log | head -40` under pipefail died with SIGPIPE; --max-count must not
+        for i in range(45):
+            (prod / "app.txt").write_text(f"bulk {i}\n")
+            git(prod, "commit", "-qam", f"bulk commit {i}")
+        git(prod, "tag", "v0.5.0-beta")
+        git(prod, "push", "-q", "origin", "main", "v0.5.0-beta")
+        run(prod, "v0.1.0-beta", "--yes")
+        p = run(prod, "v0.5.0-beta", "--yes")
+        assert head(prod) == tag_sha(prod, "v0.5.0-beta")
+        assert p.stdout.count("bulk commit") == 40
 
     def test_shows_commits_going_live(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
@@ -141,7 +161,7 @@ class TestDeploy:
     def test_unknown_tag_refused(self, prod):
         before = head(prod)
         p = run(prod, "v9.9.9-beta", "--yes", check=False)
-        assert p.returncode != 0 and "does not exist" in p.stderr
+        assert p.returncode != 0 and "not on origin" in p.stderr
         assert head(prod) == before and restart_calls(prod) == []
 
     def test_bad_tag_name_refused(self, prod):
@@ -159,6 +179,29 @@ class TestDeploy:
         p = run(prod, "v0.3.0-beta", "--yes", check=False)
         assert p.returncode != 0 and "not merged into main" in p.stderr
         assert restart_calls(prod) == []
+
+    def test_local_only_tag_is_not_a_release(self, prod):
+        # `git tag` on the box, never published on GitHub — must not deploy, and gets pruned
+        git(prod, "tag", "v0.9.0-beta", "main")
+        p = run(prod, "v0.9.0-beta", "--yes", check=False)
+        assert p.returncode != 0 and "not on origin" in p.stderr
+        assert restart_calls(prod) == []
+        assert git(prod, "tag", "-l", "v0.9.0-beta") == ""
+
+    def test_tag_deleted_on_origin_is_refused_even_if_fetched_before(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")                  # fetched every tag, incl. v0.2.0-beta
+        git(origin(prod), "tag", "-d", "v0.2.0-beta")
+        p = run(prod, "v0.2.0-beta", "--yes", check=False)
+        assert p.returncode != 0 and "not on origin" in p.stderr
+        assert head(prod) == tag_sha(prod, "v0.1.0-beta")
+        assert "v0.2.0-beta" not in run(prod, "tags").stdout
+
+    def test_tag_moved_on_origin_deploys_the_new_commit(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        git(origin(prod), "tag", "-f", "v0.2.0-beta", "main")   # re-cut onto "third"
+        p = run(prod, "v0.2.0-beta", "--yes")
+        assert head(prod) == tag_sha(prod, "main")
+        assert "third, unreleased (#3)" in p.stdout
 
     def test_dirty_tracked_file_refused(self, prod):
         (prod / "app.txt").write_text("local edit\n")
@@ -218,9 +261,32 @@ class TestFailureHandling:
         before = head(prod)                            # main, nothing recorded yet
         (prod / "STUB_RC").write_text("1\n")
         p = run(prod, "v0.1.0-beta", "--yes", check=False)
-        assert p.returncode == 1
-        assert head(prod) == before
+        assert p.returncode == 1 and "restoring main" in p.stderr
+        assert head(prod) == before and on_branch(prod) == "main"
         assert len(restart_calls(prod)) == 2
+        assert deployed(prod) == []                            # a branch is not a release
+        assert log_rows(prod)[-1][1] == "auto-rollback" and log_rows(prod)[-1][4].startswith("restored")
+        assert "first deploy not done" in run(prod, "status").stdout
+        assert "no previous deploy" in run(prod, "rollback", check=False).stderr
+
+    def test_checkout_failure_during_rollback_is_not_swallowed(self, prod):
+        # live = v0.3.0-beta (has extra.txt). Deploying v0.1.0-beta removes extra.txt; the
+        # stub then drops an untracked extra.txt and fails, so the rollback checkout to
+        # v0.3.0-beta collides. That must surface, not restart the broken tag as "ok".
+        (prod / "extra.txt").write_text("x\n")
+        git(prod, "add", "extra.txt")
+        git(prod, "commit", "-qm", "fourth: extra file")
+        git(prod, "tag", "v0.3.0-beta")
+        git(prod, "push", "-q", "origin", "main", "v0.3.0-beta")
+        run(prod, "v0.3.0-beta", "--yes")
+        (prod / "STUB_RC").write_text("1\n")
+        (prod / "STUB_TOUCH").write_text("extra.txt")
+        p = run(prod, "v0.1.0-beta", "--yes", check=False)
+        assert p.returncode == 1 and "checkout v0.3.0-beta failed" in p.stderr
+        assert len(restart_calls(prod)) == 2                   # v0.3 deploy + failed v0.1; no third
+        assert head(prod) == tag_sha(prod, "v0.1.0-beta")      # left where git left it
+        assert deployed(prod)[0] == "v0.3.0-beta"              # never recorded the broken state as ok
+        assert log_rows(prod)[-1][4] == "checkout-failed"
 
     def test_llm_probe_failure_keeps_deploy_and_warns(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
@@ -253,12 +319,21 @@ class TestRollback:
         assert log_rows(prod)[-1][1:3] == ["rollback", "v0.1.0-beta"]
         assert "replacing: v0.2.0-beta" in p.stdout
 
-    def test_rollback_twice_alternates(self, prod):
+    def test_rollback_twice_keeps_going_back_not_forward(self, prod):
+        git(prod, "tag", "v0.3.0-beta", "main")
+        git(prod, "push", "-q", "origin", "v0.3.0-beta")
         run(prod, "v0.1.0-beta", "--yes")
         run(prod, "v0.2.0-beta", "--yes")
-        run(prod, "rollback")
+        run(prod, "v0.3.0-beta", "--yes")
         run(prod, "rollback")
         assert deployed(prod)[0] == "v0.2.0-beta"
+        run(prod, "rollback")                                   # "v0.2 is bad too"
+        assert deployed(prod)[0] == "v0.1.0-beta"              # not back onto v0.3
+        p = run(prod, "rollback", check=False)
+        assert p.returncode != 0 and "no previous deploy" in p.stderr
+        run(prod, "v0.2.0-beta", "--yes")                       # an explicit deploy re-endorses it
+        run(prod, "rollback")
+        assert deployed(prod)[0] == "v0.1.0-beta"
 
     def test_rollback_without_history_needs_explicit_tag(self, prod):
         p = run(prod, "rollback", check=False)
@@ -322,6 +397,10 @@ class TestStatusAndTags:
         assert "vfoo" not in run(prod, "status").stdout
         assert "vfoo" not in run(prod, "tags").stdout
         assert "newest on origin: v0.2.0-beta" in run(prod, "status").stdout
+        git(prod, "tag", "wip", "v0.1.0-beta")                 # checkpoint tag on the live commit
+        git(prod, "push", "-q", "origin", "wip")
+        out = run(prod, "status").stdout
+        assert "[checkout] v0.1.0-beta" in out and "wip" not in out
 
     def test_help_and_unknown_command(self, prod):
         assert "deploy.sh" in run(prod, "help").stdout
@@ -339,10 +418,17 @@ class TestMaintenance:
         assert not flag.exists()
 
     def test_worker_failure_keeps_local_flag_and_reports(self, prod):
-        # no worker/ directory here → the Cloudflare step cannot run; the flag must still be set
-        p = run(prod, "maint", "on", check=False)
-        assert p.returncode == 1 and "wrangler login" in p.stderr
+        # no Cloudflare credentials (and no worker/ here) → the Worker step must fail fast,
+        # never block on an interactive wrangler login; the local flag is still set
+        p = run(prod, "maint", "on", check=False, env={"HOME": str(prod)})
+        assert p.returncode == 1 and "CLOUDFLARE_API_TOKEN" in p.stderr
         assert (prod / "logs" / "run" / "maintenance").exists()
+
+    def test_off_resumes_healthcheck_even_when_worker_step_fails(self, prod):
+        run(prod, "maint", "on", "--local-only")
+        p = run(prod, "maint", "off", check=False, env={"HOME": str(prod)})
+        assert p.returncode == 1 and "STILL see" in p.stderr
+        assert not (prod / "logs" / "run" / "maintenance").exists()
 
     def test_manual_flag_survives_a_deploy(self, prod):
         run(prod, "maint", "on", "--local-only")

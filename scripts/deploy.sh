@@ -40,7 +40,7 @@ set -Eeuo pipefail
 . "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
 
 DEPLOY_LOG="$RUN_DIR/deploys.log"   # TSV, one row per attempt: time  action  tag  sha  result  user
-TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
+TAG_RE="$RELEASE_TAG_RE"            # from _common.sh — the same pattern restart-all.sh's banner uses
 # The Worker maintenance page is flipped through wrangler, which on a headless box needs an
 # API token (Workers KV Storage: Edit) — scripts/env.local is sourced by _common.sh, so one
 # line there reaches every npm/wrangler call below.
@@ -69,7 +69,7 @@ read_deployed() {
     DEP_TAG=""; DEP_SHA=""; DEP_TIME=""
     [ -f "$DEPLOY_LOG" ] || return 0
     IFS=$'\t' read -r DEP_TAG DEP_SHA DEP_TIME < <(
-        awk -F'\t' '$5 ~ /^ok/ { t = $3; s = $4; d = $1 } END { printf "%s\t%s\t%s\n", t, s, d }' "$DEPLOY_LOG"
+        awk -F'\t' -v re="$TAG_RE" '$5 ~ /^ok/ && $3 ~ re { t = $3; s = $4; d = $1 } END { printf "%s\t%s\t%s\n", t, s, d }' "$DEPLOY_LOG"
     ) || true
 }
 
@@ -77,11 +77,20 @@ record() {  # $1 action  $2 tag  $3 sha  $4 result
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(now)" "$1" "$2" "$3" "$4" "${USER:-?}" >>"$DEPLOY_LOG"
 }
 
-# The tag to roll back to: the newest successful deploy whose tag differs from the live one.
+# The tag to roll back to: walking the successful rows backwards, the newest tag that is
+# not live and was not itself rolled back from since — so `rollback` twice keeps going
+# BACK (v0.3 → v0.2 → v0.1), never forward onto the release just abandoned. An explicit
+# `deploy` of a tag lifts that mark again.
 previous_tag() {
-    read_deployed
     [ -f "$DEPLOY_LOG" ] || return 0
-    awk -F'\t' -v cur="$DEP_TAG" '$5 ~ /^ok/ && $3 != cur { t = $3 } END { print t }' "$DEPLOY_LOG"
+    awk -F'\t' -v re="$TAG_RE" '
+        $5 ~ /^ok/ && $3 ~ re {
+            if (($2 == "rollback" || $2 == "auto-rollback") && live != "") abandoned[live] = 1
+            if ($2 == "deploy") delete abandoned[$3]
+            live = $3; tags[++n] = $3
+        }
+        END { for (i = n; i >= 1; i--) if (tags[i] != live && !(tags[i] in abandoned)) { print tags[i]; exit } }
+    ' "$DEPLOY_LOG"
 }
 
 # Release tags on origin, newest first, one per line: tag<TAB>date<TAB>subject.
@@ -127,16 +136,27 @@ stash_if_dirty() {
     say "         recover later with: git stash pop" >&2
 }
 
+# origin is the authority on tags: local-only tags are pruned (a tag nobody published is not
+# a release), moved tags are taken over (--force), a retracted tag disappears.
 fetch_tags() {
-    g fetch origin --tags --prune --quiet || die "git fetch failed — no network, or origin unreachable."
+    g fetch origin --prune --prune-tags --force --tags --quiet \
+        || die "git fetch failed — no network, or origin unreachable."
 }
 
-# Validates a release tag: name pattern, exists, reachable from origin/main. Sets TAG_SHA.
+# Validates a release tag: name pattern, published on origin, reachable from origin/main.
+# Sets TAG_SHA. Asks origin directly instead of trusting refs/tags in this checkout — a
+# `git tag` typed on the box must not be deployable (RELEASE.md: two people, not one).
 verify_tag() {
-    local tag="$1"
+    local tag="$1" remote
     [[ "$tag" =~ $TAG_RE ]] || die "'$tag' is not a release tag name (expected vX.Y.Z or vX.Y.Z-beta…, see RELEASE.md)."
-    TAG_SHA="$(g rev-parse -q --verify "refs/tags/$tag^{commit}" 2>/dev/null || true)"
-    [ -n "$TAG_SHA" ] || die "tag '$tag' does not exist on origin — has the release been published on GitHub? (./scripts/deploy.sh tags)"
+    remote="$(g ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}")" \
+        || die "cannot ask origin about tag '$tag' — no network, or origin unreachable."
+    # an annotated tag lists twice; the ^{} line is the commit it points at
+    remote="$(awk '$2 ~ /\^\{\}$/ { peeled = $1 } $2 !~ /\^\{\}$/ { plain = $1 } END { print (peeled != "" ? peeled : plain) }' <<<"$remote")"
+    [ -n "$remote" ] || die "tag '$tag' is not on origin — has the release been published on GitHub? (./scripts/deploy.sh tags)"
+    g fetch origin --force --quiet "refs/tags/$tag:refs/tags/$tag" || die "could not fetch tag '$tag' from origin."
+    TAG_SHA="$(g rev-parse -q --verify "refs/tags/$tag^{commit}")"
+    [ "$TAG_SHA" = "$remote" ] || die "tag '$tag' is ${remote:0:7} on origin but ${TAG_SHA:0:7} here even after fetching — refusing."
     g merge-base --is-ancestor "$TAG_SHA" origin/main \
         || die "tag '$tag' is not merged into main — releases are cut from main only."
 }
@@ -163,25 +183,43 @@ restore_checkout() {  # $1 = branch name or "", $2 = sha
     if [ -n "$1" ]; then g checkout --quiet "$1"; else g checkout --quiet --detach "$2"; fi
 }
 
+# After a switch: put a manual `maint on` flag back, otherwise make sure the flag is gone.
+restore_maint() {  # $1 = saved manual flag content, or ""
+    if [ -n "$1" ]; then printf '%s\n' "$1" >"$MAINT_FLAG"; else maint_off; fi
+}
+
 # switch_to <tag> <sha> <action> <allow_rollback>
 # Checks out the tag, restarts, records. On a dead backend with allow_rollback=1, restores
-# the tag that was live (or the pre-deploy commit when nothing was recorded yet) once.
+# the tag that was live once — or, before any release was ever recorded, the branch/commit
+# that was checked out (restarted, but not recorded as live: it is not a release).
 switch_to() {
     local tag="$1" sha="$2" action="$3" allow_rollback="$4"
     local pre_branch pre_sha maint_saved="" rc=0
     pre_branch="$(g symbolic-ref --short -q HEAD || true)"
     pre_sha="$(g rev-parse HEAD)"
 
-    # restart-all.sh clears the maintenance flag on exit; put a manual one back afterwards.
+    # Stand the healthcheck down for the whole switch: the checkout + frontend build window
+    # is minutes long, and a timer-triggered restart inside it would start the frontend from
+    # a half-built .next. restart-all.sh sets and clears the flag itself around the bounce;
+    # a manual `maint on` that was already there is put back at the end.
     [ -f "$MAINT_FLAG" ] && maint_saved="$(cat "$MAINT_FLAG")"
+    MAINT_SAVED="$maint_saved"
+    # shellcheck disable=SC2064  # expand now on purpose: the trap must not depend on locals
+    trap "restore_maint '$MAINT_SAVED'" EXIT   # Ctrl-C during the build must not leave it up
+    maint_on "deploy.sh $action $tag"
 
     say "[switch] git checkout --detach $tag  (${sha:0:7})"
-    g checkout --quiet --detach "$tag"
+    if ! g checkout --quiet --detach "$tag"; then
+        record "$action" "$tag" "$sha" checkout-failed
+        restore_maint "$maint_saved"
+        say "[error]  git checkout $tag failed — nothing was restarted; the tree is as git left it (git status)." >&2
+        return 1
+    fi
 
     say "[switch] restart-all.sh"
     run_restart || rc=$?
-
-    [ -n "$maint_saved" ] && printf '%s\n' "$maint_saved" >"$MAINT_FLAG"
+    restore_maint "$maint_saved"
+    trap - EXIT
 
     case "$rc" in
         0)
@@ -210,19 +248,29 @@ switch_to() {
                 return 1
             fi
             # Go back to what was live before this attempt (the log only gains an "ok" row on
-            # success); on the very first deploy there is no record, so back to what was checked out.
-            local back_tag back_sha
+            # success). Before the first release there is nothing live: restore the branch or
+            # commit that was checked out and restart that, without calling it a release.
+            local rc2=0
             read_deployed
             if [ -n "$DEP_TAG" ]; then
-                back_tag="$DEP_TAG"; back_sha="$DEP_SHA"
+                say "[undo]   restart failed (rc=$rc) — rolling back to $DEP_TAG" >&2
+                switch_to "$DEP_TAG" "$DEP_SHA" auto-rollback 0 || rc2=$?
+                case "$rc2" in
+                    0|4) say "[undo]   rolled back to $DEP_TAG; $tag was NOT deployed. See logs/backend/server.err." >&2 ;;
+                    *)   say "[error]  rollback ALSO failed — stack is down. systemctl --user status camchat.target" >&2 ;;
+                esac
             else
-                back_tag="$pre_sha"; back_sha="$pre_sha"
-            fi
-            say "[undo]   restart failed (rc=$rc) — rolling back to $back_tag" >&2
-            if switch_to "$back_tag" "$back_sha" auto-rollback 0; then
-                say "[undo]   rolled back; $tag was NOT deployed. See logs/backend/server.err." >&2
-            else
-                say "[error]  rollback ALSO failed — stack is down. systemctl --user status camchat.target" >&2
+                local where="${pre_branch:-${pre_sha:0:7}}"
+                say "[undo]   restart failed (rc=$rc) — nothing was live before; restoring $where" >&2
+                maint_on "deploy.sh restore $where"
+                restore_checkout "$pre_branch" "$pre_sha"
+                run_restart || rc2=$?
+                restore_maint "$maint_saved"
+                record auto-rollback "$where" "$pre_sha" "restored(rc=$rc2)"
+                case "$rc2" in
+                    0|4) say "[undo]   $where is back; $tag was NOT deployed. See logs/backend/server.err." >&2 ;;
+                    *)   say "[error]  restoring $where ALSO failed — stack is down. systemctl --user status camchat.target" >&2 ;;
+                esac
             fi
             return 1 ;;
     esac
@@ -245,12 +293,14 @@ cmd_deploy() {  # $1 = tag
     if [ "$TAG_SHA" = "$from" ]; then
         say "[deploy] same commit as what is live — restart only."
     else
+        # --max-count, not `| head`: head closing the pipe early would SIGPIPE git and, under
+        # pipefail + errexit, kill this script before the prompt on any release >40 commits.
         if g merge-base --is-ancestor "$from" "$TAG_SHA"; then
-            say "[deploy] commits going live:"
-            g log --oneline --no-decorate "$from..$TAG_SHA" | head -40 | sed 's/^/           /'
+            say "[deploy] commits going live (newest first, at most 40):"
+            g log --oneline --no-decorate --max-count=40 "$from..$TAG_SHA" | sed 's/^/           /'
         else
-            say "[deploy] this tag is OLDER than what is live — commits being REMOVED:"
-            g log --oneline --no-decorate "$TAG_SHA..$from" | head -40 | sed 's/^/           /'
+            say "[deploy] this tag is OLDER than what is live — commits being REMOVED (at most 40):"
+            g log --oneline --no-decorate --max-count=40 "$TAG_SHA..$from" | sed 's/^/           /'
         fi
     fi
 
@@ -371,6 +421,17 @@ cmd_status() {
     fi
 }
 
+# Flip the Worker maintenance key. Refuses up front when wrangler has nothing to
+# authenticate with (it would otherwise sit in an interactive login prompt), and is
+# time-boxed so a stuck npx/wrangler can never hold the operator's terminal.
+worker_kv() {  # $1 = on|off
+    if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] && [ ! -f "$HOME/.config/.wrangler/config/default.toml" ]; then
+        say "[worker]   no Cloudflare credentials on this box — $WRANGLER_AUTH_HINT" >&2
+        return 1
+    fi
+    (cd "$REPO/worker" && timeout 60 npm run --silent "maintenance:$1")
+}
+
 cmd_maint() {  # $1 = on|off
     local mode="$1" rc=0
     case "$mode" in
@@ -378,25 +439,22 @@ cmd_maint() {  # $1 = on|off
             maint_on "deploy.sh maint on (manual)"
             say "[maint]    healthcheck auto-restart suspended (flag: $MAINT_FLAG)"
             if [ "$local_only" = 1 ]; then return 0; fi
-            if (cd "$REPO/worker" && npm run --silent maintenance:on); then
+            if worker_kv on; then
                 say "[worker]   maintenance page ON — visitors see the 503 notice within ~60 s"
             else
                 rc=1
-                say "[error]  could not switch the Cloudflare Worker — $WRANGLER_AUTH_HINT" >&2
-                say "         (the local flag IS set; re-run 'maint on' afterwards, or use --local-only)" >&2
+                say "[error]  could not switch the Cloudflare Worker — the local flag IS set; re-run 'maint on' once wrangler can authenticate, or use --local-only" >&2
             fi ;;
         off)
-            if [ "$local_only" != 1 ]; then
-                if (cd "$REPO/worker" && npm run --silent maintenance:off); then
-                    say "[worker]   maintenance page off — visitors are back within ~60 s"
-                else
-                    rc=1
-                    say "[error]  could not switch the Cloudflare Worker — visitors STILL see the maintenance page." >&2
-                    say "         $WRANGLER_AUTH_HINT — then: cd worker && npm run maintenance:off" >&2
-                fi
-            fi
-            maint_off
-            say "[maint]    healthcheck auto-restart resumed" ;;
+            maint_off   # first: whatever happens at Cloudflare, the healthcheck must resume
+            say "[maint]    healthcheck auto-restart resumed"
+            if [ "$local_only" = 1 ]; then return 0; fi
+            if worker_kv off; then
+                say "[worker]   maintenance page off — visitors are back within ~60 s"
+            else
+                rc=1
+                say "[error]  could not switch the Cloudflare Worker — visitors STILL see the maintenance page; fix wrangler auth, then: cd worker && npm run maintenance:off" >&2
+            fi ;;
         *) die "usage: ./scripts/deploy.sh maint on|off [--local-only]" ;;
     esac
     return "$rc"

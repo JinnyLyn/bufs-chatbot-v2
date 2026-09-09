@@ -56,7 +56,7 @@ else
     echo "[deploy] serving $head on branch '${branch:-detached}'"
     [ "$branch" = "main" ] || echo "[warn]   not on main and not a release tag — the tunnel will serve '${branch:-$head}'."
     behind="$(git -C "$REPO" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
-    [ "$behind" = 0 ] || echo "[warn]   $behind commit(s) behind origin/main (as last fetched) — 'git pull' first?"
+    [ "$behind" = 0 ] || echo "[warn]   $behind commit(s) behind origin/main (as last fetched) — releases go out via ./scripts/deploy.sh <tag> (RELEASE.md)."
 fi
 if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     echo "[warn]   worktree dirty — serving code that is not committed."

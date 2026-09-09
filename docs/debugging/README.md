@@ -13,9 +13,12 @@ This guide is written for the team admin running on the production box (H100 ser
 ### 1. Enter the repo
 
 ```bash
-cd /path/to/bufs-chatbot-v2
-git pull origin main
+cd ~/camchat                  # the served checkout (systemd WorkingDirectory)
+./scripts/deploy.sh status    # what is live — this folder sits at that release tag
 ```
+
+Do not `git pull` here: the production folder follows release tags, not `main`
+(see `RELEASE.md`). To run the debug tools against newer code, use a separate clone.
 
 ### 2. Set up the virtual environment (first time only)
 
