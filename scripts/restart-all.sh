@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# restart-all.sh — one command to redeploy the stack after a merge.
+# restart-all.sh — rebuild if needed, then bounce the stack. The front door for a
+# release is scripts/deploy.sh (checks out a release tag, calls this, records what is
+# live, rolls back on failure — see RELEASE.md); run this directly only to restart the
+# code that is already checked out.
 #
-#   git checkout main && git pull        # get the code you want to serve
-#   ./scripts/restart-all.sh             # rebuild frontend if stale, bounce backend+frontend
+#   ./scripts/deploy.sh v0.2.0-beta      # normal release: tag -> checkout -> this script
+#   ./scripts/restart-all.sh             # plain restart of the current checkout
 #
 # What it does, in order:
-#   1. Deploy sanity: prints the commit being served; warns when the worktree is not
-#      on main, is behind origin/main, or is dirty (serving untracked local edits).
+#   1. Deploy sanity: prints the commit being served. At a release tag that is all; on a
+#      branch it warns when the worktree is not on main, is behind origin/main, or is
+#      dirty (serving untracked local edits).
 #   2. Frontend rebuild when needed: `npm run build` runs BEFORE anything is stopped,
 #      so the old stack keeps serving during the build and downtime stays at the
 #      restart itself. "Needed" = any frontend source newer than .next/BUILD_ID
@@ -20,6 +24,8 @@
 #        --build         force the frontend rebuild
 #        --no-build      skip the rebuild check entirely
 # Env: same as start-all.sh (BACKEND_PORT / FRONTEND_PORT / OLLAMA_PORT / ...).
+# Exit: 0 healthy; 3 frontend build failed (stack NOT touched); 1 anything after the
+#       bounce (deploy.sh rolls back on 1, only restores the checkout on 3).
 
 set -Eeuo pipefail
 
@@ -41,10 +47,16 @@ done
 # --- 1) deploy sanity ------------------------------------------------------
 branch="$(git -C "$REPO" branch --show-current 2>/dev/null || echo '?')"
 head="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo '?')"
-echo "[deploy] serving $head on branch '$branch'"
-[ "$branch" = "main" ] || echo "[warn]   not on main — the tunnel will serve '$branch'."
-behind="$(git -C "$REPO" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
-[ "$behind" = 0 ] || echo "[warn]   $behind commit(s) behind origin/main (as last fetched) — 'git pull' first?"
+tag="$(git -C "$REPO" describe --tags --exact-match HEAD 2>/dev/null || true)"
+if [ -n "$tag" ]; then
+    # A release tag is exactly what deploy.sh checks out — not being on main is the point.
+    echo "[deploy] serving release $tag ($head)"
+else
+    echo "[deploy] serving $head on branch '${branch:-detached}'"
+    [ "$branch" = "main" ] || echo "[warn]   not on main and not a release tag — the tunnel will serve '${branch:-$head}'."
+    behind="$(git -C "$REPO" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+    [ "$behind" = 0 ] || echo "[warn]   $behind commit(s) behind origin/main (as last fetched) — 'git pull' first?"
+fi
 if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     echo "[warn]   worktree dirty — serving code that is not committed."
 fi
@@ -67,7 +79,7 @@ fi
 if [ "$build" = yes ]; then
     echo "[build]  npm run build (old stack keeps serving meanwhile) -> logs/frontend/build.log"
     (cd "$FRONTEND" && npm run build >"$LOG_DIR/frontend/build.log" 2>&1) \
-        || { echo "[error] frontend build FAILED — stack left untouched. See logs/frontend/build.log"; exit 1; }
+        || { echo "[error] frontend build FAILED — stack left untouched. See logs/frontend/build.log"; exit 3; }
 fi
 
 # --- 3+4) bounce -----------------------------------------------------------

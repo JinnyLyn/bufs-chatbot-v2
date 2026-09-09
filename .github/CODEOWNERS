@@ -5,3 +5,8 @@
 
 # All files
 *   @JinnyLyn
+
+# Product-facing paths also request the product reviewer (roles: RELEASE.md).
+# Later lines win, so these get both owners.
+frontend/        @JinnyLyn @Sung1Lim
+markdown_docs/   @JinnyLyn @Sung1Lim
