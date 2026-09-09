@@ -402,6 +402,16 @@ class TestStatusAndTags:
         out = run(prod, "status").stdout
         assert "[checkout] v0.1.0-beta" in out and "wip" not in out
 
+    def test_phase_suffixes_sort_alpha_before_beta_before_release(self, prod):
+        for t in ("v0.3.0-alpha", "v0.3.0-beta", "v0.3.0", "v0.4.0-alpha"):
+            git(prod, "tag", t, "main")
+        git(prod, "push", "-q", "origin", "--tags")
+        names = [line.split()[0] for line in run(prod, "tags").stdout.splitlines()]
+        assert names[:4] == ["v0.4.0-alpha", "v0.3.0", "v0.3.0-beta", "v0.3.0-alpha"]
+        assert "newest on origin: v0.4.0-alpha" in run(prod, "status").stdout
+        run(prod, "v0.3.0-beta", "--yes")
+        assert "[checkout] v0.3.0-beta" in run(prod, "status").stdout   # not the newest tag on the commit
+
     def test_help_and_unknown_command(self, prod):
         assert "deploy.sh" in run(prod, "help").stdout
         p = run(prod, "bogus", check=False)

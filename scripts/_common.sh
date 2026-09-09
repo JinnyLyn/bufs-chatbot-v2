@@ -29,15 +29,19 @@ units_installed() {
     systemctl --user cat camchat.target >/dev/null 2>&1
 }
 
-# What a release tag looks like (vX.Y.Z, optionally -beta…). deploy.sh only deploys these;
+# What a release tag looks like (vX.Y.Z, optionally -alpha/-beta/-rc). deploy.sh only deploys these;
 # a checkpoint tag such as "wip" or "baseline-0901" is not a release anywhere.
 RELEASE_TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
+
+# Version sort that knows the phases: vX.Y.Z-alpha < vX.Y.Z-beta < vX.Y.Z-rc < vX.Y.Z
+# (git's default would sort every pre-release AFTER its release). Use: git "${GIT_VERSIONSORT[@]}" …
+GIT_VERSIONSORT=(-c versionsort.suffix=-alpha -c versionsort.suffix=-beta -c versionsort.suffix=-rc)
 
 # The release tag checked out right now (deploy.sh checks tags out detached), else empty.
 # Shared so restart-all.sh's banner and deploy.sh's status call the same thing a release;
 # newest first when several release tags sit on the same commit.
 head_release_tag() {
-    git -C "$REPO" -c versionsort.suffix=-beta tag --points-at HEAD --sort=-v:refname 2>/dev/null \
+    git -C "$REPO" "${GIT_VERSIONSORT[@]}" tag --points-at HEAD --sort=-v:refname 2>/dev/null \
         | grep -E "$RELEASE_TAG_RE" | sed -n 1p || true
 }
 

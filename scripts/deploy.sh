@@ -96,7 +96,7 @@ previous_tag() {
 # Release tags on origin, newest first, one per line: tag<TAB>date<TAB>subject.
 # Only names that verify_tag would accept — a stray "v1" or "vfoo" tag is not a release.
 release_tags() {
-    g -c versionsort.suffix=-beta for-each-ref --sort=-v:refname \
+    g "${GIT_VERSIONSORT[@]}" for-each-ref --sort=-v:refname \
         --format='%(refname:short)%09%(creatordate:short)%09%(contents:subject)' 'refs/tags/v*' \
         | awk -F'\t' -v re="$TAG_RE" '$1 ~ re'
 }
@@ -148,7 +148,7 @@ fetch_tags() {
 # `git tag` typed on the box must not be deployable (RELEASE.md: two people, not one).
 verify_tag() {
     local tag="$1" remote
-    [[ "$tag" =~ $TAG_RE ]] || die "'$tag' is not a release tag name (expected vX.Y.Z or vX.Y.Z-beta…, see RELEASE.md)."
+    [[ "$tag" =~ $TAG_RE ]] || die "'$tag' is not a release tag name (expected vX.Y.Z-alpha / vX.Y.Z-beta / vX.Y.Z, see RELEASE.md)."
     remote="$(g ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}")" \
         || die "cannot ask origin about tag '$tag' — no network, or origin unreachable."
     # an annotated tag lists twice; the ^{} line is the commit it points at
@@ -320,7 +320,7 @@ cmd_rollback() {  # $1 = tag or ""
     fetch_tags
     if [ -z "$tag" ]; then
         tag="$(previous_tag)"
-        [ -n "$tag" ] || die "no previous deploy recorded in $DEPLOY_LOG — name the tag: ./scripts/deploy.sh rollback vX.Y.Z-beta"
+        [ -n "$tag" ] || die "no previous deploy recorded in $DEPLOY_LOG — name the tag: ./scripts/deploy.sh rollback vX.Y.Z-alpha"
     fi
     verify_tag "$tag"
     read_deployed
@@ -346,8 +346,12 @@ cmd_status() {
     read_deployed
     local head_sha head_ref
     head_sha="$(g rev-parse HEAD)"
-    head_ref="$(head_release_tag)"
-    [ -n "$head_ref" ] || head_ref="$(g symbolic-ref --short -q HEAD || echo detached)"
+    if [ -n "$DEP_TAG" ] && [ "$head_sha" = "$DEP_SHA" ]; then
+        head_ref="$DEP_TAG"
+    else
+        head_ref="$(head_release_tag)"
+        [ -n "$head_ref" ] || head_ref="$(g symbolic-ref --short -q HEAD || echo detached)"
+    fi
 
     if [ -n "$DEP_TAG" ]; then
         say "[live]     $DEP_TAG (${DEP_SHA:0:7})  deployed $DEP_TIME"

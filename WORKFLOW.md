@@ -122,7 +122,7 @@ git 명령·경로 몰라도 됩니다. **이 3마디만** 기억하세요 (그�
 ## 🚀 머지 ≠ 배포 — 사용자에게 내보내는 건 별도 절차
 
 PR이 `main`에 머지돼도 사이트(maruvis.kr)는 바로 안 바뀝니다. 머지된 코드에 **성원(@Sung1Lim)이
-GitHub Releases에서 이름표(태그 `v0.x.y-beta`)를 발행**하고, **진서(@JinnyLyn)가 서버에서
+GitHub Releases에서 이름표(태그 `v0.x.y-alpha`, 학생 공개 후 `-beta`)를 발행**하고, **진서(@JinnyLyn)가 서버에서
 `./scripts/deploy.sh <태그>`** 를 쳐야 바뀝니다. 되돌리기는 `./scripts/deploy.sh rollback`.
 누가 언제 무엇을 누르는지는 **`RELEASE.md`** 한 장에 있습니다.
 
