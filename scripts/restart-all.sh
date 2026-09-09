@@ -24,8 +24,9 @@
 #        --build         force the frontend rebuild
 #        --no-build      skip the rebuild check entirely
 # Env: same as start-all.sh (BACKEND_PORT / FRONTEND_PORT / OLLAMA_PORT / ...).
-# Exit: 0 healthy; 3 frontend build failed (stack NOT touched); 1 anything after the
-#       bounce (deploy.sh rolls back on 1, only restores the checkout on 3).
+# Exit: 0 healthy; 3 frontend build failed (stack NOT touched); 4 backend answers but the
+#       LLM probe failed (up, degraded); 1 backend not answering after the bounce.
+#       deploy.sh: 3 → restore the checkout only, 4 → keep the deploy and warn, 1 → roll back.
 
 set -Eeuo pipefail
 
@@ -47,7 +48,7 @@ done
 # --- 1) deploy sanity ------------------------------------------------------
 branch="$(git -C "$REPO" branch --show-current 2>/dev/null || echo '?')"
 head="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo '?')"
-tag="$(git -C "$REPO" describe --tags --exact-match HEAD 2>/dev/null || true)"
+tag="$(head_release_tag)"
 if [ -n "$tag" ]; then
     # A release tag is exactly what deploy.sh checks out — not being on main is the point.
     echo "[deploy] serving release $tag ($head)"
@@ -97,7 +98,7 @@ if curl -fsS --max-time 10 "http://127.0.0.1:$BACKEND_PORT/health" >/dev/null 2>
         echo "[done]   backend healthy and LLM reachable — $head is live."
     else
         echo "[warn]   backend up but /health/llm failed — LLM unreachable (check ollama)." >&2
-        exit 1
+        exit 4
     fi
 else
     echo "[error]  /health not answering after restart — check logs/backend/server.err" >&2

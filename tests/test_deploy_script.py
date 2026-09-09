@@ -106,8 +106,9 @@ def restart_calls(root):
 
 
 def deployed(root):
-    f = root / "logs" / "run" / "DEPLOYED"
-    return f.read_text().split() if f.exists() else []
+    """[tag, sha] of the last successful row in deploys.log (what deploy.sh calls live)."""
+    ok = [r for r in log_rows(root) if r[4].startswith("ok")]
+    return ok[-1][2:4] if ok else []
 
 
 def log_rows(root):
@@ -171,6 +172,11 @@ class TestDeploy:
         assert "nothing changed" in p.stdout
         assert head(prod) == before and restart_calls(prod) == [] and deployed(prod) == []
 
+    def test_unknown_flag_is_an_error_not_help(self, prod):
+        p = run(prod, "v0.1.0-beta", "--yes", "--typo", check=False)
+        assert p.returncode != 0 and "unknown flag: --typo" in p.stderr
+        assert restart_calls(prod) == [] and head(prod) == tag_sha(prod, "main")
+
     def test_without_yes_needs_a_terminal(self, prod):
         p = run(prod, "v0.1.0-beta", check=False)   # stdin is /dev/null
         assert p.returncode != 0 and "--yes" in p.stderr
@@ -216,6 +222,17 @@ class TestFailureHandling:
         assert head(prod) == before
         assert len(restart_calls(prod)) == 2
 
+    def test_llm_probe_failure_keeps_deploy_and_warns(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        (prod / "STUB_RC").write_text("4\n")           # backend up, /health/llm failed
+        p = run(prod, "v0.2.0-beta", "--yes", check=False)
+        assert p.returncode == 4 and "not rolling back" in p.stderr
+        assert head(prod) == tag_sha(prod, "v0.2.0-beta")
+        assert deployed(prod)[0] == "v0.2.0-beta"           # it IS live, degraded
+        assert len(restart_calls(prod)) == 2                 # no rollback bounce
+        assert log_rows(prod)[-1][4] == "ok (llm probe failed)"
+        assert "[live]     v0.2.0-beta" in run(prod, "status").stdout
+
     def test_no_auto_rollback_flag_stops_after_failure(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
         (prod / "STUB_RC").write_text("1\n")
@@ -249,6 +266,23 @@ class TestRollback:
         run(prod, "rollback", "v0.1.0-beta")
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
 
+    def test_rollback_stashes_uncommitted_edits_instead_of_refusing(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        run(prod, "v0.2.0-beta", "--yes")
+        (prod / "app.txt").write_text("someone's 3 a.m. edit\n")
+        p = run(prod, "rollback")
+        assert "stashed" in p.stderr and "git stash pop" in p.stderr
+        assert head(prod) == tag_sha(prod, "v0.1.0-beta")
+        assert (prod / "app.txt").read_text() == "first\n"          # tree equals the tag
+        assert "deploy.sh rollback" in git(prod, "stash", "list")    # the edit is recoverable
+
+    def test_deploy_still_refuses_dirty_tree(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        (prod / "app.txt").write_text("edit\n")
+        p = run(prod, "v0.2.0-beta", "--yes", check=False)
+        assert p.returncode != 0 and "uncommitted changes" in p.stderr
+        assert git(prod, "stash", "list") == ""
+
     def test_rollback_dry_run(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
         run(prod, "v0.2.0-beta", "--yes")
@@ -279,6 +313,15 @@ class TestStatusAndTags:
         lines = p.stdout.splitlines()
         assert lines[0].startswith("v0.2.0-beta") and "<- live" not in lines[0]
         assert lines[1].startswith("v0.1.0-beta") and "<- live" in lines[1]
+
+    def test_non_release_tag_names_are_ignored(self, prod):
+        # a stray "vfoo" tag on main must not become the "newest" suggestion nor be listed
+        git(prod, "tag", "vfoo", "main")
+        git(prod, "push", "-q", "origin", "vfoo")
+        run(prod, "v0.1.0-beta", "--yes")
+        assert "vfoo" not in run(prod, "status").stdout
+        assert "vfoo" not in run(prod, "tags").stdout
+        assert "newest on origin: v0.2.0-beta" in run(prod, "status").stdout
 
     def test_help_and_unknown_command(self, prod):
         assert "deploy.sh" in run(prod, "help").stdout

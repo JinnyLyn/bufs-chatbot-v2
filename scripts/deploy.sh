@@ -18,13 +18,16 @@
 # A deploy, in order:
 #   1. fetch tags; the tag must exist, look like vX.Y.Z[-suffix], and be merged into origin/main
 #   2. this checkout must be the one systemd serves, with no uncommitted tracked changes
+#      (rollback instead stashes them — an emergency must not wait for someone's edits)
 #   3. show the commits that will go live (or be removed) and ask
 #   4. git checkout --detach <tag>
 #   5. restart-all.sh — frontend rebuild when needed, stop, start, /health + /health/llm probe
-#   6. record to logs/run/DEPLOYED (what is live) and logs/run/deploys.log (history)
-# If restart-all.sh fails AFTER bouncing the stack, the previous version is checked out and
-# restarted again (auto-rollback). If only the frontend build failed (exit 3), the stack was
-# never touched: the checkout is restored and nothing is restarted.
+#   6. append to logs/run/deploys.log — the last "ok" row there IS what is live
+# restart-all.sh exit codes and what happens next:
+#   0  healthy                                → recorded as live
+#   3  frontend build failed, stack untouched → checkout restored, nothing restarted
+#   4  backend up, /health/llm failed         → recorded as live (degraded), NO rollback, loud warning
+#   1  backend not answering                  → auto-rollback to the tag that was live (or --no-auto-rollback)
 #
 # The release process around this script (who tags, who deploys, version names): RELEASE.md.
 #
@@ -36,8 +39,7 @@ set -Eeuo pipefail
 # shellcheck source=scripts/_common.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
 
-DEPLOYED="$RUN_DIR/DEPLOYED"        # one line: <tag> <sha> <YYYY-mm-dd HH:MM:SS>
-DEPLOY_LOG="$RUN_DIR/deploys.log"   # TSV, one line per attempt: time  action  tag  sha  result  user
+DEPLOY_LOG="$RUN_DIR/deploys.log"   # TSV, one row per attempt: time  action  tag  sha  result  user
 TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
 # The Worker maintenance page is flipped through wrangler, which on a headless box needs an
 # API token (Workers KV Storage: Edit) — scripts/env.local is sourced by _common.sh, so one
@@ -46,17 +48,6 @@ WRANGLER_AUTH_HINT='put "export CLOUDFLARE_API_TOKEN=..." in scripts/env.local, 
 
 yes=0; dry_run=0; auto_rollback=1; local_only=0
 positional=()
-for arg in "$@"; do
-    case "$arg" in
-        --yes)              yes=1 ;;
-        --dry-run)          dry_run=1 ;;
-        --no-auto-rollback) auto_rollback=0 ;;
-        --local-only)       local_only=1 ;;
-        -h|--help)          positional=(help) ;;
-        --*)                echo "unknown flag: $arg" >&2; positional=(help) ;;
-        *)                  positional+=("$arg") ;;
-    esac
-done
 
 usage() {
     sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -70,30 +61,38 @@ g() { git -C "$REPO" "$@"; }
 now() { date '+%Y-%m-%d %H:%M:%S'; }
 
 # ---------------------------------------------------------------------------------------
-# state
+# state — deploys.log is the single record; "live" = its last row whose result starts "ok"
 # ---------------------------------------------------------------------------------------
 
-# Sets DEP_TAG / DEP_SHA / DEP_TIME from logs/run/DEPLOYED (all empty when nothing recorded).
+# Sets DEP_TAG / DEP_SHA / DEP_TIME (all empty when nothing has been deployed yet).
 read_deployed() {
     DEP_TAG=""; DEP_SHA=""; DEP_TIME=""
-    [ -f "$DEPLOYED" ] || return 0
-    read -r DEP_TAG DEP_SHA DEP_TIME <"$DEPLOYED" || true
+    [ -f "$DEPLOY_LOG" ] || return 0
+    IFS=$'\t' read -r DEP_TAG DEP_SHA DEP_TIME < <(
+        awk -F'\t' '$5 ~ /^ok/ { t = $3; s = $4; d = $1 } END { printf "%s\t%s\t%s\n", t, s, d }' "$DEPLOY_LOG"
+    ) || true
 }
 
 record() {  # $1 action  $2 tag  $3 sha  $4 result
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(now)" "$1" "$2" "$3" "$4" "${USER:-?}" >>"$DEPLOY_LOG"
-    if [ "$4" = ok ]; then
-        printf '%s %s %s\n' "$2" "$3" "$(now)" >"$DEPLOYED"
-    fi
 }
 
-# The tag to roll back to: the newest successful deploy in the log whose tag differs from
-# the one currently live. Empty when there is none.
+# The tag to roll back to: the newest successful deploy whose tag differs from the live one.
 previous_tag() {
     read_deployed
     [ -f "$DEPLOY_LOG" ] || return 0
-    awk -F'\t' -v cur="$DEP_TAG" '$5 == "ok" && $3 != cur { t = $3 } END { print t }' "$DEPLOY_LOG"
+    awk -F'\t' -v cur="$DEP_TAG" '$5 ~ /^ok/ && $3 != cur { t = $3 } END { print t }' "$DEPLOY_LOG"
 }
+
+# Release tags on origin, newest first, one per line: tag<TAB>date<TAB>subject.
+# Only names that verify_tag would accept — a stray "v1" or "vfoo" tag is not a release.
+release_tags() {
+    g -c versionsort.suffix=-beta for-each-ref --sort=-v:refname \
+        --format='%(refname:short)%09%(creatordate:short)%09%(contents:subject)' 'refs/tags/v*' \
+        | awk -F'\t' -v re="$TAG_RE" '$1 ~ re'
+}
+
+latest_release_tag() { release_tags | head -1 | cut -f1; }
 
 # ---------------------------------------------------------------------------------------
 # checks
@@ -110,10 +109,22 @@ check_serving_repo() {
         || die "systemd serves $wd, but this is $REPO — run deploy.sh from the served checkout."
 }
 
+dirty_files() { g status --porcelain --untracked-files=no; }
+
 check_clean() {
     local dirty
-    dirty="$(g status --porcelain --untracked-files=no)"
+    dirty="$(dirty_files)"
     [ -z "$dirty" ] || die "uncommitted changes in tracked files — commit or stash first, production must equal the tag exactly:"$'\n'"$dirty"
+}
+
+# Rollback is the emergency path: set someone's edits aside instead of refusing.
+stash_if_dirty() {
+    [ -n "$(dirty_files)" ] || return 0
+    local label
+    label="deploy.sh rollback $(now): uncommitted changes set aside"
+    g stash push --quiet -m "$label"
+    say "[stash]  uncommitted changes were in the way — stashed as \"$label\"" >&2
+    say "         recover later with: git stash pop" >&2
 }
 
 fetch_tags() {
@@ -128,6 +139,10 @@ verify_tag() {
     [ -n "$TAG_SHA" ] || die "tag '$tag' does not exist on origin — has the release been published on GitHub? (./scripts/deploy.sh tags)"
     g merge-base --is-ancestor "$TAG_SHA" origin/main \
         || die "tag '$tag' is not merged into main — releases are cut from main only."
+}
+
+dry_run_note() {
+    say "[dry-run] would: git checkout --detach $1 && ./scripts/restart-all.sh  — nothing changed."
 }
 
 # ---------------------------------------------------------------------------------------
@@ -149,8 +164,8 @@ restore_checkout() {  # $1 = branch name or "", $2 = sha
 }
 
 # switch_to <tag> <sha> <action> <allow_rollback>
-# Checks out the tag, restarts, records. On a post-bounce failure with allow_rollback=1,
-# restores the previous deploy (or the pre-deploy commit when none is recorded) once.
+# Checks out the tag, restarts, records. On a dead backend with allow_rollback=1, restores
+# the tag that was live (or the pre-deploy commit when nothing was recorded yet) once.
 switch_to() {
     local tag="$1" sha="$2" action="$3" allow_rollback="$4"
     local pre_branch pre_sha maint_saved="" rc=0
@@ -180,6 +195,13 @@ switch_to() {
             restore_checkout "$pre_branch" "$pre_sha"
             say "[undo]   build failed, stack untouched — checkout restored to ${pre_branch:-${pre_sha:0:7}}." >&2
             return 3 ;;
+        4)
+            # backend answers, LLM probe failed — the code IS live; bouncing again would not
+            # fix ollama and would only add downtime, so keep it and shout.
+            record "$action" "$tag" "$sha" "ok (llm probe failed)"
+            say "[warn]   $tag (${sha:0:7}) is live but /health/llm failed — not rolling back." >&2
+            say "         check ollama: ./scripts/healthcheck.sh / systemctl --user status camchat-ollama" >&2
+            return 4 ;;
         *)
             record "$action" "$tag" "$sha" "restart-failed(rc=$rc)"
             if [ "$allow_rollback" != 1 ]; then
@@ -187,8 +209,8 @@ switch_to() {
                 say "         fix, or: ./scripts/deploy.sh rollback" >&2
                 return 1
             fi
-            # Go back to what was live before this attempt (DEPLOYED only moves on success);
-            # on the very first deploy there is no record, so back to what was checked out.
+            # Go back to what was live before this attempt (the log only gains an "ok" row on
+            # success); on the very first deploy there is no record, so back to what was checked out.
             local back_tag back_sha
             read_deployed
             if [ -n "$DEP_TAG" ]; then
@@ -232,10 +254,7 @@ cmd_deploy() {  # $1 = tag
         fi
     fi
 
-    if [ "$dry_run" = 1 ]; then
-        say "[dry-run] would: git checkout --detach $tag && ./scripts/restart-all.sh  — nothing changed."
-        return 0
-    fi
+    if [ "$dry_run" = 1 ]; then dry_run_note "$tag"; return 0; fi
     if [ "$yes" != 1 ]; then
         [ -t 0 ] || die "not a terminal — pass --yes to deploy without the prompt."
         local answer
@@ -254,30 +273,22 @@ cmd_rollback() {  # $1 = tag or ""
         [ -n "$tag" ] || die "no previous deploy recorded in $DEPLOY_LOG — name the tag: ./scripts/deploy.sh rollback vX.Y.Z-beta"
     fi
     verify_tag "$tag"
-    check_clean
     read_deployed
     say "[rollback] $tag (${TAG_SHA:0:7})   replacing: ${DEP_TAG:-unrecorded}"
-    if [ "$dry_run" = 1 ]; then
-        say "[dry-run] would: git checkout --detach $tag && ./scripts/restart-all.sh  — nothing changed."
-        return 0
-    fi
+    if [ "$dry_run" = 1 ]; then dry_run_note "$tag"; return 0; fi
+    stash_if_dirty
     switch_to "$tag" "$TAG_SHA" rollback 0
 }
 
 cmd_tags() {
     fetch_tags
     read_deployed
-    local n=0
+    local n=0 tag date subject mark
     while IFS=$'\t' read -r tag date subject; do
-        [[ "$tag" =~ $TAG_RE ]] || continue
         n=$((n + 1))
-        if [ "$tag" = "$DEP_TAG" ]; then
-            printf '%-18s %s  %s   <- live\n' "$tag" "$date" "$subject"
-        else
-            printf '%-18s %s  %s\n' "$tag" "$date" "$subject"
-        fi
-    done < <(g -c versionsort.suffix=-beta for-each-ref --sort=-v:refname \
-                --format='%(refname:short)%09%(creatordate:short)%09%(contents:subject)' 'refs/tags/v*')
+        mark=""; [ "$tag" = "$DEP_TAG" ] && mark="   <- live"
+        printf '%-18s %s  %s%s\n' "$tag" "$date" "$subject" "$mark"
+    done < <(release_tags)
     [ "$n" -gt 0 ] || say "no release tags yet — publish one on GitHub (Releases -> Draft a new release), see RELEASE.md."
 }
 
@@ -285,7 +296,8 @@ cmd_status() {
     read_deployed
     local head_sha head_ref
     head_sha="$(g rev-parse HEAD)"
-    head_ref="$(g describe --tags --exact-match HEAD 2>/dev/null || g symbolic-ref --short -q HEAD || echo detached)"
+    head_ref="$(head_release_tag)"
+    [ -n "$head_ref" ] || head_ref="$(g symbolic-ref --short -q HEAD || echo detached)"
 
     if [ -n "$DEP_TAG" ]; then
         say "[live]     $DEP_TAG (${DEP_SHA:0:7})  deployed $DEP_TIME"
@@ -348,7 +360,7 @@ cmd_status() {
     fi
 
     local newest
-    newest="$(g -c versionsort.suffix=-beta for-each-ref --sort=-v:refname --format='%(refname:short)' 'refs/tags/v*' | head -1)"
+    newest="$(latest_release_tag)"
     if [ -n "$newest" ] && [ "$newest" != "$DEP_TAG" ]; then
         say "[tags]     newest on origin: $newest (not live)  -> ./scripts/deploy.sh $newest"
     fi
@@ -391,6 +403,18 @@ cmd_maint() {  # $1 = on|off
 }
 
 main() {
+    local arg
+    for arg in "$@"; do
+        case "$arg" in
+            --yes)              yes=1 ;;
+            --dry-run)          dry_run=1 ;;
+            --no-auto-rollback) auto_rollback=0 ;;
+            --local-only)       local_only=1 ;;
+            -h|--help)          usage; exit 0 ;;
+            --*)                die "unknown flag: $arg (./scripts/deploy.sh --help)" ;;
+            *)                  positional+=("$arg") ;;
+        esac
+    done
     local cmd="${positional[0]:-help}"
     case "$cmd" in
         help)      usage; exit 0 ;;
@@ -403,4 +427,4 @@ main() {
     esac
 }
 
-main
+main "$@"

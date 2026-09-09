@@ -29,6 +29,12 @@ units_installed() {
     systemctl --user cat camchat.target >/dev/null 2>&1
 }
 
+# The release tag checked out right now (deploy.sh checks tags out detached), else empty.
+# Shared so restart-all.sh's banner and deploy.sh's status call the same thing a release.
+head_release_tag() {
+    git -C "$REPO" describe --tags --exact-match HEAD 2>/dev/null || true
+}
+
 # Maintenance flag: while logs/run/maintenance exists, healthcheck-cron.sh skips its
 # checks (no auto-restart fights a deliberate stop — doc_sync reindex, a deploy bounce,
 # the unit switch-over). Callers pair maint_on with maint_off in an EXIT trap.
