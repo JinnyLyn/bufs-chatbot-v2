@@ -16,12 +16,12 @@ Claude Code/CLI로 PR을 만들면 자동으로 안 채워지니, 에이전트�
 
 ## 변경 승인 (리뷰어가 체크 — 작성자는 비워둠)
 
-### Technical verification — @JinnyLyn
+### 기술 검증 (Technical verification) — @JinnyLyn
 - [ ] CI 통과 (Unit Tests · gitleaks · CodeQL)
 - [ ] 코드 리뷰 완료
 - [ ] 보안·성능 영향 확인
 
-### Product verification — @Sung1Lim
+### 제품 검증 (Product verification) — @Sung1Lim
 - [ ] 요구사항과 구현 결과 일치
 - [ ] 사용자 영향 확인 (화면·문구·답변 품질)
 - [ ] 운영 정책과 충돌 없음
