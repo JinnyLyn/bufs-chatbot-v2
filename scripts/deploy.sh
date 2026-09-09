@@ -178,6 +178,20 @@ run_restart() {
     fi
 }
 
+# The record the release checklist asks for (RELEASE.md), filled in — paste it into the
+# GitHub Release. The box account is shared, so DEPLOY_BY (scripts/env.local) names the person.
+release_record() {  # $1 = tag  $2 = sha  $3 = tag that was live before, or ""
+    say
+    say "[record] paste into the GitHub Release description (Edit release):"
+    say "         Version: $1"
+    say "         Commit: ${2:0:7}"
+    say "         Released: $(date '+%Y-%m-%d')"
+    say "         Approved by: (release 발행자)"
+    say "         Deployed by: ${DEPLOY_BY:-$USER}"
+    say "         Previous version: ${3:-none}"
+    say "         Rollback target: ${3:-none}"
+}
+
 # Restore the checkout that was current before a deploy attempt (branch if it was one).
 restore_checkout() {  # $1 = branch name or "", $2 = sha
     if [ -n "$1" ]; then g checkout --quiet "$1"; else g checkout --quiet --detach "$2"; fi
@@ -194,9 +208,10 @@ restore_maint() {  # $1 = saved manual flag content, or ""
 # that was checked out (restarted, but not recorded as live: it is not a release).
 switch_to() {
     local tag="$1" sha="$2" action="$3" allow_rollback="$4"
-    local pre_branch pre_sha maint_saved="" rc=0
+    local pre_branch pre_sha prev_tag maint_saved="" rc=0
     pre_branch="$(g symbolic-ref --short -q HEAD || true)"
     pre_sha="$(g rev-parse HEAD)"
+    read_deployed; prev_tag="$DEP_TAG"
 
     # Stand the healthcheck down for the whole switch: the checkout + frontend build window
     # is minutes long, and a timer-triggered restart inside it would start the frontend from
@@ -226,6 +241,7 @@ switch_to() {
             record "$action" "$tag" "$sha" ok
             say
             say "[done]   $tag (${sha:0:7}) is live.   undo: ./scripts/deploy.sh rollback"
+            if [ "$action" = deploy ]; then release_record "$tag" "$sha" "$prev_tag"; fi
             return 0 ;;
         3)
             # frontend build failed — restart-all.sh left the stack untouched
@@ -239,6 +255,7 @@ switch_to() {
             record "$action" "$tag" "$sha" "ok (llm probe failed)"
             say "[warn]   $tag (${sha:0:7}) is live but /health/llm failed — not rolling back." >&2
             say "         check ollama: ./scripts/healthcheck.sh / systemctl --user status camchat-ollama" >&2
+            if [ "$action" = deploy ]; then release_record "$tag" "$sha" "$prev_tag"; fi
             return 4 ;;
         *)
             record "$action" "$tag" "$sha" "restart-failed(rc=$rc)"

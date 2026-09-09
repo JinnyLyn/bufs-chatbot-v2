@@ -134,6 +134,9 @@ class TestDeploy:
         rows = log_rows(prod)
         assert rows[-1][1:3] == ["deploy", "v0.1.0-beta"] and rows[-1][4] == "ok"
         assert "is live" in p.stdout
+        # the release record to paste into the GitHub Release
+        assert "Version: v0.1.0-beta" in p.stdout and f"Commit: {tag_sha(prod, 'v0.1.0-beta')[:7]}" in p.stdout
+        assert "Previous version: none" in p.stdout and "Rollback target: none" in p.stdout
 
     def test_more_than_40_commits_does_not_kill_the_script(self, prod):
         # `git log | head -40` under pipefail died with SIGPIPE; --max-count must not
@@ -149,9 +152,12 @@ class TestDeploy:
 
     def test_shows_commits_going_live(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
-        p = run(prod, "v0.2.0-beta", "--yes")
+        p = run(prod, "v0.2.0-beta", "--yes", env={"DEPLOY_BY": "tester"})
         assert "commits going live" in p.stdout and "second (#2)" in p.stdout
         assert head(prod) == tag_sha(prod, "v0.2.0-beta")
+        assert "Previous version: v0.1.0-beta" in p.stdout and "Rollback target: v0.1.0-beta" in p.stdout
+        assert "Deployed by: tester" in p.stdout
+        assert "[record]" not in run(prod, "rollback").stdout           # rollback is not a release
 
     def test_older_tag_lists_removed_commits(self, prod):
         # HEAD is main (third) and nothing is recorded, so v0.1.0-beta is a step backwards.
