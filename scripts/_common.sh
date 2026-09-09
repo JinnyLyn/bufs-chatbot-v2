@@ -29,17 +29,17 @@ units_installed() {
     systemctl --user cat camchat.target >/dev/null 2>&1
 }
 
-# What a release tag looks like (vX.Y.Z, optionally -alpha/-beta/-rc). deploy.sh only deploys these;
-# a checkpoint tag such as "wip" or "baseline-0901" is not a release anywhere.
+# 릴리스 태그의 모양 (vX.Y.Z, 접미사 -alpha/-beta/-rc 선택). deploy.sh 는 이것만 배포한다;
+# "wip" 나 "baseline-0901" 같은 체크포인트 태그는 어디서도 릴리스가 아니다.
 RELEASE_TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
 
-# Version sort that knows the phases: vX.Y.Z-alpha < vX.Y.Z-beta < vX.Y.Z-rc < vX.Y.Z
-# (git's default would sort every pre-release AFTER its release). Use: git "${GIT_VERSIONSORT[@]}" …
+# 단계를 아는 버전 정렬: vX.Y.Z-alpha < vX.Y.Z-beta < vX.Y.Z-rc < vX.Y.Z
+# (git 기본값은 모든 pre-release 를 정식 뒤로 보낸다). 사용: git "${GIT_VERSIONSORT[@]}" …
 GIT_VERSIONSORT=(-c versionsort.suffix=-alpha -c versionsort.suffix=-beta -c versionsort.suffix=-rc)
 
-# The release tag checked out right now (deploy.sh checks tags out detached), else empty.
-# Shared so restart-all.sh's banner and deploy.sh's status call the same thing a release;
-# newest first when several release tags sit on the same commit.
+# 지금 체크아웃된 릴리스 태그 (deploy.sh 는 태그를 detached 로 체크아웃), 없으면 빈 값.
+# restart-all.sh 배너와 deploy.sh status 가 같은 것을 릴리스라 부르도록 공유; 한 커밋에
+# 릴리스 태그가 여럿이면 최신 것.
 head_release_tag() {
     git -C "$REPO" "${GIT_VERSIONSORT[@]}" tag --points-at HEAD --sort=-v:refname 2>/dev/null \
         | grep -E "$RELEASE_TAG_RE" | sed -n 1p || true

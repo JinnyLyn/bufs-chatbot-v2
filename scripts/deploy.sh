@@ -1,50 +1,49 @@
 #!/usr/bin/env bash
-# deploy.sh — the one production switch. Deploy a release tag, roll back, flip
-# maintenance mode, or show what is live. Everything else (build, unit bounce, health
-# probe) is delegated to restart-all.sh; nothing here starts a process on its own.
+# deploy.sh — 운영 서버 스위치 하나. 릴리스 태그 배포, 롤백, 점검 모드, 지금 뭐가 떠 있는지.
+# 빌드·유닛 재기동·헬스 확인은 전부 restart-all.sh 에 맡기고, 이 스크립트가 직접 프로세스를
+# 띄우는 일은 없다.
 #
-#   ./scripts/deploy.sh v0.2.0-beta          # deploy that release tag (shows what changes, asks y/N)
-#   ./scripts/deploy.sh rollback             # back to the previous deploy — no questions asked
-#   ./scripts/deploy.sh rollback v0.1.0-beta # back to a specific tag
-#   ./scripts/deploy.sh status               # live tag vs checkout vs running process, health, maint
-#   ./scripts/deploy.sh tags                 # release tags on origin, newest first, live one marked
-#   ./scripts/deploy.sh maint on|off         # planned maintenance: Worker 503 page + healthcheck stands down
+#   ./scripts/deploy.sh v0.2.0-alpha          # 그 릴리스 태그를 배포 (바뀌는 커밋 보여주고 y/N)
+#   ./scripts/deploy.sh rollback              # 직전 배포로 — 묻지 않음
+#   ./scripts/deploy.sh rollback v0.1.0-alpha # 지정한 태그로
+#   ./scripts/deploy.sh status                # 운영 중 태그 / 체크아웃 / 실제 도는 프로세스 / 헬스 / 점검 모드
+#   ./scripts/deploy.sh tags                  # origin 의 릴리스 태그 최신순, 운영 중인 것 표시
+#   ./scripts/deploy.sh maint on|off          # 점검 모드: Worker 503 안내 페이지 + healthcheck 자동 재기동 중지
 #
-# Flags: --yes                skip the y/N confirmation (deploy only)
-#        --dry-run            run every check, change nothing
-#        --no-auto-rollback   when the restart fails, stop there instead of restoring the previous version
-#        --local-only         (maint) touch only the healthcheck flag, leave the Cloudflare Worker alone
+# 플래그: --yes                y/N 확인 생략 (배포만)
+#         --dry-run            검사만 하고 아무것도 바꾸지 않음
+#         --no-auto-rollback   재기동 실패 시 이전 버전으로 되돌리지 않고 멈춤
+#         --local-only         (maint) healthcheck 플래그만 건드리고 Cloudflare Worker 는 그대로
 #
-# A deploy, in order:
-#   1. fetch tags; the tag must exist, look like vX.Y.Z[-suffix], and be merged into origin/main
-#   2. this checkout must be the one systemd serves, with no uncommitted tracked changes
-#      (rollback instead stashes them — an emergency must not wait for someone's edits)
-#   3. show the commits that will go live (or be removed) and ask
-#   4. git checkout --detach <tag>
-#   5. restart-all.sh — frontend rebuild when needed, stop, start, /health + /health/llm probe
-#   6. append to logs/run/deploys.log — the last "ok" row there IS what is live
-# restart-all.sh exit codes and what happens next:
-#   0  healthy                                → recorded as live
-#   3  frontend build failed, stack untouched → checkout restored, nothing restarted
-#   4  backend up, /health/llm failed         → recorded as live (degraded), NO rollback, loud warning
-#   1  backend not answering                  → auto-rollback to the tag that was live (or --no-auto-rollback)
+# 배포 순서:
+#   1. 태그 fetch; 태그는 존재하고, vX.Y.Z[-접미사] 모양이고, origin/main 에 머지돼 있어야 함
+#   2. 이 체크아웃이 systemd 가 서비스하는 그 폴더여야 하고, 커밋 안 된 수정이 없어야 함
+#      (rollback 은 대신 stash 해 둠 — 비상시에 남의 수정 때문에 멈추면 안 되니까)
+#   3. 새로 나가는(또는 빠지는) 커밋을 보여주고 확인
+#   4. git checkout --detach <태그>
+#   5. restart-all.sh — 필요하면 프론트 재빌드, stop, start, /health + /health/llm 확인
+#   6. logs/run/deploys.log 에 한 줄 추가 — 마지막 "ok" 행이 곧 운영 중인 버전
+# restart-all.sh 종료 코드와 그다음:
+#   0  정상                                   → 운영 중으로 기록
+#   3  프론트 빌드 실패, 서버는 안 건드림       → 체크아웃만 되돌림, 재기동 없음
+#   4  백엔드는 응답, /health/llm 실패          → 운영 중(성능 저하)으로 기록, 롤백 없음, 큰 경고
+#   1  백엔드 무응답                            → 직전 운영 태그로 자동 롤백 (--no-auto-rollback 이면 멈춤)
 #
-# The release process around this script (who tags, who deploys, version names): RELEASE.md.
+# 누가 태그를 발행하고 누가 배포하는지, 버전 이름 규칙: RELEASE.md.
 #
-# Test hooks (same idea as healthcheck-cron.sh): DEPLOY_RESTART_CMD replaces restart-all.sh,
-# DEPLOY_SKIP_UNIT_CHECK=1 skips the "this checkout is the one systemd serves" guard.
+# 테스트 훅 (healthcheck-cron.sh 와 같은 방식): DEPLOY_RESTART_CMD 가 restart-all.sh 를 대신,
+# DEPLOY_SKIP_UNIT_CHECK=1 이면 "systemd 가 서비스하는 체크아웃인가" 검사를 건너뜀.
 
 set -Eeuo pipefail
 
 # shellcheck source=scripts/_common.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
 
-DEPLOY_LOG="$RUN_DIR/deploys.log"   # TSV, one row per attempt: time  action  tag  sha  result  user
-TAG_RE="$RELEASE_TAG_RE"            # from _common.sh — the same pattern restart-all.sh's banner uses
-# The Worker maintenance page is flipped through wrangler, which on a headless box needs an
-# API token (Workers KV Storage: Edit) — scripts/env.local is sourced by _common.sh, so one
-# line there reaches every npm/wrangler call below.
-WRANGLER_AUTH_HINT='put "export CLOUDFLARE_API_TOKEN=..." in scripts/env.local, or run: cd worker && npx wrangler login'
+DEPLOY_LOG="$RUN_DIR/deploys.log"   # TSV, 시도마다 한 행: 시각  동작  태그  sha  결과  계정
+TAG_RE="$RELEASE_TAG_RE"            # _common.sh — restart-all.sh 배너와 같은 패턴
+# Worker 점검 페이지는 wrangler 로 켜고 끈다. 화면 없는 서버라 API 토큰이 필요하고,
+# scripts/env.local 은 _common.sh 가 읽으니 거기 한 줄이면 아래 모든 npm/wrangler 호출에 전달된다.
+WRANGLER_AUTH_HINT='scripts/env.local 에 export CLOUDFLARE_API_TOKEN=... 한 줄, 또는 cd worker && npx wrangler login'
 
 yes=0; dry_run=0; auto_rollback=1; local_only=0
 positional=()
@@ -61,10 +60,10 @@ g() { git -C "$REPO" "$@"; }
 now() { date '+%Y-%m-%d %H:%M:%S'; }
 
 # ---------------------------------------------------------------------------------------
-# state — deploys.log is the single record; "live" = its last row whose result starts "ok"
+# 상태 — deploys.log 하나가 기록 전부; "운영 중" = 결과가 "ok" 로 시작하는 마지막 행
 # ---------------------------------------------------------------------------------------
 
-# Sets DEP_TAG / DEP_SHA / DEP_TIME (all empty when nothing has been deployed yet).
+# DEP_TAG / DEP_SHA / DEP_TIME 를 채운다 (배포 기록이 없으면 전부 빈 값).
 read_deployed() {
     DEP_TAG=""; DEP_SHA=""; DEP_TIME=""
     [ -f "$DEPLOY_LOG" ] || return 0
@@ -73,14 +72,13 @@ read_deployed() {
     ) || true
 }
 
-record() {  # $1 action  $2 tag  $3 sha  $4 result
+record() {  # $1 동작  $2 태그  $3 sha  $4 결과
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(now)" "$1" "$2" "$3" "$4" "${USER:-?}" >>"$DEPLOY_LOG"
 }
 
-# The tag to roll back to: walking the successful rows backwards, the newest tag that is
-# not live and was not itself rolled back from since — so `rollback` twice keeps going
-# BACK (v0.3 → v0.2 → v0.1), never forward onto the release just abandoned. An explicit
-# `deploy` of a tag lifts that mark again.
+# 롤백 대상: 성공한 행을 거꾸로 훑으며, 운영 중이 아니고 그 뒤에 롤백으로 떠난 적도 없는
+# 가장 최근 태그 — 그래서 `rollback` 두 번은 계속 뒤로 간다 (v0.3 → v0.2 → v0.1), 방금 버린
+# 릴리스로 앞으로 가지 않는다. 명시적 `deploy` 는 그 표시를 지운다.
 previous_tag() {
     [ -f "$DEPLOY_LOG" ] || return 0
     awk -F'\t' -v re="$TAG_RE" '
@@ -93,8 +91,8 @@ previous_tag() {
     ' "$DEPLOY_LOG"
 }
 
-# Release tags on origin, newest first, one per line: tag<TAB>date<TAB>subject.
-# Only names that verify_tag would accept — a stray "v1" or "vfoo" tag is not a release.
+# origin 의 릴리스 태그, 최신순, 한 줄에 태그<TAB>날짜<TAB>제목.
+# verify_tag 가 받아 줄 이름만 — "v1" 이나 "vfoo" 같은 태그는 릴리스가 아니다.
 release_tags() {
     g "${GIT_VERSIONSORT[@]}" for-each-ref --sort=-v:refname \
         --format='%(refname:short)%09%(creatordate:short)%09%(contents:subject)' 'refs/tags/v*' \
@@ -104,18 +102,18 @@ release_tags() {
 latest_release_tag() { release_tags | head -1 | cut -f1; }
 
 # ---------------------------------------------------------------------------------------
-# checks
+# 검사
 # ---------------------------------------------------------------------------------------
 
-# The systemd units hard-code the checkout they run from. Deploying from a different clone
-# would switch files nobody is serving and bounce units that serve something else.
+# systemd 유닛은 자기가 돌릴 체크아웃 경로를 박아 둔다. 다른 clone 에서 배포하면 아무도
+# 서비스하지 않는 파일을 바꾸고, 엉뚱한 것을 돌리는 유닛을 재기동하게 된다.
 check_serving_repo() {
     [ "${DEPLOY_SKIP_UNIT_CHECK:-0}" = 1 ] && return 0
     units_installed || return 0
     local wd
     wd="$(systemctl --user show -p WorkingDirectory --value camchat-backend.service 2>/dev/null || true)"
     [ -z "$wd" ] || [ "$wd" = "$REPO" ] \
-        || die "systemd serves $wd, but this is $REPO — run deploy.sh from the served checkout."
+        || die "systemd 가 서비스하는 체크아웃은 $wd 인데 여기는 $REPO — 운영 체크아웃에서 실행하세요."
 }
 
 dirty_files() { g status --porcelain --untracked-files=no; }
@@ -123,89 +121,89 @@ dirty_files() { g status --porcelain --untracked-files=no; }
 check_clean() {
     local dirty
     dirty="$(dirty_files)"
-    [ -z "$dirty" ] || die "uncommitted changes in tracked files — commit or stash first, production must equal the tag exactly:"$'\n'"$dirty"
+    [ -z "$dirty" ] || die "커밋 안 된 수정이 있습니다 — 운영은 태그와 정확히 같아야 하니 먼저 커밋하거나 git stash 하세요:"$'\n'"$dirty"
 }
 
-# Rollback is the emergency path: set someone's edits aside instead of refusing.
+# 롤백은 비상 경로: 남의 수정 때문에 거부하지 말고 치워 두고 진행한다.
 stash_if_dirty() {
     [ -n "$(dirty_files)" ] || return 0
     local label
-    label="deploy.sh rollback $(now): uncommitted changes set aside"
+    label="deploy.sh rollback $(now): 커밋 안 된 수정 임시 보관"
     g stash push --quiet -m "$label"
-    say "[stash]  uncommitted changes were in the way — stashed as \"$label\"" >&2
-    say "         recover later with: git stash pop" >&2
+    say "[stash]  커밋 안 된 수정을 치워 뒀습니다 — stash 이름 \"$label\"" >&2
+    say "         복구: git stash pop" >&2
 }
 
-# origin is the authority on tags: local-only tags are pruned (a tag nobody published is not
-# a release), moved tags are taken over (--force), a retracted tag disappears.
+# 태그의 기준은 origin: 로컬에만 있는 태그는 지우고(아무도 발행 안 한 태그는 릴리스가 아니다),
+# 옮겨진 태그는 따라가고(--force), origin 에서 지운 태그는 사라진다.
 fetch_tags() {
     g fetch origin --prune --prune-tags --force --tags --quiet \
-        || die "git fetch failed — no network, or origin unreachable."
+        || die "git fetch 실패 — 네트워크가 없거나 origin 에 닿지 않습니다."
 }
 
-# Validates a release tag: name pattern, published on origin, reachable from origin/main.
-# Sets TAG_SHA. Asks origin directly instead of trusting refs/tags in this checkout — a
-# `git tag` typed on the box must not be deployable (RELEASE.md: two people, not one).
+# 릴리스 태그 검증: 이름 패턴, origin 에 발행됨, origin/main 에서 닿음. TAG_SHA 를 채운다.
+# 이 체크아웃의 refs/tags 를 믿지 않고 origin 에 직접 묻는다 — 서버에서 `git tag` 만 친 태그는
+# 배포되면 안 된다 (RELEASE.md: 두 사람이지 한 사람이 아니다).
 verify_tag() {
     local tag="$1" remote
-    [[ "$tag" =~ $TAG_RE ]] || die "'$tag' is not a release tag name (expected vX.Y.Z-alpha / vX.Y.Z-beta / vX.Y.Z, see RELEASE.md)."
+    [[ "$tag" =~ $TAG_RE ]] || die "'$tag' 은(는) 릴리스 태그 이름이 아닙니다 (vX.Y.Z-alpha / vX.Y.Z-beta / vX.Y.Z, RELEASE.md)."
     remote="$(g ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}")" \
-        || die "cannot ask origin about tag '$tag' — no network, or origin unreachable."
-    # an annotated tag lists twice; the ^{} line is the commit it points at
+        || die "origin 에 태그 '$tag' 를 물어볼 수 없습니다 — 네트워크가 없거나 origin 에 닿지 않습니다."
+    # annotated 태그는 두 줄로 나온다; ^{} 줄이 태그가 가리키는 커밋
     remote="$(awk '$2 ~ /\^\{\}$/ { peeled = $1 } $2 !~ /\^\{\}$/ { plain = $1 } END { print (peeled != "" ? peeled : plain) }' <<<"$remote")"
-    [ -n "$remote" ] || die "tag '$tag' is not on origin — has the release been published on GitHub? (./scripts/deploy.sh tags)"
-    g fetch origin --force --quiet "refs/tags/$tag:refs/tags/$tag" || die "could not fetch tag '$tag' from origin."
+    [ -n "$remote" ] || die "태그 '$tag' 가 origin 에 없습니다 — GitHub 에서 릴리스를 발행했나요? (./scripts/deploy.sh tags)"
+    g fetch origin --force --quiet "refs/tags/$tag:refs/tags/$tag" || die "origin 에서 태그 '$tag' 를 가져오지 못했습니다."
     TAG_SHA="$(g rev-parse -q --verify "refs/tags/$tag^{commit}")"
-    [ "$TAG_SHA" = "$remote" ] || die "tag '$tag' is ${remote:0:7} on origin but ${TAG_SHA:0:7} here even after fetching — refusing."
+    [ "$TAG_SHA" = "$remote" ] || die "태그 '$tag' 가 origin 에선 ${remote:0:7}, 여기선 ${TAG_SHA:0:7} — fetch 뒤에도 달라 중단합니다."
     g merge-base --is-ancestor "$TAG_SHA" origin/main \
-        || die "tag '$tag' is not merged into main — releases are cut from main only."
+        || die "태그 '$tag' 가 main 에 머지돼 있지 않습니다 — 릴리스는 main 에서만 냅니다."
 }
 
 dry_run_note() {
-    say "[dry-run] would: git checkout --detach $1 && ./scripts/restart-all.sh  — nothing changed."
+    say "[dry-run] 실행했다면: git checkout --detach $1 && ./scripts/restart-all.sh  — 아무것도 바꾸지 않았습니다."
 }
 
 # ---------------------------------------------------------------------------------------
-# the switch
+# 전환
 # ---------------------------------------------------------------------------------------
 
 run_restart() {
     if [ -n "${DEPLOY_RESTART_CMD:-}" ]; then
-        # shellcheck disable=SC2086  # test hook: a command line, split on purpose
+        # shellcheck disable=SC2086  # 테스트 훅: 명령줄이라 일부러 단어 분리
         $DEPLOY_RESTART_CMD
     else
         "$REPO/scripts/restart-all.sh"
     fi
 }
 
-# The record the release checklist asks for (RELEASE.md), filled in — paste it into the
-# GitHub Release. The box account is shared, so DEPLOY_BY (scripts/env.local) names the person.
-release_record() {  # $1 = tag  $2 = sha  $3 = tag that was live before, or ""
+# 릴리스 체크리스트(RELEASE.md)가 요구하는 기록, 채워서 출력 — GitHub Release 에 붙여넣는다.
+# 서버 계정은 공용이라 DEPLOY_BY (scripts/env.local) 로 사람 이름을 넣는다.
+release_record() {  # $1 = 태그  $2 = sha  $3 = 직전 운영 태그 (없으면 "")
     say
-    say "[record] paste into the GitHub Release description (Edit release):"
+    say "[record] GitHub Release 설명(Edit release)에 붙여넣으세요:"
     say "         Version: $1"
     say "         Commit: ${2:0:7}"
     say "         Released: $(date '+%Y-%m-%d')"
-    say "         Approved by: (release 발행자)"
+    say "         Approved by: (릴리스 발행자)"
     say "         Deployed by: ${DEPLOY_BY:-$USER}"
-    say "         Previous version: ${3:-none}"
-    say "         Rollback target: ${3:-none}"
+    say "         Previous version: ${3:-없음}"
+    say "         Rollback target: ${3:-없음}"
 }
 
-# Restore the checkout that was current before a deploy attempt (branch if it was one).
-restore_checkout() {  # $1 = branch name or "", $2 = sha
+# 배포 시도 전의 체크아웃으로 복귀 (브랜치였으면 브랜치로).
+restore_checkout() {  # $1 = 브랜치 이름 또는 "", $2 = sha
     if [ -n "$1" ]; then g checkout --quiet "$1"; else g checkout --quiet --detach "$2"; fi
 }
 
-# After a switch: put a manual `maint on` flag back, otherwise make sure the flag is gone.
-restore_maint() {  # $1 = saved manual flag content, or ""
+# 전환이 끝난 뒤: 수동 `maint on` 플래그가 있었으면 되돌리고, 아니면 플래그를 확실히 지운다.
+restore_maint() {  # $1 = 보관해 둔 수동 플래그 내용, 또는 ""
     if [ -n "$1" ]; then printf '%s\n' "$1" >"$MAINT_FLAG"; else maint_off; fi
 }
 
-# switch_to <tag> <sha> <action> <allow_rollback>
-# Checks out the tag, restarts, records. On a dead backend with allow_rollback=1, restores
-# the tag that was live once — or, before any release was ever recorded, the branch/commit
-# that was checked out (restarted, but not recorded as live: it is not a release).
+# switch_to <태그> <sha> <동작> <롤백허용>
+# 태그를 체크아웃하고 재기동하고 기록한다. 백엔드가 죽었고 롤백허용=1 이면 직전 운영 태그를
+# 한 번 복원한다 — 릴리스 기록이 아예 없던 첫 배포라면 원래 체크아웃(브랜치/커밋)을 복원해
+# 재기동하되, 릴리스가 아니므로 운영 중으로 기록하지 않는다.
 switch_to() {
     local tag="$1" sha="$2" action="$3" allow_rollback="$4"
     local pre_branch pre_sha prev_tag maint_saved="" rc=0
@@ -213,21 +211,20 @@ switch_to() {
     pre_sha="$(g rev-parse HEAD)"
     read_deployed; prev_tag="$DEP_TAG"
 
-    # Stand the healthcheck down for the whole switch: the checkout + frontend build window
-    # is minutes long, and a timer-triggered restart inside it would start the frontend from
-    # a half-built .next. restart-all.sh sets and clears the flag itself around the bounce;
-    # a manual `maint on` that was already there is put back at the end.
+    # 전환 내내 healthcheck 를 세워 둔다: 체크아웃 + 프론트 빌드 구간이 몇 분이라, 그 사이
+    # 타이머가 재기동하면 반쯤 빌드된 .next 로 프론트를 띄운다. restart-all.sh 는 자기 구간에서
+    # 플래그를 세우고 지우므로, 원래 있던 수동 `maint on` 은 끝나고 되돌린다.
     [ -f "$MAINT_FLAG" ] && maint_saved="$(cat "$MAINT_FLAG")"
     MAINT_SAVED="$maint_saved"
-    # shellcheck disable=SC2064  # expand now on purpose: the trap must not depend on locals
-    trap "restore_maint '$MAINT_SAVED'" EXIT   # Ctrl-C during the build must not leave it up
+    # shellcheck disable=SC2064  # 지금 확장하는 게 의도: trap 이 지역 변수에 기대면 안 됨
+    trap "restore_maint '$MAINT_SAVED'" EXIT   # 빌드 중 Ctrl-C 해도 플래그가 남으면 안 됨
     maint_on "deploy.sh $action $tag"
 
     say "[switch] git checkout --detach $tag  (${sha:0:7})"
     if ! g checkout --quiet --detach "$tag"; then
         record "$action" "$tag" "$sha" checkout-failed
         restore_maint "$maint_saved"
-        say "[error]  git checkout $tag failed — nothing was restarted; the tree is as git left it (git status)." >&2
+        say "[error]  git checkout $tag 실패 — 재기동하지 않았습니다. 워크트리는 git 이 남긴 상태 그대로 (git status)." >&2
         return 1
     fi
 
@@ -240,53 +237,53 @@ switch_to() {
         0)
             record "$action" "$tag" "$sha" ok
             say
-            say "[done]   $tag (${sha:0:7}) is live.   undo: ./scripts/deploy.sh rollback"
+            say "[done]   $tag (${sha:0:7}) 운영 중.   되돌리기: ./scripts/deploy.sh rollback"
             if [ "$action" = deploy ]; then release_record "$tag" "$sha" "$prev_tag"; fi
             return 0 ;;
         3)
-            # frontend build failed — restart-all.sh left the stack untouched
+            # 프론트 빌드 실패 — restart-all.sh 가 서버를 건드리지 않았다
             record "$action" "$tag" "$sha" build-failed
             restore_checkout "$pre_branch" "$pre_sha"
-            say "[undo]   build failed, stack untouched — checkout restored to ${pre_branch:-${pre_sha:0:7}}." >&2
+            say "[undo]   프론트 빌드 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌렸습니다." >&2
             return 3 ;;
         4)
-            # backend answers, LLM probe failed — the code IS live; bouncing again would not
-            # fix ollama and would only add downtime, so keep it and shout.
+            # 백엔드는 응답, LLM 확인만 실패 — 코드는 이미 운영 중이다. 다시 재기동해도 ollama 가
+            # 고쳐지지 않고 다운타임만 늘어나니, 유지하고 크게 알린다.
             record "$action" "$tag" "$sha" "ok (llm probe failed)"
-            say "[warn]   $tag (${sha:0:7}) is live but /health/llm failed — not rolling back." >&2
-            say "         check ollama: ./scripts/healthcheck.sh / systemctl --user status camchat-ollama" >&2
+            say "[warn]   $tag (${sha:0:7}) 운영 중이지만 /health/llm 실패 — 롤백하지 않습니다." >&2
+            say "         ollama 확인: ./scripts/healthcheck.sh / systemctl --user status camchat-ollama" >&2
             if [ "$action" = deploy ]; then release_record "$tag" "$sha" "$prev_tag"; fi
             return 4 ;;
         *)
             record "$action" "$tag" "$sha" "restart-failed(rc=$rc)"
             if [ "$allow_rollback" != 1 ]; then
-                say "[error]  restart failed (rc=$rc) and auto-rollback is off — stack may be down." >&2
-                say "         fix, or: ./scripts/deploy.sh rollback" >&2
+                say "[error]  재기동 실패 (rc=$rc), 자동 롤백 꺼짐 — 서버가 내려가 있을 수 있습니다." >&2
+                say "         고치거나: ./scripts/deploy.sh rollback" >&2
                 return 1
             fi
-            # Go back to what was live before this attempt (the log only gains an "ok" row on
-            # success). Before the first release there is nothing live: restore the branch or
-            # commit that was checked out and restart that, without calling it a release.
+            # 이번 시도 전에 운영 중이던 것으로 돌아간다 (로그는 성공했을 때만 "ok" 행을 얻는다).
+            # 첫 릴리스 전이라 운영 중인 것이 없으면, 원래 체크아웃(브랜치/커밋)을 복원해 재기동하되
+            # 릴리스라고 부르지 않는다.
             local rc2=0
             read_deployed
             if [ -n "$DEP_TAG" ]; then
-                say "[undo]   restart failed (rc=$rc) — rolling back to $DEP_TAG" >&2
+                say "[undo]   재기동 실패 (rc=$rc) — $DEP_TAG 로 롤백합니다" >&2
                 switch_to "$DEP_TAG" "$DEP_SHA" auto-rollback 0 || rc2=$?
                 case "$rc2" in
-                    0|4) say "[undo]   rolled back to $DEP_TAG; $tag was NOT deployed. See logs/backend/server.err." >&2 ;;
-                    *)   say "[error]  rollback ALSO failed — stack is down. systemctl --user status camchat.target" >&2 ;;
+                    0|4) say "[undo]   $DEP_TAG 로 롤백됨; $tag 는 배포되지 않았습니다. logs/backend/server.err 확인." >&2 ;;
+                    *)   say "[error]  롤백도 실패 — 서버가 내려가 있습니다. systemctl --user status camchat.target" >&2 ;;
                 esac
             else
                 local where="${pre_branch:-${pre_sha:0:7}}"
-                say "[undo]   restart failed (rc=$rc) — nothing was live before; restoring $where" >&2
+                say "[undo]   재기동 실패 (rc=$rc) — 이전 릴리스 기록이 없음. 복원: $where" >&2
                 maint_on "deploy.sh restore $where"
                 restore_checkout "$pre_branch" "$pre_sha"
                 run_restart || rc2=$?
                 restore_maint "$maint_saved"
                 record auto-rollback "$where" "$pre_sha" "restored(rc=$rc2)"
                 case "$rc2" in
-                    0|4) say "[undo]   $where is back; $tag was NOT deployed. See logs/backend/server.err." >&2 ;;
-                    *)   say "[error]  restoring $where ALSO failed — stack is down. systemctl --user status camchat.target" >&2 ;;
+                    0|4) say "[undo]   $where 복원됨; $tag 는 배포되지 않았습니다. logs/backend/server.err 확인." >&2 ;;
+                    *)   say "[error]  $where 복원도 실패 — 서버가 내려가 있습니다. systemctl --user status camchat.target" >&2 ;;
                 esac
             fi
             return 1 ;;
@@ -294,10 +291,10 @@ switch_to() {
 }
 
 # ---------------------------------------------------------------------------------------
-# commands
+# 명령
 # ---------------------------------------------------------------------------------------
 
-cmd_deploy() {  # $1 = tag
+cmd_deploy() {  # $1 = 태그
     local tag="$1" from
     check_serving_repo
     fetch_tags
@@ -306,42 +303,42 @@ cmd_deploy() {  # $1 = tag
     read_deployed
 
     from="${DEP_SHA:-$(g rev-parse HEAD)}"
-    say "[deploy] $tag (${TAG_SHA:0:7})   currently live: ${DEP_TAG:-unrecorded} (${from:0:7})"
+    say "[deploy] $tag (${TAG_SHA:0:7})   지금 운영 중: ${DEP_TAG:-기록 없음} (${from:0:7})"
     if [ "$TAG_SHA" = "$from" ]; then
-        say "[deploy] same commit as what is live — restart only."
+        say "[deploy] 운영 중인 커밋과 같음 — 재기동만 합니다."
     else
-        # --max-count, not `| head`: head closing the pipe early would SIGPIPE git and, under
-        # pipefail + errexit, kill this script before the prompt on any release >40 commits.
+        # `| head` 가 아니라 --max-count: head 가 먼저 닫히면 git 이 SIGPIPE 를 받고, pipefail +
+        # errexit 아래서는 40커밋 넘는 릴리스마다 확인 전에 이 스크립트가 죽는다.
         if g merge-base --is-ancestor "$from" "$TAG_SHA"; then
-            say "[deploy] commits going live (newest first, at most 40):"
+            say "[deploy] 새로 나가는 커밋 (최신순, 최대 40개):"
             g log --oneline --no-decorate --max-count=40 "$from..$TAG_SHA" | sed 's/^/           /'
         else
-            say "[deploy] this tag is OLDER than what is live — commits being REMOVED (at most 40):"
+            say "[deploy] 이 태그는 운영 중인 것보다 오래됨 — 빠지는 커밋 (최대 40개):"
             g log --oneline --no-decorate --max-count=40 "$TAG_SHA..$from" | sed 's/^/           /'
         fi
     fi
 
     if [ "$dry_run" = 1 ]; then dry_run_note "$tag"; return 0; fi
     if [ "$yes" != 1 ]; then
-        [ -t 0 ] || die "not a terminal — pass --yes to deploy without the prompt."
+        [ -t 0 ] || die "터미널이 아닙니다 — 확인 없이 배포하려면 --yes 를 붙이세요."
         local answer
-        read -r -p "Deploy $tag to production now? [y/N] " answer
-        [[ "$answer" =~ ^[Yy]$ ]] || { say "aborted."; return 0; }
+        read -r -p "$tag 를 운영에 배포할까요? [y/N] " answer
+        [[ "$answer" =~ ^[Yy]$ ]] || { say "취소했습니다."; return 0; }
     fi
     switch_to "$tag" "$TAG_SHA" deploy "$auto_rollback"
 }
 
-cmd_rollback() {  # $1 = tag or ""
+cmd_rollback() {  # $1 = 태그 또는 ""
     local tag="${1:-}"
     check_serving_repo
     fetch_tags
     if [ -z "$tag" ]; then
         tag="$(previous_tag)"
-        [ -n "$tag" ] || die "no previous deploy recorded in $DEPLOY_LOG — name the tag: ./scripts/deploy.sh rollback vX.Y.Z-alpha"
+        [ -n "$tag" ] || die "$DEPLOY_LOG 에 되돌아갈 이전 배포 기록이 없습니다 — 태그를 지정하세요: ./scripts/deploy.sh rollback vX.Y.Z-alpha"
     fi
     verify_tag "$tag"
     read_deployed
-    say "[rollback] $tag (${TAG_SHA:0:7})   replacing: ${DEP_TAG:-unrecorded}"
+    say "[rollback] $tag (${TAG_SHA:0:7})   대체 대상: ${DEP_TAG:-기록 없음}"
     if [ "$dry_run" = 1 ]; then dry_run_note "$tag"; return 0; fi
     stash_if_dirty
     switch_to "$tag" "$TAG_SHA" rollback 0
@@ -353,10 +350,10 @@ cmd_tags() {
     local n=0 tag date subject mark
     while IFS=$'\t' read -r tag date subject; do
         n=$((n + 1))
-        mark=""; [ "$tag" = "$DEP_TAG" ] && mark="   <- live"
+        mark=""; [ "$tag" = "$DEP_TAG" ] && mark="   <- 운영중"
         printf '%-18s %s  %s%s\n' "$tag" "$date" "$subject" "$mark"
     done < <(release_tags)
-    [ "$n" -gt 0 ] || say "no release tags yet — publish one on GitHub (Releases -> Draft a new release), see RELEASE.md."
+    [ "$n" -gt 0 ] || say "릴리스 태그가 아직 없습니다 — GitHub Releases -> Draft a new release 로 발행하세요 (RELEASE.md)."
 }
 
 cmd_status() {
@@ -371,26 +368,26 @@ cmd_status() {
     fi
 
     if [ -n "$DEP_TAG" ]; then
-        say "[live]     $DEP_TAG (${DEP_SHA:0:7})  deployed $DEP_TIME"
+        say "[live]     $DEP_TAG (${DEP_SHA:0:7})  배포 $DEP_TIME"
     else
-        say "[live]     nothing recorded yet — first deploy not done (./scripts/deploy.sh <tag>)"
+        say "[live]     기록 없음 — 아직 첫 배포 전 (./scripts/deploy.sh <태그>)"
     fi
 
     if [ -z "$DEP_SHA" ] || [ "$head_sha" = "$DEP_SHA" ]; then
         say "[checkout] $head_ref (${head_sha:0:7})"
     else
-        say "[checkout] $head_ref (${head_sha:0:7})  != live — a restart (healthcheck, systemd) would serve THIS, not $DEP_TAG"
+        say "[checkout] $head_ref (${head_sha:0:7})  != 운영중 — 재기동(healthcheck·systemd)되면 $DEP_TAG 가 아니라 이게 뜹니다"
     fi
 
-    # The backend logs its commit on every start (run-backend.sh) — what is actually running.
+    # 백엔드는 시작할 때마다 자기 커밋을 로그에 남긴다 (run-backend.sh) — 실제로 도는 코드.
     local run_line run_sha
     run_line="$(grep -a '\[backend\] starting on' "$LOG_DIR/backend/server.out" 2>/dev/null | tail -1 || true)"
     if [ -n "$run_line" ]; then
         run_sha="$(sed -n 's/.*(\([0-9a-f]\{7,\}\)).*/\1/p' <<<"$run_line")"
         if [ -n "$DEP_SHA" ] && [ -n "$run_sha" ] && [ "${DEP_SHA:0:${#run_sha}}" != "$run_sha" ]; then
-            say "[running]  backend started from $run_sha  != live $DEP_TAG (${DEP_SHA:0:7})"
+            say "[running]  백엔드 시작 커밋 $run_sha  != 운영중 $DEP_TAG (${DEP_SHA:0:7})"
         else
-            say "[running]  backend started from ${run_sha:-?}"
+            say "[running]  백엔드 시작 커밋 ${run_sha:-?}"
         fi
     fi
 
@@ -399,7 +396,7 @@ cmd_status() {
         for u in ollama backend frontend; do
             st="$(systemctl --user is-active "camchat-$u.service" 2>/dev/null || true)"
             since="$(systemctl --user show -p ActiveEnterTimestamp --value "camchat-$u.service" 2>/dev/null | cut -d' ' -f2-3)"
-            line="$line  $u=$st${since:+ (since $since)}"
+            line="$line  $u=$st${since:+ ($since 부터)}"
         done
         say "[units]  $line"
     fi
@@ -409,23 +406,23 @@ cmd_status() {
     fi
 
     if [ -f "$MAINT_FLAG" ]; then
-        say "[maint]    ON since: $(cat "$MAINT_FLAG")  — healthcheck auto-restart suspended (./scripts/deploy.sh maint off)"
+        say "[maint]    ON — $(cat "$MAINT_FLAG")  — healthcheck 자동 재기동 중지됨 (./scripts/deploy.sh maint off)"
     else
         say "[maint]    off"
     fi
     if [ -f "$REPO/worker/package.json" ]; then
-        # wrangler prints the value on stdout (plus a blank line), "Value not found" on stderr
-        # when the key is absent (= off), and an auth error on stderr when it cannot ask at all.
+        # wrangler 는 값을 stdout 에(빈 줄 하나 덤으로), 키가 없으면 "Value not found" 를 stderr 에,
+        # 물어볼 수조차 없으면 인증 오류를 stderr 에 낸다.
         local kv err
         err="$(mktemp)"
         kv="$(cd "$REPO/worker" && timeout 25 npm run --silent maintenance:status 2>"$err" || true)"
         kv="${kv//[$'\n\r\t ']/}"
         if [ "$kv" = on ]; then
-            say "[worker]   maintenance page ON (visitors see the 503 notice)"
+            say "[worker]   점검 안내 페이지 ON (방문자에게 503 안내)"
         elif [ -n "$kv" ] || grep -qi 'not found' "$err"; then
-            say "[worker]   maintenance page off"
+            say "[worker]   점검 안내 페이지 off"
         else
-            say "[worker]   maintenance page: unknown — wrangler cannot reach Cloudflare here ($WRANGLER_AUTH_HINT)"
+            say "[worker]   점검 안내 페이지: 알 수 없음 — 이 서버의 wrangler 가 Cloudflare 에 접근 못 함 ($WRANGLER_AUTH_HINT)"
         fi
         rm -f "$err"
     fi
@@ -433,7 +430,7 @@ cmd_status() {
     local newest
     newest="$(latest_release_tag)"
     if [ -n "$newest" ] && [ "$newest" != "$DEP_TAG" ]; then
-        say "[tags]     newest on origin: $newest (not live)  -> ./scripts/deploy.sh $newest"
+        say "[tags]     origin 최신 태그: $newest (운영 중 아님)  -> ./scripts/deploy.sh $newest"
     fi
 
     if [ -f "$DEPLOY_LOG" ]; then
@@ -442,12 +439,11 @@ cmd_status() {
     fi
 }
 
-# Flip the Worker maintenance key. Refuses up front when wrangler has nothing to
-# authenticate with (it would otherwise sit in an interactive login prompt), and is
-# time-boxed so a stuck npx/wrangler can never hold the operator's terminal.
+# Worker 점검 키를 켜고 끈다. wrangler 가 인증할 것이 없으면 미리 거부하고(안 그러면 대화형
+# 로그인 프롬프트에서 멈춘다), 시간을 제한해 멈춘 npx/wrangler 가 터미널을 붙들지 못하게 한다.
 worker_kv() {  # $1 = on|off
     if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] && [ ! -f "$HOME/.config/.wrangler/config/default.toml" ]; then
-        say "[worker]   no Cloudflare credentials on this box — $WRANGLER_AUTH_HINT" >&2
+        say "[worker]   이 서버에 Cloudflare 인증 정보가 없습니다 — $WRANGLER_AUTH_HINT" >&2
         return 1
     fi
     (cd "$REPO/worker" && timeout 60 npm run --silent "maintenance:$1")
@@ -458,25 +454,25 @@ cmd_maint() {  # $1 = on|off
     case "$mode" in
         on)
             maint_on "deploy.sh maint on (manual)"
-            say "[maint]    healthcheck auto-restart suspended (flag: $MAINT_FLAG)"
+            say "[maint]    healthcheck 자동 재기동 중지 (플래그: $MAINT_FLAG)"
             if [ "$local_only" = 1 ]; then return 0; fi
             if worker_kv on; then
-                say "[worker]   maintenance page ON — visitors see the 503 notice within ~60 s"
+                say "[worker]   점검 안내 페이지 ON — 방문자에게 최대 60초 안에 503 안내"
             else
                 rc=1
-                say "[error]  could not switch the Cloudflare Worker — the local flag IS set; re-run 'maint on' once wrangler can authenticate, or use --local-only" >&2
+                say "[error]  Cloudflare Worker 전환 실패 — 서버 쪽 플래그는 세워졌습니다. wrangler 인증 뒤 'maint on' 을 다시 하거나 --local-only 를 쓰세요." >&2
             fi ;;
         off)
-            maint_off   # first: whatever happens at Cloudflare, the healthcheck must resume
-            say "[maint]    healthcheck auto-restart resumed"
+            maint_off   # 먼저: Cloudflare 쪽이 어찌 되든 healthcheck 는 다시 돌아야 한다
+            say "[maint]    healthcheck 자동 재기동 재개"
             if [ "$local_only" = 1 ]; then return 0; fi
             if worker_kv off; then
-                say "[worker]   maintenance page off — visitors are back within ~60 s"
+                say "[worker]   점검 안내 페이지 off — 최대 60초 안에 정상 화면"
             else
                 rc=1
-                say "[error]  could not switch the Cloudflare Worker — visitors STILL see the maintenance page; fix wrangler auth, then: cd worker && npm run maintenance:off" >&2
+                say "[error]  Cloudflare Worker 전환 실패 — 방문자에게 아직 점검 페이지가 보입니다. wrangler 인증을 고친 뒤: cd worker && npm run maintenance:off" >&2
             fi ;;
-        *) die "usage: ./scripts/deploy.sh maint on|off [--local-only]" ;;
+        *) die "사용법: ./scripts/deploy.sh maint on|off [--local-only]" ;;
     esac
     return "$rc"
 }
@@ -490,7 +486,7 @@ main() {
             --no-auto-rollback) auto_rollback=0 ;;
             --local-only)       local_only=1 ;;
             -h|--help)          usage; exit 0 ;;
-            --*)                die "unknown flag: $arg (./scripts/deploy.sh --help)" ;;
+            --*)                die "알 수 없는 플래그: $arg (./scripts/deploy.sh --help)" ;;
             *)                  positional+=("$arg") ;;
         esac
     done
@@ -502,7 +498,7 @@ main() {
         rollback)  cmd_rollback "${positional[1]:-}" ;;
         maint)     cmd_maint "${positional[1]:-}" ;;
         v*)        cmd_deploy "$cmd" ;;
-        *)         echo "unknown command: $cmd" >&2; usage >&2; exit 2 ;;
+        *)         echo "알 수 없는 명령: $cmd" >&2; usage >&2; exit 2 ;;
     esac
 }
 

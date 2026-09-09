@@ -133,10 +133,10 @@ class TestDeploy:
         assert not (prod / "logs" / "run" / "maintenance").exists()
         rows = log_rows(prod)
         assert rows[-1][1:3] == ["deploy", "v0.1.0-beta"] and rows[-1][4] == "ok"
-        assert "is live" in p.stdout
+        assert "운영 중" in p.stdout
         # the release record to paste into the GitHub Release
         assert "Version: v0.1.0-beta" in p.stdout and f"Commit: {tag_sha(prod, 'v0.1.0-beta')[:7]}" in p.stdout
-        assert "Previous version: none" in p.stdout and "Rollback target: none" in p.stdout
+        assert "Previous version: 없음" in p.stdout and "Rollback target: 없음" in p.stdout
 
     def test_more_than_40_commits_does_not_kill_the_script(self, prod):
         # `git log | head -40` under pipefail died with SIGPIPE; --max-count must not
@@ -153,7 +153,7 @@ class TestDeploy:
     def test_shows_commits_going_live(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
         p = run(prod, "v0.2.0-beta", "--yes", env={"DEPLOY_BY": "tester"})
-        assert "commits going live" in p.stdout and "second (#2)" in p.stdout
+        assert "새로 나가는 커밋" in p.stdout and "second (#2)" in p.stdout
         assert head(prod) == tag_sha(prod, "v0.2.0-beta")
         assert "Previous version: v0.1.0-beta" in p.stdout and "Rollback target: v0.1.0-beta" in p.stdout
         assert "Deployed by: tester" in p.stdout
@@ -162,17 +162,17 @@ class TestDeploy:
     def test_older_tag_lists_removed_commits(self, prod):
         # HEAD is main (third) and nothing is recorded, so v0.1.0-beta is a step backwards.
         p = run(prod, "v0.1.0-beta", "--yes")
-        assert "REMOVED" in p.stdout and "third, unreleased (#3)" in p.stdout
+        assert "빠지는 커밋" in p.stdout and "third, unreleased (#3)" in p.stdout
 
     def test_unknown_tag_refused(self, prod):
         before = head(prod)
         p = run(prod, "v9.9.9-beta", "--yes", check=False)
-        assert p.returncode != 0 and "not on origin" in p.stderr
+        assert p.returncode != 0 and "origin 에 없습니다" in p.stderr
         assert head(prod) == before and restart_calls(prod) == []
 
     def test_bad_tag_name_refused(self, prod):
         p = run(prod, "v1", "--yes", check=False)
-        assert p.returncode != 0 and "not a release tag name" in p.stderr
+        assert p.returncode != 0 and "릴리스 태그 이름이 아닙니다" in p.stderr
         assert restart_calls(prod) == []
 
     def test_tag_not_merged_into_main_refused(self, prod):
@@ -183,14 +183,14 @@ class TestDeploy:
         git(prod, "push", "-q", "origin", "v0.3.0-beta")
         git(prod, "checkout", "-q", "main")
         p = run(prod, "v0.3.0-beta", "--yes", check=False)
-        assert p.returncode != 0 and "not merged into main" in p.stderr
+        assert p.returncode != 0 and "main 에 머지돼 있지 않습니다" in p.stderr
         assert restart_calls(prod) == []
 
     def test_local_only_tag_is_not_a_release(self, prod):
         # `git tag` on the box, never published on GitHub — must not deploy, and gets pruned
         git(prod, "tag", "v0.9.0-beta", "main")
         p = run(prod, "v0.9.0-beta", "--yes", check=False)
-        assert p.returncode != 0 and "not on origin" in p.stderr
+        assert p.returncode != 0 and "origin 에 없습니다" in p.stderr
         assert restart_calls(prod) == []
         assert git(prod, "tag", "-l", "v0.9.0-beta") == ""
 
@@ -198,7 +198,7 @@ class TestDeploy:
         run(prod, "v0.1.0-beta", "--yes")                  # fetched every tag, incl. v0.2.0-beta
         git(origin(prod), "tag", "-d", "v0.2.0-beta")
         p = run(prod, "v0.2.0-beta", "--yes", check=False)
-        assert p.returncode != 0 and "not on origin" in p.stderr
+        assert p.returncode != 0 and "origin 에 없습니다" in p.stderr
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
         assert "v0.2.0-beta" not in run(prod, "tags").stdout
 
@@ -212,18 +212,18 @@ class TestDeploy:
     def test_dirty_tracked_file_refused(self, prod):
         (prod / "app.txt").write_text("local edit\n")
         p = run(prod, "v0.1.0-beta", "--yes", check=False)
-        assert p.returncode != 0 and "uncommitted changes" in p.stderr
+        assert p.returncode != 0 and "커밋 안 된 수정" in p.stderr
         assert "app.txt" in p.stderr and restart_calls(prod) == []
 
     def test_dry_run_changes_nothing(self, prod):
         before = head(prod)
         p = run(prod, "v0.1.0-beta", "--dry-run")
-        assert "nothing changed" in p.stdout
+        assert "아무것도 바꾸지 않았습니다" in p.stdout
         assert head(prod) == before and restart_calls(prod) == [] and deployed(prod) == []
 
     def test_unknown_flag_is_an_error_not_help(self, prod):
         p = run(prod, "v0.1.0-beta", "--yes", "--typo", check=False)
-        assert p.returncode != 0 and "unknown flag: --typo" in p.stderr
+        assert p.returncode != 0 and "알 수 없는 플래그: --typo" in p.stderr
         assert restart_calls(prod) == [] and head(prod) == tag_sha(prod, "main")
 
     def test_without_yes_needs_a_terminal(self, prod):
@@ -255,7 +255,7 @@ class TestFailureHandling:
         (prod / "STUB_RC").write_text("1\n")           # first restart fails, rollback restart succeeds
         p = run(prod, "v0.2.0-beta", "--yes", check=False)
         assert p.returncode == 1
-        assert "rolling back to v0.1.0-beta" in p.stderr
+        assert "v0.1.0-beta 로 롤백합니다" in p.stderr
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
         assert deployed(prod)[0] == "v0.1.0-beta"
         assert len(restart_calls(prod)) == 3           # deploy #1, failed deploy #2, rollback
@@ -267,13 +267,13 @@ class TestFailureHandling:
         before = head(prod)                            # main, nothing recorded yet
         (prod / "STUB_RC").write_text("1\n")
         p = run(prod, "v0.1.0-beta", "--yes", check=False)
-        assert p.returncode == 1 and "restoring main" in p.stderr
+        assert p.returncode == 1 and "복원: main" in p.stderr
         assert head(prod) == before and on_branch(prod) == "main"
         assert len(restart_calls(prod)) == 2
         assert deployed(prod) == []                            # a branch is not a release
         assert log_rows(prod)[-1][1] == "auto-rollback" and log_rows(prod)[-1][4].startswith("restored")
-        assert "first deploy not done" in run(prod, "status").stdout
-        assert "no previous deploy" in run(prod, "rollback", check=False).stderr
+        assert "첫 배포 전" in run(prod, "status").stdout
+        assert "이전 배포 기록이 없습니다" in run(prod, "rollback", check=False).stderr
 
     def test_checkout_failure_during_rollback_is_not_swallowed(self, prod):
         # live = v0.3.0-beta (has extra.txt). Deploying v0.1.0-beta removes extra.txt; the
@@ -288,7 +288,7 @@ class TestFailureHandling:
         (prod / "STUB_RC").write_text("1\n")
         (prod / "STUB_TOUCH").write_text("extra.txt")
         p = run(prod, "v0.1.0-beta", "--yes", check=False)
-        assert p.returncode == 1 and "checkout v0.3.0-beta failed" in p.stderr
+        assert p.returncode == 1 and "checkout v0.3.0-beta 실패" in p.stderr
         assert len(restart_calls(prod)) == 2                   # v0.3 deploy + failed v0.1; no third
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")      # left where git left it
         assert deployed(prod)[0] == "v0.3.0-beta"              # never recorded the broken state as ok
@@ -298,7 +298,7 @@ class TestFailureHandling:
         run(prod, "v0.1.0-beta", "--yes")
         (prod / "STUB_RC").write_text("4\n")           # backend up, /health/llm failed
         p = run(prod, "v0.2.0-beta", "--yes", check=False)
-        assert p.returncode == 4 and "not rolling back" in p.stderr
+        assert p.returncode == 4 and "롤백하지 않습니다" in p.stderr
         assert head(prod) == tag_sha(prod, "v0.2.0-beta")
         assert deployed(prod)[0] == "v0.2.0-beta"           # it IS live, degraded
         assert len(restart_calls(prod)) == 2                 # no rollback bounce
@@ -309,7 +309,7 @@ class TestFailureHandling:
         run(prod, "v0.1.0-beta", "--yes")
         (prod / "STUB_RC").write_text("1\n")
         p = run(prod, "v0.2.0-beta", "--yes", "--no-auto-rollback", check=False)
-        assert p.returncode == 1 and "auto-rollback is off" in p.stderr
+        assert p.returncode == 1 and "자동 롤백 꺼짐" in p.stderr
         assert head(prod) == tag_sha(prod, "v0.2.0-beta")   # left where it failed, for inspection
         assert len(restart_calls(prod)) == 2
         assert deployed(prod)[0] == "v0.1.0-beta"           # DEPLOYED only moves on success
@@ -323,7 +323,7 @@ class TestRollback:
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
         assert deployed(prod)[0] == "v0.1.0-beta"
         assert log_rows(prod)[-1][1:3] == ["rollback", "v0.1.0-beta"]
-        assert "replacing: v0.2.0-beta" in p.stdout
+        assert "대체 대상: v0.2.0-beta" in p.stdout
 
     def test_rollback_twice_keeps_going_back_not_forward(self, prod):
         git(prod, "tag", "v0.3.0-beta", "main")
@@ -336,14 +336,14 @@ class TestRollback:
         run(prod, "rollback")                                   # "v0.2 is bad too"
         assert deployed(prod)[0] == "v0.1.0-beta"              # not back onto v0.3
         p = run(prod, "rollback", check=False)
-        assert p.returncode != 0 and "no previous deploy" in p.stderr
+        assert p.returncode != 0 and "이전 배포 기록이 없습니다" in p.stderr
         run(prod, "v0.2.0-beta", "--yes")                       # an explicit deploy re-endorses it
         run(prod, "rollback")
         assert deployed(prod)[0] == "v0.1.0-beta"
 
     def test_rollback_without_history_needs_explicit_tag(self, prod):
         p = run(prod, "rollback", check=False)
-        assert p.returncode != 0 and "no previous deploy" in p.stderr
+        assert p.returncode != 0 and "이전 배포 기록이 없습니다" in p.stderr
         run(prod, "rollback", "v0.1.0-beta")
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
 
@@ -352,7 +352,7 @@ class TestRollback:
         run(prod, "v0.2.0-beta", "--yes")
         (prod / "app.txt").write_text("someone's 3 a.m. edit\n")
         p = run(prod, "rollback")
-        assert "stashed" in p.stderr and "git stash pop" in p.stderr
+        assert "치워 뒀습니다" in p.stderr and "git stash pop" in p.stderr
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
         assert (prod / "app.txt").read_text() == "first\n"          # tree equals the tag
         assert "deploy.sh rollback" in git(prod, "stash", "list")    # the edit is recoverable
@@ -361,39 +361,39 @@ class TestRollback:
         run(prod, "v0.1.0-beta", "--yes")
         (prod / "app.txt").write_text("edit\n")
         p = run(prod, "v0.2.0-beta", "--yes", check=False)
-        assert p.returncode != 0 and "uncommitted changes" in p.stderr
+        assert p.returncode != 0 and "커밋 안 된 수정" in p.stderr
         assert git(prod, "stash", "list") == ""
 
     def test_rollback_dry_run(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
         run(prod, "v0.2.0-beta", "--yes")
         p = run(prod, "rollback", "--dry-run")
-        assert "nothing changed" in p.stdout and head(prod) == tag_sha(prod, "v0.2.0-beta")
+        assert "아무것도 바꾸지 않았습니다" in p.stdout and head(prod) == tag_sha(prod, "v0.2.0-beta")
 
 
 class TestStatusAndTags:
     def test_status_before_any_deploy(self, prod):
         p = run(prod, "status")
-        assert "first deploy not done" in p.stdout
-        assert "newest on origin: v0.2.0-beta (not live)" in p.stdout
+        assert "첫 배포 전" in p.stdout
+        assert "origin 최신 태그: v0.2.0-beta (운영 중 아님)" in p.stdout
 
     def test_status_after_deploy_and_drift(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
         p = run(prod, "status")
         assert "[live]     v0.1.0-beta" in p.stdout
-        assert "[checkout] v0.1.0-beta" in p.stdout and "!= live" not in p.stdout
+        assert "[checkout] v0.1.0-beta" in p.stdout and "!= 운영중" not in p.stdout
         assert "deploy.sh v0.2.0-beta" in p.stdout
         # a developer checks out main in the served folder: status must shout
         git(prod, "checkout", "-q", "main")
         p = run(prod, "status")
-        assert "[checkout] main" in p.stdout and "!= live" in p.stdout
+        assert "[checkout] main" in p.stdout and "!= 운영중" in p.stdout
 
     def test_tags_newest_first_marks_live(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
         p = run(prod, "tags")
         lines = p.stdout.splitlines()
-        assert lines[0].startswith("v0.2.0-beta") and "<- live" not in lines[0]
-        assert lines[1].startswith("v0.1.0-beta") and "<- live" in lines[1]
+        assert lines[0].startswith("v0.2.0-beta") and "<- 운영중" not in lines[0]
+        assert lines[1].startswith("v0.1.0-beta") and "<- 운영중" in lines[1]
 
     def test_non_release_tag_names_are_ignored(self, prod):
         # a stray "vfoo" tag on main must not become the "newest" suggestion nor be listed
@@ -402,7 +402,7 @@ class TestStatusAndTags:
         run(prod, "v0.1.0-beta", "--yes")
         assert "vfoo" not in run(prod, "status").stdout
         assert "vfoo" not in run(prod, "tags").stdout
-        assert "newest on origin: v0.2.0-beta" in run(prod, "status").stdout
+        assert "origin 최신 태그: v0.2.0-beta" in run(prod, "status").stdout
         git(prod, "tag", "wip", "v0.1.0-beta")                 # checkpoint tag on the live commit
         git(prod, "push", "-q", "origin", "wip")
         out = run(prod, "status").stdout
@@ -414,7 +414,7 @@ class TestStatusAndTags:
         git(prod, "push", "-q", "origin", "--tags")
         names = [line.split()[0] for line in run(prod, "tags").stdout.splitlines()]
         assert names[:4] == ["v0.4.0-alpha", "v0.3.0", "v0.3.0-beta", "v0.3.0-alpha"]
-        assert "newest on origin: v0.4.0-alpha" in run(prod, "status").stdout
+        assert "origin 최신 태그: v0.4.0-alpha" in run(prod, "status").stdout
         run(prod, "v0.3.0-beta", "--yes")
         assert "[checkout] v0.3.0-beta" in run(prod, "status").stdout   # not the newest tag on the commit
 
@@ -443,7 +443,7 @@ class TestMaintenance:
     def test_off_resumes_healthcheck_even_when_worker_step_fails(self, prod):
         run(prod, "maint", "on", "--local-only")
         p = run(prod, "maint", "off", check=False, env={"HOME": str(prod)})
-        assert p.returncode == 1 and "STILL see" in p.stderr
+        assert p.returncode == 1 and "아직 점검 페이지" in p.stderr
         assert not (prod / "logs" / "run" / "maintenance").exists()
 
     def test_manual_flag_survives_a_deploy(self, prod):

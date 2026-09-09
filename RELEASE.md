@@ -114,7 +114,7 @@ cd ~/camchat
 ./scripts/deploy.sh v0.2.0-alpha     # 바뀌는 커밋 목록 보여주고 y/N → 체크아웃 → 재기동 → /health 확인
 ```
 
-끝나면 `[done]   v0.2.0-alpha (abc1234) is live.` 가 찍힙니다. 성원에게 "떴어요".
+끝나면 `[done]   v0.2.0-alpha (abc1234) 운영 중.` 가 찍힙니다. 성원에게 "떴어요".
 그 아래 `[record]` 블록(Version / Commit / Released / Deployed by / Previous version / Rollback
 target)이 같이 찍힙니다 — GitHub Release 설명(Edit release)의 기록 칸에 붙여넣으세요. `Deployed by`
 에 이름을 넣으려면 `scripts/env.local` 에 `export DEPLOY_BY=진서` 한 줄.
