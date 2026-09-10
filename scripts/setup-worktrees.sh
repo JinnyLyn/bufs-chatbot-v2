@@ -13,9 +13,10 @@
 # 이 스크립트는 systemd 유닛과 cloudflared 는 건드리지 않는다. 끝나면 다음 단계를 찍어 준다.
 #
 #   scripts/setup-worktrees.sh
-# 환경: PROD_DIR, STAGING_DIR, STAGING_BACKEND_PORT(8010), STAGING_FRONTEND_PORT(3010),
-#       DEV_BACKEND_PORT(8020), DEV_FRONTEND_PORT(3020) — 개발 폴더에서 실수로 start-all.sh
-#       를 쳐도 운영 포트와 부딪히지 않게 개발 env.local 에 적어 둔다.
+# 환경: PROD_DIR, STAGING_DIR, STAGING_BACKEND_PORT(8010), STAGING_FRONTEND_PORT(3010)
+# 개발 폴더의 env.local 은 건드리지 않는다 — 유닛이 옮겨가기 전까진 운영 유닛이 그 파일을 읽는다.
+# 개발 폴더에서 실수로 start-all.sh 를 치는 건 start-all.sh 자체가 막는다(유닛이 다른 폴더를
+# 서비스 중이면 기본 포트로는 거부).
 
 set -Eeuo pipefail
 
@@ -26,8 +27,6 @@ PROD_DIR="${PROD_DIR:-$HOME/camchat-prod}"
 STAGING_DIR="${STAGING_DIR:-$HOME/camchat-staging}"
 STAGING_BACKEND_PORT="${STAGING_BACKEND_PORT:-8010}"
 STAGING_FRONTEND_PORT="${STAGING_FRONTEND_PORT:-3010}"
-DEV_BACKEND_PORT="${DEV_BACKEND_PORT:-8020}"
-DEV_FRONTEND_PORT="${DEV_FRONTEND_PORT:-3020}"
 
 die() { echo "[error]  $*" >&2; exit 1; }
 say() { echo "$*"; }
@@ -93,23 +92,16 @@ else
 fi
 say "[staging] env.local: :$STAGING_BACKEND_PORT/:$STAGING_FRONTEND_PORT, START_OLLAMA=no; .env: LANGFUSE_TRACING_ENVIRONMENT=staging"
 
-# 개발 폴더: 실수로 start-all.sh 를 쳐도 운영 포트를 잡지 않게
-[ -f "$REPO/scripts/env.local" ] || : >"$REPO/scripts/env.local"
-append_once "$REPO/scripts/env.local" "# --- dev (setup-worktrees.sh): 운영 포트와 부딪히지 않게 ---" \
-    "export BACKEND_PORT=$DEV_BACKEND_PORT" \
-    "export FRONTEND_PORT=$DEV_FRONTEND_PORT" \
-    "export START_OLLAMA=no"
-say "[dev]     env.local: :$DEV_BACKEND_PORT/:$DEV_FRONTEND_PORT, START_OLLAMA=no (운영 포트 보호)"
 
 say
 say "폴더 셋 준비됨:"
 git -C "$REPO" worktree list | sed 's/^/  /'
 say
-say "다음 (순서대로, RELEASE.md '처음 한 번'):"
-say "  1. 운영 유닛을 $PROD_DIR 로 옮기기 — 재기동 없음, 다음 배포 때부터 새 폴더에서 뜸:"
-say "       cd $PROD_DIR && scripts/install-units.sh"
+say "다음 (순서대로, MIGRATION_H100.md 3-7):"
+say "  1. 운영 유닛을 $PROD_DIR 로 옮기고 거기서 재기동 (프론트 빌드 몇 분 + 재기동 30초, 한 번):"
+say "       cd $PROD_DIR && scripts/install-units.sh --move"
 say "  2. 성원이 GitHub Releases 에서 첫 릴리스(v0.1.0-alpha, main) 발행"
-say "  3. 첫 배포 (이때 재기동 한 번, 30초쯤):"
+say "  3. 첫 배포 기록 (같은 커밋이 이미 떠 있으면 재기동 없이 기록만):"
 say "       cd $PROD_DIR && ./scripts/deploy.sh v0.1.0-alpha"
 say "  4. staging 도메인: ~/.cloudflared/config.yml 에 staging.maruvis.kr → :$STAGING_FRONTEND_PORT, /api → :$STAGING_BACKEND_PORT"
 say "     + cloudflared tunnel route dns maruvis staging.maruvis.kr   (MIGRATION_H100.md 3-7)"

@@ -30,6 +30,9 @@ g() { git -C "$STAGING_DIR" "$@"; }
 check_dir() {
     [ -e "$STAGING_DIR/.git" ] || die "staging 폴더가 없습니다: $STAGING_DIR — 먼저 scripts/setup-worktrees.sh"
     [ -f "$STAGING_DIR/.deploy-worktree" ] || die "$STAGING_DIR 는 setup-worktrees.sh 가 만든 폴더가 아닙니다 (.deploy-worktree 마커 없음)."
+    # 마커 내용까지 본다 — STAGING_DIR 가 운영 폴더를 가리키면 down 이 운영을 내리고 up 이 태그를 벗긴다.
+    [ "$(cat "$STAGING_DIR/.deploy-worktree")" = staging ] \
+        || die "$STAGING_DIR 는 staging 폴더가 아닙니다 (마커: $(cat "$STAGING_DIR/.deploy-worktree")) — STAGING_DIR 확인."
 }
 
 # staging 폴더의 env.local 에서 포트만 읽는다 (다른 export 는 이 셸에 남기지 않도록 서브셸).
@@ -103,9 +106,12 @@ cmd_status() {
     fi
 }
 
+usage() { sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
 case "${1:-}" in
-    up)     cmd_up ;;
-    down)   cmd_down ;;
-    status) cmd_status ;;
-    *)      sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ -z "${1:-}" ] || exit 2 ;;
+    up)          cmd_up ;;
+    down)        cmd_down ;;
+    status)      cmd_status ;;
+    ""|-h|--help) usage ;;
+    *)           usage >&2; exit 2 ;;
 esac

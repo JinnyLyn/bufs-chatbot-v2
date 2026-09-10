@@ -281,22 +281,26 @@ cd ~/camchat && scripts/setup-worktrees.sh     # ~/camchat-prod, ~/camchat-stagi
 ```
 
 만드는 것: worktree 둘(origin/main, detached) · `.venv` 심링크 공유 · `project/.env`·`scripts/env.local` 복사
-(staging 은 `BACKEND_PORT=8010 FRONTEND_PORT=3010 START_OLLAMA=no`, `.env` 의 `LANGFUSE_TRACING_ENVIRONMENT=staging`;
-개발 폴더 env.local 엔 `:8020/:3020 START_OLLAMA=no` 를 덧붙여 운영 포트를 보호) · `npm ci` · `.deploy-worktree` 마커
-(pre-commit 훅이 이 마커를 보면 커밋 거부). 유닛·cloudflared 는 건드리지 않는다.
+(staging 은 `BACKEND_PORT=8010 FRONTEND_PORT=3010 START_OLLAMA=no`, `.env` 의 `LANGFUSE_TRACING_ENVIRONMENT=staging`) ·
+`npm ci` · `.deploy-worktree` 마커(pre-commit 훅이 이 마커를 보면 커밋 거부). **개발 폴더의 `env.local` 은 건드리지
+않는다** — 유닛이 옮겨가기 전까진 운영 유닛이 그 파일을 읽는다. 유닛·cloudflared 도 건드리지 않는다.
 
 그다음, 순서대로:
 
-1. **유닛을 운영 폴더로** — 재기동 없음. 유닛 파일의 경로만 `~/camchat-prod` 로 다시 쓰고 daemon-reload;
-   떠 있는 프로세스는 다음 재기동 때까지 그대로다.
+1. **유닛을 운영 폴더로 옮기고 거기서 재기동 — 한 번에.**
    ```bash
-   cd ~/camchat-prod && scripts/install-units.sh
+   cd ~/camchat-prod && scripts/install-units.sh --move
    ```
-   `_common.sh` 의 `units_installed()` 는 유닛의 `WorkingDirectory` 가 자기 체크아웃일 때만 참이라, 이 뒤로
-   staging·개발 폴더의 `start/stop/restart-all.sh` 는 systemctl 을 건드리지 않고 자기 프로세스만 직접 관리한다.
-2. **첫 릴리스** — 성원이 GitHub Releases 에서 `v0.1.0-alpha`(main) 발행.
-3. **첫 배포** — `cd ~/camchat-prod && ./scripts/deploy.sh v0.1.0-alpha`. 여기서 재기동 한 번(30초, 그동안 Worker 장애
-   안내 페이지). 이후 운영 폴더는 태그에 머문다.
+   유닛 파일의 경로를 `~/camchat-prod` 로 다시 쓰고 daemon-reload 한 뒤 `restart-all.sh`: 프론트 빌드(몇 분, 그동안 옛
+   스택이 계속 서비스) → `systemctl stop`(옛 폴더 프로세스도 유닛 소속이라 같이 내려감) → `start`(새 폴더에서) → `/health`.
+   사용자에게 보이는 건 재기동 30초(Worker 장애 안내 페이지). "옛 폴더 프로세스 + 새 폴더 유닛" 이 섞인 시간이 없어야
+   하므로 재기동 없는 `install-units.sh` 만 따로 돌리지 않는다.
+   `_common.sh` 의 `units_installed()` 는 유닛의 `WorkingDirectory` 가 자기 체크아웃일 때만 참이라, 이 뒤로 staging·개발
+   폴더의 `start/stop/restart-all.sh` 는 systemctl 을 건드리지 않고 자기 프로세스만 직접 관리하고, 개발 폴더에서
+   기본 포트로 `start-all.sh` 를 치면 거부된다.
+2. **첫 릴리스** — 성원이 GitHub Releases 에서 `v0.1.0-alpha`(main, 1번과 같은 커밋) 발행.
+3. **첫 배포 기록** — `cd ~/camchat-prod && ./scripts/deploy.sh v0.1.0-alpha`. 그 커밋이 이미 떠서 응답 중이면
+   재기동 없이 기록만 남긴다. 이후 운영 폴더는 태그에 머문다.
 4. **staging 도메인** — `~/.cloudflared/config.yml` 의 ingress 에서 `maruvis.kr` 항목들 **앞**에:
    ```yaml
      - hostname: staging.maruvis.kr

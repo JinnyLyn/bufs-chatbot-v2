@@ -25,8 +25,10 @@
    `scripts/deploy.sh`(배포·롤백·점검 모드)와 `restart-all.sh`, `staging.sh` 를 **사용자의 명시적 지시 없이
    실행하지 않는다.** 태그 발행은 성원(@Sung1Lim)의 몫 — 에이전트가 태그를 만들거나 push 하지 않는다.
 6. **폴더 셋.** 서버의 `~/camchat` 만 개발 폴더다. `~/camchat-prod`(운영, 릴리스 태그)와
-   `~/camchat-staging`(origin/main)은 **읽기 전용** — 거기서 파일 편집·커밋·브랜치 변경·`git pull` 을
-   하지 않는다. `.deploy-worktree` 마커가 있는 폴더면 멈추고 사용자에게 말한다. (`RELEASE.md` "폴더 셋")
+   `~/camchat-staging`(origin/main)은 **사람·에이전트가 직접 건드리지 않는다** — 파일 편집·커밋·
+   `git checkout`/`git pull`·서버 기동을 손으로 하지 않는다. 그 폴더의 체크아웃을 바꾸는 건 오직
+   `deploy.sh`(운영)와 `staging.sh`(staging)뿐이며, 그것도 규칙 5대로 사용자 지시가 있을 때만.
+   `.deploy-worktree` 마커가 있는 폴더면 멈추고 사용자에게 말한다. (`RELEASE.md` "폴더 셋")
 
 > 생성물(데이터·인덱스·평가 리포트)은 커밋하지 않는다 — `.gitignore`에 맡긴다.
 

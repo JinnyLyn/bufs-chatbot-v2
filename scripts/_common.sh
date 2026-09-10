@@ -24,15 +24,30 @@ mkdir -p "$LOG_DIR"/{ollama,backend,frontend} "$RUN_DIR"
 # scripts/install-units.sh) are present. start/stop/restart-all.sh then delegate to
 # systemctl instead of spawning processes themselves, so there is exactly one way the
 # stack runs on a box: either the units own the processes, or the scripts do.
+# 유닛(camchat.target)이 이 서버에 설치돼 있나 — 어느 체크아웃 것이든.
+units_present() {
+    command -v systemctl >/dev/null 2>&1 && systemctl --user cat camchat.target >/dev/null 2>&1
+}
+
+# 유닛이 서비스하는 체크아웃 경로 (camchat-backend.service 의 WorkingDirectory). 유닛이 없거나
+# 알 수 없으면 빈 값. 테스트 훅: CAMCHAT_UNITS_DIR 가 정의돼 있으면 systemctl 대신 그 값.
+units_serving_dir() {
+    if [ -n "${CAMCHAT_UNITS_DIR+x}" ]; then echo "$CAMCHAT_UNITS_DIR"; return 0; fi
+    units_present || return 0
+    systemctl --user show -p WorkingDirectory --value camchat-backend.service 2>/dev/null || true
+}
+
+# 유닛이 "이 체크아웃" 것인가. 유닛은 한 폴더(운영)에 묶여 있으니 다른 worktree(staging·개발)에선
+# 거짓 — 그러면 start/stop/restart-all.sh 가 systemctl 을 건드리지 않고 자기 프로세스만 직접
+# 관리한다 (안 그러면 staging 의 stop-all.sh 가 운영을 내린다). 유닛은 있는데 어디 것인지 알 수
+# 없으면(빈 값) 역시 거짓 — 남의 것을 systemctl 로 내리느니 직접 관리가 낫다. 한 프로세스 안에선
+# 답이 바뀌지 않으니 한 번만 묻는다.
 units_installed() {
-    command -v systemctl >/dev/null 2>&1 || return 1
-    systemctl --user cat camchat.target >/dev/null 2>&1 || return 1
-    # 유닛은 한 체크아웃(운영 폴더)에 묶여 있다. 다른 worktree(staging, 개발)에서 부르면
-    # "유닛 없음" 으로 답해 스크립트가 자기 프로세스를 직접 관리하게 한다 — 안 그러면
-    # staging 의 stop-all.sh 가 systemctl 로 운영을 내린다.
-    local wd
-    wd="$(systemctl --user show -p WorkingDirectory --value camchat-backend.service 2>/dev/null || true)"
-    [ -z "$wd" ] || [ "$wd" = "$REPO" ]
+    if [ -z "${_UNITS_INSTALLED+x}" ]; then
+        local wd; wd="$(units_serving_dir)"
+        if [ -n "$wd" ] && [ "$wd" = "$REPO" ]; then _UNITS_INSTALLED=0; else _UNITS_INSTALLED=1; fi
+    fi
+    return "$_UNITS_INSTALLED"
 }
 
 # 릴리스 태그의 모양 (vX.Y.Z, 접미사 -alpha/-beta/-rc 선택). deploy.sh 는 이것만 배포한다;

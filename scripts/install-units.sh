@@ -4,6 +4,10 @@
 #
 #   scripts/install-units.sh            # copy units, daemon-reload, enable target + timer
 #   scripts/install-units.sh --switch   # + stop agentic-rag (and its ollama), start camchat.target
+#   scripts/install-units.sh --move     # 유닛을 이 체크아웃(worktree)으로 옮기고 backend+frontend 를
+#                                       # 여기서 재기동 (restart-all.sh: 필요하면 프론트 빌드 → 재기동 → /health).
+#                                       # ollama 는 그대로. 운영 폴더 전환(RELEASE.md '폴더 셋')용 — 한 번의
+#                                       # 재기동으로 끝나야 "옛 폴더 프로세스 + 새 폴더 유닛" 상태가 안 생긴다.
 #
 # What the units give you (reports/CamChat-장애대응.pdf §4):
 #   - one service per process (ollama / backend / frontend), Restart=on-failure, 5-per-10-min
@@ -18,11 +22,12 @@ set -Eeuo pipefail
 . "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
 derive_ollama_port   # find_service_pids ollama needs OLLAMA_PORT to recognise the old instance
 
-switch=0
+switch=0; move=0
 case "${1:-}" in
     "") ;;
     --switch) switch=1 ;;
-    *) echo "usage: $0 [--switch]" >&2; exit 2 ;;
+    --move)   move=1 ;;
+    *) echo "usage: $0 [--switch|--move]" >&2; exit 2 ;;
 esac
 
 command -v systemctl >/dev/null 2>&1 || { echo "systemctl not found — this box has no systemd." >&2; exit 1; }
@@ -57,7 +62,12 @@ echo "[enable]  camchat.target + camchat-healthcheck.timer + camchat-logrotate.t
 # shell-started stack) still owns the ports — then the units could not bind, so say so
 # and leave starting to --switch. Enabled-but-not-started units would otherwise sit idle
 # until the next reboot (linger keeps the user manager alive for months).
-if [ "$switch" != 1 ]; then
+if [ "$move" = 1 ]; then
+    # 유닛은 이제 이 폴더를 가리킨다(daemon-reload 됨). restart-all.sh 가 units_installed 로 그걸 보고
+    # 프론트 빌드 → systemctl stop(옛 폴더 프로세스도 유닛 소속이라 같이 내려감) → start → /health.
+    echo "[move]    backend+frontend 를 $REPO 에서 재기동 (restart-all.sh)"
+    "$REPO/scripts/restart-all.sh"
+elif [ "$switch" != 1 ]; then
     old_plane=0
     for name in backend frontend ollama; do
         [ "$name" = ollama ] && [ "$OLLAMA_LOCAL" != 1 ] && continue

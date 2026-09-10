@@ -46,17 +46,25 @@ done
 branch="$(git -C "$REPO" branch --show-current 2>/dev/null || echo '?')"
 head="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo '?')"
 tag="$(head_release_tag)"
+behind="$(git -C "$REPO" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+at_main_tip=0; [ "$(git -C "$REPO" rev-parse HEAD 2>/dev/null)" = "$(git -C "$REPO" rev-parse origin/main 2>/dev/null)" ] && at_main_tip=1
 if [ -n "$tag" ]; then
     # 릴리스 태그는 deploy.sh 가 체크아웃한 바로 그것 — main 이 아닌 게 정상.
     echo "[deploy] 릴리스 $tag ($head) 서비스"
-elif [ "$branch" = main ] || [ "$(git -C "$REPO" rev-parse HEAD 2>/dev/null)" = "$(git -C "$REPO" rev-parse origin/main 2>/dev/null)" ]; then
+elif units_installed; then
+    # 운영 폴더인데 릴리스 태그가 아니다 — 사용자가 릴리스 안 된 코드를 보게 된다. 첫 배포 전
+    # (install-units.sh --move 직후) 에만 정상.
+    echo "[deploy] $head 서비스 (브랜치 '${branch:-detached}')"
+    echo "[warn]   운영 폴더인데 릴리스 태그가 아닙니다 — 릴리스는 ./scripts/deploy.sh <태그> 로 (RELEASE.md)."
+    [ "$behind" = 0 ] || echo "[warn]   origin/main 보다 $behind 커밋 뒤처짐 (마지막 fetch 기준)."
+elif [ "$branch" = main ] || [ "$at_main_tip" = 1 ]; then
     # main 이거나 origin/main 최신을 detached 로 꺼낸 것(staging.sh) — 경고할 게 없다.
     echo "[deploy] main ($head) 서비스"
-    behind="$(git -C "$REPO" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
     [ "$behind" = 0 ] || echo "[warn]   origin/main 보다 $behind 커밋 뒤처짐 (마지막 fetch 기준)."
 else
     echo "[deploy] $head 서비스 (브랜치 '${branch:-detached}')"
-    echo "[warn]   main 도 릴리스 태그도 아님 — 터널이 '${branch:-$head}' 를 서비스하게 됩니다. 릴리스는 ./scripts/deploy.sh <태그> 로 (RELEASE.md)."
+    echo "[warn]   main 도 릴리스 태그도 아님 — 이 폴더가 '${branch:-$head}' 를 서비스하게 됩니다."
+    echo "[warn]   origin/main 보다 $behind 커밋 뒤처짐 (마지막 fetch 기준)."
 fi
 if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     echo "[warn]   워크트리가 더러움 — 커밋 안 된 코드를 서비스합니다."

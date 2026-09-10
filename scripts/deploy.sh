@@ -31,8 +31,9 @@
 #
 # 누가 태그를 발행하고 누가 배포하는지, 버전 이름 규칙: RELEASE.md.
 #
-# 테스트 훅 (healthcheck-cron.sh 와 같은 방식): DEPLOY_RESTART_CMD 가 restart-all.sh 를 대신,
-# DEPLOY_SKIP_UNIT_CHECK=1 이면 "systemd 가 서비스하는 체크아웃인가" 검사를 건너뜀.
+# 테스트 훅 (healthcheck-cron.sh 와 같은 방식): DEPLOY_RESTART_CMD 가 restart-all.sh 를,
+# DEPLOY_HEALTH_CMD 가 /health 확인을 대신. DEPLOY_SKIP_UNIT_CHECK=1 이면 "systemd 가 서비스하는
+# 체크아웃인가" 검사를 건너뜀 (CAMCHAT_UNITS_DIR 로 유닛 경로를 흉내낼 수도 있음 — _common.sh).
 
 set -Eeuo pipefail
 
@@ -105,15 +106,31 @@ latest_release_tag() { release_tags | head -1 | cut -f1; }
 # 검사
 # ---------------------------------------------------------------------------------------
 
-# systemd 유닛은 자기가 돌릴 체크아웃 경로를 박아 둔다. 다른 clone 에서 배포하면 아무도
-# 서비스하지 않는 파일을 바꾸고, 엉뚱한 것을 돌리는 유닛을 재기동하게 된다.
+# systemd 유닛은 자기가 돌릴 체크아웃 경로를 박아 둔다. 다른 폴더(개발·staging)에서 배포하면
+# 아무도 서비스하지 않는 파일을 바꾸고 엉뚱한 스택을 띄우면서 "운영 중" 이라고 기록하게 된다.
+# 유닛이 아예 없는 서버(CI, 노트북)에선 검사할 게 없다.
 check_serving_repo() {
     [ "${DEPLOY_SKIP_UNIT_CHECK:-0}" = 1 ] && return 0
-    units_installed || return 0
     local wd
-    wd="$(systemctl --user show -p WorkingDirectory --value camchat-backend.service 2>/dev/null || true)"
+    wd="$(units_serving_dir)"
     [ -z "$wd" ] || [ "$wd" = "$REPO" ] \
-        || die "systemd 가 서비스하는 체크아웃은 $wd 인데 여기는 $REPO — 운영 체크아웃에서 실행하세요."
+        || die "systemd 가 서비스하는 체크아웃은 $wd 인데 여기는 $REPO — 운영 폴더에서 실행하세요: cd $wd"
+}
+
+# 백엔드가 이 체크아웃의 포트에서 응답하나 (같은 커밋을 다시 배포할 때 재기동을 건너뛰어도 되는지).
+backend_alive() {
+    if [ -n "${DEPLOY_HEALTH_CMD:-}" ]; then
+        # shellcheck disable=SC2086  # 테스트 훅
+        $DEPLOY_HEALTH_CMD
+    else
+        curl -fsS --max-time 5 "http://127.0.0.1:${BACKEND_PORT:-8000}/health" >/dev/null 2>&1
+    fi
+}
+
+# 지금 도는 백엔드의 커밋 (run-backend.sh 가 시작 때 로그에 남김), 모르면 빈 값.
+running_sha() {
+    grep -a '\[backend\] starting on' "$LOG_DIR/backend/server.out" 2>/dev/null | tail -1 \
+        | sed -n 's/.*(\([0-9a-f]\{7,\}\)).*/\1/p' || true
 }
 
 dirty_files() { g status --porcelain --untracked-files=no; }
@@ -304,6 +321,18 @@ cmd_deploy() {  # $1 = 태그
 
     from="${DEP_SHA:-$(g rev-parse HEAD)}"
     say "[deploy] $tag (${TAG_SHA:0:7})   지금 운영 중: ${DEP_TAG:-기록 없음} (${from:0:7})"
+    # 그 커밋이 이미 체크아웃돼 있고 백엔드도 그 커밋으로 떠서 응답 중이면 재기동할 이유가 없다 —
+    # 기록만 남긴다 (첫 릴리스: install-units.sh --move 로 main 을 띄운 직후 같은 커밋에 태그가 붙는 경우).
+    local rsha
+    rsha="$(running_sha)"
+    if [ "$TAG_SHA" = "$(g rev-parse HEAD)" ] && [ -n "$rsha" ] && [ "${TAG_SHA:0:${#rsha}}" = "$rsha" ] && backend_alive; then
+        say "[deploy] 그 커밋이 이미 떠 있고 응답 중 — 재기동 없이 기록만 남깁니다."
+        if [ "$dry_run" = 1 ]; then say "[dry-run] 아무것도 바꾸지 않았습니다."; return 0; fi
+        record deploy "$tag" "$TAG_SHA" "ok (재기동 없음)"
+        say "[done]   $tag (${TAG_SHA:0:7}) 운영 중."
+        release_record "$tag" "$TAG_SHA" "$DEP_TAG"
+        return 0
+    fi
     if [ "$TAG_SHA" = "$from" ]; then
         say "[deploy] 운영 중인 커밋과 같음 — 재기동만 합니다."
     else
@@ -367,6 +396,11 @@ cmd_status() {
         [ -n "$head_ref" ] || head_ref="$(g symbolic-ref --short -q HEAD || echo detached)"
     fi
 
+    local wd
+    wd="$(units_serving_dir)"
+    if [ -n "$wd" ] && [ "$wd" != "$REPO" ]; then
+        say "[folder]   여기는 운영 폴더가 아닙니다 — 유닛은 $wd 를 서비스합니다. 아래는 이 폴더 기준."
+    fi
     if [ -n "$DEP_TAG" ]; then
         say "[live]     $DEP_TAG (${DEP_SHA:0:7})  배포 $DEP_TIME"
     else
@@ -380,11 +414,10 @@ cmd_status() {
     fi
 
     # 백엔드는 시작할 때마다 자기 커밋을 로그에 남긴다 (run-backend.sh) — 실제로 도는 코드.
-    local run_line run_sha
-    run_line="$(grep -a '\[backend\] starting on' "$LOG_DIR/backend/server.out" 2>/dev/null | tail -1 || true)"
-    if [ -n "$run_line" ]; then
-        run_sha="$(sed -n 's/.*(\([0-9a-f]\{7,\}\)).*/\1/p' <<<"$run_line")"
-        if [ -n "$DEP_SHA" ] && [ -n "$run_sha" ] && [ "${DEP_SHA:0:${#run_sha}}" != "$run_sha" ]; then
+    local run_sha
+    run_sha="$(running_sha)"
+    if [ -n "$run_sha" ]; then
+        if [ -n "$DEP_SHA" ] && [ "${DEP_SHA:0:${#run_sha}}" != "$run_sha" ]; then
             say "[running]  백엔드 시작 커밋 $run_sha  != 운영중 $DEP_TAG (${DEP_SHA:0:7})"
         else
             say "[running]  백엔드 시작 커밋 ${run_sha:-?}"
@@ -451,6 +484,7 @@ worker_kv() {  # $1 = on|off
 
 cmd_maint() {  # $1 = on|off
     local mode="$1" rc=0
+    check_serving_repo   # 플래그는 폴더별 — 개발 폴더에 세우면 운영 healthcheck 는 못 보고 Worker 페이지만 켜진다
     case "$mode" in
         on)
             maint_on "deploy.sh maint on (manual)"
