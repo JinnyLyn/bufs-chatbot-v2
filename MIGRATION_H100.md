@@ -315,8 +315,9 @@ cd ~/camchat && scripts/setup-worktrees.sh     # ~/camchat-prod, ~/camchat-stagi
    staging 은 해당 없음.
 5. `cd ~/camchat && ./scripts/staging.sh up` → `https://staging.maruvis.kr`.
 
-되돌리기: `cd ~/camchat && scripts/install-units.sh` 로 유닛을 개발 폴더로 되돌리고 재기동. worktree 는
-`git worktree remove ~/camchat-prod` 로 지워도 히스토리엔 영향 없다.
+되돌리기: `cd ~/camchat && scripts/install-units.sh --move` — 앞의 1번과 대칭. 플래그 없는 `install-units.sh` 는
+유닛 경로만 다시 쓰고 이미 active 인 유닛은 재기동하지 않아, 프로세스는 계속 운영 worktree 를 서비스한 채 남는다.
+worktree 는 `git worktree remove ~/camchat-prod` 로 지워도 히스토리엔 영향 없다.
 
 ---
 
