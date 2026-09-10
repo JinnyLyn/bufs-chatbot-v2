@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# start-all.sh — Linux/H100 equivalent of scripts/start-all.ps1.
+# start-all.sh — 스택 기동 (Linux/H100).
 #
 # Starts the full stack: Ollama, FastAPI backend (:8000), Next.js frontend (:3000).
 # Idempotent: anything already listening is left alone (its pid is adopted into

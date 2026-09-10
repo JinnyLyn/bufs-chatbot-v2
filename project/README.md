@@ -21,13 +21,15 @@ pip install -r requirements.txt
 
 ### Running the Application
 
-Start the Gradio interface locally:
+Start the API server (FastAPI + SSE) locally:
 
 ```bash
-python project/app.py
+python project/server.py            # http://localhost:8000  (/api/chat, /health, /health/llm)
 ```
 
-The application will be available at `http://localhost:7860` (default Gradio port).
+The chat UI is the Next.js app in `frontend/` (`npm run dev`, proxies `/api/*` to :8000).
+On the server the whole stack is started with `scripts/start-all.sh`; production is deployed
+from a release tag with `scripts/deploy.sh` (see `RELEASE.md`).
 
 ### Prerequisites
 
@@ -60,11 +62,10 @@ PDF → Markdown Conversion → Parent/Child Chunking → Vector Indexing → Ag
 
 | File | Purpose |
 |------|---------|
-| `project/app.py` | Application entry point, launches Gradio UI |
+| `project/server.py` | API entry point (FastAPI + SSE), started by `scripts/run-backend.sh` |
 | `project/config.py` | **Central configuration hub** - edit this for provider/model/chunking changes |
 | `project/utils.py` | PDF to Markdown conversion and context token estimation |
 | `project/document_chunker.py` | Parent/child splitting logic with cleaning and merging rules |
-| `project/Dockerfile` | Dockerfile with Ollama for local deployment |
 
 ### Core System
 
@@ -93,13 +94,6 @@ PDF → Markdown Conversion → Parent/Child Chunking → Vector Indexing → Ag
 | `project/rag_agent/tools.py` | Retrieval tools (`search_child_chunks`, `retrieve_parent_chunks`) |
 | `project/rag_agent/prompts.py` | System prompts for agent behavior |
 | `project/rag_agent/schemas.py` | Structured output schemas (Pydantic models) |
-
-### User Interface
-
-| File | Purpose |
-|------|---------|
-| `project/ui/css.py` | Custom CSS styling for the Gradio interface |
-| `project/ui/gradio_app.py` | Gradio UI implementation with document upload and chat |
 
 ---
 
@@ -343,7 +337,7 @@ SPARSE_MODEL = "Qdrant/bm25"  # Usually no need to change
 
 **Step 2:** Re-index your documents
 
-⚠️ **Important:** Changing embeddings requires re-indexing all documents through the Gradio UI.
+⚠️ **Important:** Changing embeddings requires re-indexing all documents (`python project/reindex.py`, see KB_MANAGEMENT.md).
 
 **Implementation Details** (in `project/db/vector_db_manager.py`):
 
@@ -414,7 +408,7 @@ self.__child_splitter = SentenceTransformersTokenTextSplitter(
 
 **Step 3:** Re-run ingestion pipeline
 
-Upload documents again through the Gradio interface to apply new chunking.
+Re-index (`python project/reindex.py`) to apply new chunking.
 
 **Chunking Guidelines:**
 
@@ -551,49 +545,6 @@ This pattern allows the agent to either request clarification from the user or f
 - Default: JSON file
 - Alternatives: PostgreSQL, MongoDB, S3
 - Edit: `project/db/parent_store_manager.py`
-
-### Extending the UI
-
-**Location:** `project/ui/gradio_app.py`
-
-Add runtime settings, admin panels, or analytics:
-```python
-with gr.Accordion("Advanced Settings", open=False):
-    provider_dropdown = gr.Dropdown(
-        choices=["openai", "anthropic", "google", "ollama"],
-        label="LLM Provider"
-    )
-```
-
-### Docker Deployment
-
-> ⚠️ **System Requirements**: At least 8GB of RAM allocated to Docker. The default Ollama model needs approximately 3.3GB to run.
-
-#### Build and Run
-```bash
-# Build image
-docker build -t agentic-rag -f project/Dockerfile .
-
-# Run container
-docker run --name rag-assistant -p 7860:7860 agentic-rag
-```
-
-**Optional: GPU acceleration** (NVIDIA only):
-```bash
-docker run --gpus all --name rag-assistant -p 7860:7860 agentic-rag
-```
-
-**Common commands:**
-```bash
-docker stop rag-assistant      # Stop
-docker start rag-assistant     # Restart
-docker logs -f rag-assistant   # View logs
-docker rm -f rag-assistant     # Remove
-```
-
-> ⚠️ **Performance Note**: On Windows/Mac, Docker runs via a Linux VM which may slow down I/O operations like document indexing. LLM inference speed is largely unaffected. On Linux, performance is comparable to running locally.
-
-Once running, open `http://localhost:7860`.
 
 ---
 

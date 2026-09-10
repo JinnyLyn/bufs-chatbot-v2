@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# healthcheck.sh — Linux/H100 equivalent of scripts/healthcheck.ps1.
+# healthcheck.sh — 스택 상태 점검 (Linux/H100).
 # Probes backend /health + /health/llm and the frontend port. Exits 1 if anything is down.
 # Usable from cron / external monitoring.
 #
@@ -31,7 +31,7 @@ else
 fi
 
 # Ollama is a locally-managed core service on the H100 — an unreachable LLM is an
-# outage, so (unlike the .ps1) it fails the check. "no model loaded" stays OK.
+# outage, so it fails the check. "no model loaded" stays OK.
 llm="$(curl -fsS --max-time 8 "http://127.0.0.1:$BACKEND_PORT/health/llm" 2>/dev/null)"
 if [ -n "$llm" ]; then
     if ! echo "$llm" | "$PYTHON" -c '
