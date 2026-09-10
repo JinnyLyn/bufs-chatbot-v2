@@ -11,6 +11,8 @@ __pycache__/
 .vscode/
 .env
 .venv/
+# 운영/staging worktree 의 .venv 는 개발 폴더로 가는 심링크 — 'dir/' 패턴은 심링크에 안 맞아 따로
+.venv
 venv/
 
 # Agent-local settings and scratch worktrees. settings.local.json holds per-machine
