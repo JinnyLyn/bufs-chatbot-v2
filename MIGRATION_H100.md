@@ -266,7 +266,7 @@ scripts/install-units.sh --switch     # 예전 one-shot agentic-rag.service 에�
 - 유닛 파일 속 `%h/camchat` 은 설치 스크립트가 **실제 체크아웃 경로**로 바꿔 넣는다(워크트리·다른 이름의 클론도 자기 스크립트를 가리킨다).
 - 로그는 그대로 `logs/<svc>/` 에 append 되고(`journalctl --user -u camchat-backend` 도 됨), healthcheck 는 `logs/healthcheck.log`, 알림은 `logs/alerts.log`.
 - 알림 웹훅(Discord/Slack): `scripts/env.local` 에 `export ALERT_WEBHOOK_URL=https://…` 한 줄. 없으면 로그만 남긴다. 인증정보라 Git 에 넣지 않는다.
-- 기존 스크립트는 그대로 쓴다: 유닛이 깔려 있으면 `start-all.sh`/`stop-all.sh`/`restart-all.sh` 가 systemctl 로 위임하고, `doc_sync.sh --restart` 는 백엔드 유닛만 내렸다 올린다. **배포는 여전히 `./scripts/restart-all.sh`** (프론트 재빌드 → 유닛 재기동 → /health 확인).
+- 기존 스크립트는 그대로 쓴다: 유닛이 깔려 있으면 `start-all.sh`/`stop-all.sh`/`restart-all.sh` 가 systemctl 로 위임하고, `doc_sync.sh --restart` 는 백엔드 유닛만 내렸다 올린다. **배포는 `./scripts/deploy.sh <릴리스 태그>`** (태그 체크아웃 → `restart-all.sh`: 프론트 재빌드 → 유닛 재기동 → /health 확인 → 실패 시 자동 롤백; 절차와 역할은 `RELEASE.md`).
 - user 매니저에는 network-online.target 이 없다. 부팅 직후 네트워크가 늦어 Langfuse/HF 접속이 실패하면 `Restart=on-failure` 가 다시 띄운다.
 
 systemd를 쓸 수 없으면 유닛 없이 `./scripts/start-all.sh` 가 예전처럼 프로세스를 직접 띄운다(`tmux new -d -s rag './scripts/start-all.sh'`).

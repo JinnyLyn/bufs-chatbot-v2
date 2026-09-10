@@ -5,3 +5,8 @@
 
 # All files
 *   @JinnyLyn
+
+# 사용자에게 보이는 경로는 제품 리뷰어(성원)도 자동으로 리뷰 요청됨 (역할표: RELEASE.md).
+# 아래 줄이 위 줄보다 우선하므로, 이 경로들은 두 사람 모두 owner.
+frontend/        @JinnyLyn @Sung1Lim
+markdown_docs/   @JinnyLyn @Sung1Lim

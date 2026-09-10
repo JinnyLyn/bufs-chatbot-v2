@@ -13,9 +13,12 @@ This guide is written for the team admin running on the production box (H100 ser
 ### 1. Enter the repo
 
 ```bash
-cd /path/to/bufs-chatbot-v2
-git pull origin main
+cd ~/camchat                  # 운영 체크아웃 (systemd WorkingDirectory)
+./scripts/deploy.sh status    # 지금 떠 있는 버전 — 이 폴더는 그 릴리스 태그에 있음
 ```
+
+여기서 `git pull` 하지 마세요: 운영 폴더는 `main` 이 아니라 릴리스 태그를 따릅니다
+(`RELEASE.md`). 더 새 코드로 디버그 도구를 돌리려면 별도 clone 을 쓰세요.
 
 ### 2. Set up the virtual environment (first time only)
 
