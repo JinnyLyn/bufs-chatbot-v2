@@ -42,8 +42,12 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # opened/reopened 에서만: Dependabot 이 rebase 할 때마다 synchronize 가 다시 오는데,
+      # 그때마다 같은 코멘트를 또 달면 안 된다 (auto-merge 단계는 여러 번 돌아도 무해).
       - name: major → 사람 리뷰 대기 코멘트
-        if: steps.meta.outputs.update-type == 'version-update:semver-major'
+        if: >-
+          steps.meta.outputs.update-type == 'version-update:semver-major' &&
+          (github.event.action == 'opened' || github.event.action == 'reopened')
         run: >-
           gh pr comment "$PR_URL" --body
           "major 버전 올림 — 자동 머지 대상 아님. @JinnyLyn 가 소비 코드와 변경 사항을 보고 결정 (WORKFLOW.md 'Dependabot')."
