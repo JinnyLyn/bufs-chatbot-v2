@@ -126,6 +126,16 @@ GitHub Releases에서 이름표(태그 `v0.x.y-alpha`, 학생 공개 후 `-beta`
 `./scripts/deploy.sh <태그>`** 를 쳐야 바뀝니다. 되돌리기는 `./scripts/deploy.sh rollback`.
 누가 언제 무엇을 누르는지는 **`RELEASE.md`** 한 장에 있습니다.
 
+## 🤖 Dependabot PR — 사람이 안 봐도 되는 것과 봐야 하는 것
+
+라이브러리 버전 올리는 PR 은 Dependabot 이 매주 묶음으로 올립니다.
+
+- **minor/patch 묶음**: CI(유닛 테스트·gitleaks·CodeQL)가 초록이면 **자동으로 squash 머지**됩니다
+  (`.github/workflows/dependabot-automerge.yml`). 머지돼도 사용자한텐 아무 일 없어요 — `main` 만
+  앞서가고, 다음 릴리스 때 staging 을 거쳐 태그로 나갑니다.
+- **major**: 자동 머지 안 됨. 코멘트가 달리고 @JinnyLyn 이 소비 코드를 보고 결정합니다.
+- **CI 가 빨간불이거나 충돌**: 자동 머지가 그냥 안 일어납니다. 그때만 사람이 봅니다.
+
 ## 🚫 하지 말 것
 
 - ❌ `main`에서 직접 작업 / 커밋 / push  → **운영 서버라 금지**
