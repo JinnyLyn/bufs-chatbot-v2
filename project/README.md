@@ -21,13 +21,9 @@ pip install -r requirements.txt
 
 ### Running the Application
 
-Start the Gradio interface locally:
-
-```bash
-python project/app.py
-```
-
-The application will be available at `http://localhost:7860` (default Gradio port).
+실행 방법은 루트 `README.md` 의 **빠른 시작** 한 곳에만 둔다 (백엔드 `python project/server.py` :8000,
+프론트 `frontend/`, 서버 스택 `scripts/start-all.sh`, 운영 배포 `scripts/deploy.sh` — `RELEASE.md`).
+여기서는 되풀이하지 않는다.
 
 ### Prerequisites
 
@@ -60,11 +56,10 @@ PDF → Markdown Conversion → Parent/Child Chunking → Vector Indexing → Ag
 
 | File | Purpose |
 |------|---------|
-| `project/app.py` | Application entry point, launches Gradio UI |
+| `project/server.py` | API 진입점 (FastAPI + SSE) — `scripts/run-backend.sh` 가 띄움 |
 | `project/config.py` | **Central configuration hub** - edit this for provider/model/chunking changes |
 | `project/utils.py` | PDF to Markdown conversion and context token estimation |
 | `project/document_chunker.py` | Parent/child splitting logic with cleaning and merging rules |
-| `project/Dockerfile` | Dockerfile with Ollama for local deployment |
 
 ### Core System
 
@@ -93,13 +88,6 @@ PDF → Markdown Conversion → Parent/Child Chunking → Vector Indexing → Ag
 | `project/rag_agent/tools.py` | Retrieval tools (`search_child_chunks`, `retrieve_parent_chunks`) |
 | `project/rag_agent/prompts.py` | System prompts for agent behavior |
 | `project/rag_agent/schemas.py` | Structured output schemas (Pydantic models) |
-
-### User Interface
-
-| File | Purpose |
-|------|---------|
-| `project/ui/css.py` | Custom CSS styling for the Gradio interface |
-| `project/ui/gradio_app.py` | Gradio UI implementation with document upload and chat |
 
 ---
 
@@ -343,7 +331,7 @@ SPARSE_MODEL = "Qdrant/bm25"  # Usually no need to change
 
 **Step 2:** Re-index your documents
 
-⚠️ **Important:** Changing embeddings requires re-indexing all documents through the Gradio UI.
+⚠️ **Important:** Changing embeddings requires re-indexing all documents (`python project/reindex.py`, see KB_MANAGEMENT.md).
 
 **Implementation Details** (in `project/db/vector_db_manager.py`):
 
@@ -414,7 +402,7 @@ self.__child_splitter = SentenceTransformersTokenTextSplitter(
 
 **Step 3:** Re-run ingestion pipeline
 
-Upload documents again through the Gradio interface to apply new chunking.
+Re-index (`python project/reindex.py`) to apply new chunking.
 
 **Chunking Guidelines:**
 
@@ -551,49 +539,6 @@ This pattern allows the agent to either request clarification from the user or f
 - Default: JSON file
 - Alternatives: PostgreSQL, MongoDB, S3
 - Edit: `project/db/parent_store_manager.py`
-
-### Extending the UI
-
-**Location:** `project/ui/gradio_app.py`
-
-Add runtime settings, admin panels, or analytics:
-```python
-with gr.Accordion("Advanced Settings", open=False):
-    provider_dropdown = gr.Dropdown(
-        choices=["openai", "anthropic", "google", "ollama"],
-        label="LLM Provider"
-    )
-```
-
-### Docker Deployment
-
-> ⚠️ **System Requirements**: At least 8GB of RAM allocated to Docker. The default Ollama model needs approximately 3.3GB to run.
-
-#### Build and Run
-```bash
-# Build image
-docker build -t agentic-rag -f project/Dockerfile .
-
-# Run container
-docker run --name rag-assistant -p 7860:7860 agentic-rag
-```
-
-**Optional: GPU acceleration** (NVIDIA only):
-```bash
-docker run --gpus all --name rag-assistant -p 7860:7860 agentic-rag
-```
-
-**Common commands:**
-```bash
-docker stop rag-assistant      # Stop
-docker start rag-assistant     # Restart
-docker logs -f rag-assistant   # View logs
-docker rm -f rag-assistant     # Remove
-```
-
-> ⚠️ **Performance Note**: On Windows/Mac, Docker runs via a Linux VM which may slow down I/O operations like document indexing. LLM inference speed is largely unaffected. On Linux, performance is comparable to running locally.
-
-Once running, open `http://localhost:7860`.
 
 ---
 

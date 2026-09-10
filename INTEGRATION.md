@@ -124,7 +124,7 @@ clarification instead of answered.
 - `GET /health` → `{model, ollama_base_url, num_ctx, embedding_device, langfuse_enabled, kb_docs, uptime_s}`
   — confirms which Ollama is in use (local `:11435` vs the remote tunnel).
 - `GET /health/llm` → loaded model(s) + **`gpu_offload_pct`** (100% = fully on the local GPU).
-- `scripts/healthcheck.ps1` prints both + frontend status; exits non-zero if anything is down.
+- `scripts/healthcheck.sh` prints both + frontend status; exits non-zero if anything is down.
 
 ### Langfuse tracing (Cloud)
 Create a project at [cloud.langfuse.com](https://cloud.langfuse.com), then in `project/.env` set the
@@ -133,19 +133,20 @@ grouped trace (LLM calls, tool calls, node transitions, latency/cost), grouped b
 callback is already wired (`api/runtime.py:build_config`); it stays off and harmless without keys.
 
 ### Run / autostart scripts
-```powershell
-scripts\start-all.ps1          # start local Ollama (:11435) + backend (:8000) + frontend (:3000), logs to logs\
-scripts\stop-all.ps1           # stop them (leaves the SSH tunnel :11434 untouched)
-scripts\healthcheck.ps1        # probe everything
-scripts\register-autostart.ps1 # (run once) auto-start the stack at logon via Task Scheduler
+```bash
+scripts/start-all.sh           # ollama (:11500) + backend (:8000) + frontend (:3000), logs to logs/
+scripts/stop-all.sh            # stop them (ollama stays up)
+scripts/healthcheck.sh         # probe everything
+scripts/install-units.sh       # systemd --user units: autostart + Restart=on-failure (MIGRATION_H100.md 3-6)
 ```
+Production runs from a release tag via `scripts/deploy.sh` (RELEASE.md). The Windows-era `.ps1`
+scripts are gone — what replaced each one: MIGRATION_H100.md §3-4.
 
 ## Notes / limitations
 - agentic-RAG sources are local filenames (no notice URLs), so the Source panel shows
   document name + snippet; `source_urls` is empty.
 - The agent answers from whatever you ingest. For good Korean retrieval keep
   `DENSE_MODEL=BAAI/bge-m3` (the original `all-mpnet-base-v2` is English-only).
-- The original Gradio app (`project/app.py`) still works independently.
 
 ### Performance
 An answer can take **tens of seconds to a few minutes**. The agentic graph makes many

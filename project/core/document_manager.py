@@ -19,7 +19,7 @@ class DocumentManager:
         """Copy (.md) or convert (.pdf) each source into the KB directory and index it.
 
         ``source_root``: when given, only sources that resolve inside this directory are
-        read; anything else is skipped and logged. The Gradio UI passes its upload cache so
+        read; anything else is skipped and logged. The upload path passes its upload cache so
         a client-supplied path can never pull an arbitrary server file into the KB. The
         operator CLI (ingest.py) leaves it ``None`` — its paths are the operator's own.
         """

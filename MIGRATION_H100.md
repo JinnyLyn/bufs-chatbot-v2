@@ -219,6 +219,8 @@ chmod +x scripts/*.sh          # 최초 1회
 | `apply-maruvis-tunnel.ps1` | 옛 maruvis.co.kr 배포용 일회성 — 폐기. 새 배포는 `cloudflared-config.example.yml` |
 | `rollback-tuning.ps1` / `rollback-cohort-fix.ps1` / `rollback-schedule-fix.ps1` | **실행 금지.** 2026-06 인시던트 시점의 스냅샷 복원용 — `project/.env`를 **이전 관리자의 옛 env**(옛 Langfuse 키·Windows SSL 경로·4070 :11435 프로파일)로 덮어쓰고 KB를 커밋본보다 오래된 스냅샷으로 되돌린다. 서버에서 롤백은 git(`qdrant_db`/`parent_store`는 커밋됨) + 3-2절 `.env` 템플릿으로 한다. `backups/` 삭제(2절) 후에는 "No backup found"로 안전하게 실패한다 |
 
+> 위 `.ps1` 파일들은 2026-09-11 청소 PR 에서 **전부 삭제**했다 (git 히스토리엔 남음). 이 표는 어디로 대체됐는지의 기록.
+
 ### 3-5. cloudflared
 
 새 배포는 **새 Cloudflare 프로필 + 새 도메인 `maruvis.kr` + 새 터널**이다
@@ -238,7 +240,7 @@ cloudflared tunnel --config ~/.cloudflared/config.yml run <uuid>
 > 도메인이 다르므로 옛 터널과 경합하진 않지만, 옛 PC의 cloudflared 서비스가 살아
 > 있으면 `maruvis.co.kr`로 옛 배포가 계속 노출된다 — 2-1절대로 정지시킬 것.
 
-### 3-6. 자동 시작·자동 복구 (`register-autostart.ps1` 대체)
+### 3-6. 자동 시작·자동 복구 (옛 `register-autostart.ps1` 대체)
 
 프로세스별 systemd `--user` 유닛을 쓴다(2026-09, 장애 대응 보고서 §4). 유닛 파일은 레포의
 `scripts/systemd/` 에 있고 `scripts/install-units.sh` 가 `~/.config/systemd/user/` 로 복사·활성화한다.

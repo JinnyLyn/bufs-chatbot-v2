@@ -106,7 +106,7 @@ npm run dev                   # :3000 (프로덕션: npm run build && npm start)
 전체 통합·운영 가이드는 [INTEGRATION.md](INTEGRATION.md) 참조.
 KB 문서 추가·제거(학기/연도 전환)는 [KB_MANAGEMENT.md](KB_MANAGEMENT.md) 참조.
 **H100 리눅스 서버로의 서빙 이관**(cloudflared 터널 포함)은 [MIGRATION_H100.md](MIGRATION_H100.md) 참조
-— `scripts/start-all.sh` / `stop-all.sh` / `healthcheck.sh`가 기존 `.ps1`들의 리눅스 대응이다.
+— 기동·중지·점검은 `scripts/start-all.sh` / `stop-all.sh` / `healthcheck.sh`, 릴리스 배포는 `scripts/deploy.sh` (RELEASE.md).
 
 ## 프로젝트 구조
 
@@ -124,7 +124,7 @@ KB 문서 추가·제거(학기/연도 전환)는 [KB_MANAGEMENT.md](KB_MANAGEME
 ├── markdown_docs/            # 학사문서 (KB 소스; archive/ = 색인 제외 — KB_MANAGEMENT.md)
 ├── qdrant_db/ parent_store/  # 벡터DB + parent 청크 (커밋됨)
 ├── eval_tools/               # 평가/분석 하니스 (룰기반·RAGAS·Langfuse)
-├── scripts/                  # 기동/중지/헬스체크(.ps1=Windows, .sh=Linux)/롤백/배포/KB 문서동기화(doc_sync.sh)
+├── scripts/                  # 기동/중지/헬스체크/배포(deploy.sh)/staging/KB 문서동기화(doc_sync.sh)
 ├── reports/                  # 보고서 (성능 REPORT_결과 · 비교 REPORT_vs_BUFS · 장애대응) + 생성 스크립트
 └── INTEGRATION.md            # 통합·운영 가이드
 ```

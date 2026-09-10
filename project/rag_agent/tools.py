@@ -79,7 +79,7 @@ def _scope_criteria_active(question: str) -> bool:
 
 # Parent texts are immutable for the life of the process for the doc_sync path (it
 # stops the server before reindexing — KB_MANAGEMENT.md), so the OCU verdict per
-# (store, parent_id) is cached. The Gradio admin path mutates the store IN-PROCESS
+# (store, parent_id) is cached. The an in-process mutation of the store (ingest.py, tests)
 # (core/document_manager.py) and clears this cache after every mutation. The store
 # path is part of the key so eval harnesses with variant stores never cross-read;
 # tests that point config.PARENT_STORE_PATH elsewhere must still cache_clear().

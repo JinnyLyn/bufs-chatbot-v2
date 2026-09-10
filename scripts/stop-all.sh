@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# stop-all.sh — Linux/H100 equivalent of scripts/stop-all.ps1.
+# stop-all.sh — 스택 종료 (Linux/H100).
 #
 # Stops OUR stack processes and nothing else. This box is SHARED: we never kill by
 # port. Two ways a process qualifies:
