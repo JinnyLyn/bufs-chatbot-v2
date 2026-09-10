@@ -26,7 +26,13 @@ mkdir -p "$LOG_DIR"/{ollama,backend,frontend} "$RUN_DIR"
 # stack runs on a box: either the units own the processes, or the scripts do.
 units_installed() {
     command -v systemctl >/dev/null 2>&1 || return 1
-    systemctl --user cat camchat.target >/dev/null 2>&1
+    systemctl --user cat camchat.target >/dev/null 2>&1 || return 1
+    # 유닛은 한 체크아웃(운영 폴더)에 묶여 있다. 다른 worktree(staging, 개발)에서 부르면
+    # "유닛 없음" 으로 답해 스크립트가 자기 프로세스를 직접 관리하게 한다 — 안 그러면
+    # staging 의 stop-all.sh 가 systemctl 로 운영을 내린다.
+    local wd
+    wd="$(systemctl --user show -p WorkingDirectory --value camchat-backend.service 2>/dev/null || true)"
+    [ -z "$wd" ] || [ "$wd" = "$REPO" ]
 }
 
 # 릴리스 태그의 모양 (vX.Y.Z, 접미사 -alpha/-beta/-rc 선택). deploy.sh 는 이것만 배포한다;

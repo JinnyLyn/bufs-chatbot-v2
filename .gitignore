@@ -87,3 +87,6 @@ scripts/env.local
 
 # Cloudflare Worker local state (miniflare KV/cache, cf.json)
 worker/.wrangler/
+
+# 운영/staging worktree 표식 (scripts/setup-worktrees.sh) — 폴더마다 다르고 커밋 대상 아님
+.deploy-worktree

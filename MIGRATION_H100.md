@@ -271,6 +271,49 @@ scripts/install-units.sh --switch     # 예전 one-shot agentic-rag.service 에�
 
 systemd를 쓸 수 없으면 유닛 없이 `./scripts/start-all.sh` 가 예전처럼 프로세스를 직접 띄운다(`tmux new -d -s rag './scripts/start-all.sh'`).
 
+### 3-7. 폴더 셋 — 개발 / staging / 운영 (git worktree)
+
+운영은 사람이 편집하는 폴더에서 뜨면 안 된다(브랜치 바꿔 둔 채 프로세스가 죽으면 그 브랜치가 뜬다).
+그래서 레포를 세 폴더로 꺼낸다 — 역할과 규칙은 `RELEASE.md` "폴더 셋".
+
+```bash
+cd ~/camchat && scripts/setup-worktrees.sh     # ~/camchat-prod, ~/camchat-staging 생성 (멱등)
+```
+
+만드는 것: worktree 둘(origin/main, detached) · `.venv` 심링크 공유 · `project/.env`·`scripts/env.local` 복사
+(staging 은 `BACKEND_PORT=8010 FRONTEND_PORT=3010 START_OLLAMA=no`, `.env` 의 `LANGFUSE_TRACING_ENVIRONMENT=staging`;
+개발 폴더 env.local 엔 `:8020/:3020 START_OLLAMA=no` 를 덧붙여 운영 포트를 보호) · `npm ci` · `.deploy-worktree` 마커
+(pre-commit 훅이 이 마커를 보면 커밋 거부). 유닛·cloudflared 는 건드리지 않는다.
+
+그다음, 순서대로:
+
+1. **유닛을 운영 폴더로** — 재기동 없음. 유닛 파일의 경로만 `~/camchat-prod` 로 다시 쓰고 daemon-reload;
+   떠 있는 프로세스는 다음 재기동 때까지 그대로다.
+   ```bash
+   cd ~/camchat-prod && scripts/install-units.sh
+   ```
+   `_common.sh` 의 `units_installed()` 는 유닛의 `WorkingDirectory` 가 자기 체크아웃일 때만 참이라, 이 뒤로
+   staging·개발 폴더의 `start/stop/restart-all.sh` 는 systemctl 을 건드리지 않고 자기 프로세스만 직접 관리한다.
+2. **첫 릴리스** — 성원이 GitHub Releases 에서 `v0.1.0-alpha`(main) 발행.
+3. **첫 배포** — `cd ~/camchat-prod && ./scripts/deploy.sh v0.1.0-alpha`. 여기서 재기동 한 번(30초, 그동안 Worker 장애
+   안내 페이지). 이후 운영 폴더는 태그에 머문다.
+4. **staging 도메인** — `~/.cloudflared/config.yml` 의 ingress 에서 `maruvis.kr` 항목들 **앞**에:
+   ```yaml
+     - hostname: staging.maruvis.kr
+       path: ^/api/
+       service: http://localhost:8010
+     - hostname: staging.maruvis.kr
+       service: http://localhost:3010
+   ```
+   그리고 `cloudflared tunnel route dns maruvis staging.maruvis.kr` (DNS 레코드 생성). cloudflared 는 config 변경을
+   자동으로 다시 읽는다 — `journalctl --user -u cloudflared -n 20` 에 "Updated to new configuration" 이 없으면
+   `systemctl --user restart cloudflared`(터널 몇 초 끊김). Worker 의 장애 페이지 라우트는 `maruvis.kr/*` 만이라
+   staging 은 해당 없음.
+5. `cd ~/camchat && ./scripts/staging.sh up` → `https://staging.maruvis.kr`.
+
+되돌리기: `cd ~/camchat && scripts/install-units.sh` 로 유닛을 개발 폴더로 되돌리고 재기동. worktree 는
+`git worktree remove ~/camchat-prod` 로 지워도 히스토리엔 영향 없다.
+
 ---
 
 ## 4. 이관 검증 체크리스트

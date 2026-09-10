@@ -22,8 +22,11 @@
 4. **다음 작업은 머지를 기다리지 말고, 다시 최신 `main`에서 새 브랜치를 판다.**
    이전 브랜치 위에 다음 작업을 얹지 않는다.
 5. **머지 ≠ 배포.** 운영 서버는 릴리스 태그(`v0.x.y-alpha` → 학생 공개 후 `-beta` → 정식 `v1.0.0`)를 돌린다 (`RELEASE.md`). 에이전트는
-   `scripts/deploy.sh`(배포·롤백·점검 모드)와 `restart-all.sh`를 **사용자의 명시적 지시 없이
+   `scripts/deploy.sh`(배포·롤백·점검 모드)와 `restart-all.sh`, `staging.sh` 를 **사용자의 명시적 지시 없이
    실행하지 않는다.** 태그 발행은 성원(@Sung1Lim)의 몫 — 에이전트가 태그를 만들거나 push 하지 않는다.
+6. **폴더 셋.** 서버의 `~/camchat` 만 개발 폴더다. `~/camchat-prod`(운영, 릴리스 태그)와
+   `~/camchat-staging`(origin/main)은 **읽기 전용** — 거기서 파일 편집·커밋·브랜치 변경·`git pull` 을
+   하지 않는다. `.deploy-worktree` 마커가 있는 폴더면 멈추고 사용자에게 말한다. (`RELEASE.md` "폴더 셋")
 
 > 생성물(데이터·인덱스·평가 리포트)은 커밋하지 않는다 — `.gitignore`에 맡긴다.
 
