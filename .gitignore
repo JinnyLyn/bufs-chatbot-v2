@@ -11,6 +11,8 @@ __pycache__/
 .vscode/
 .env
 .venv/
+# 운영/staging worktree 의 .venv 는 개발 폴더로 가는 심링크 — 'dir/' 패턴은 심링크에 안 맞아 따로
+.venv
 venv/
 
 # Agent-local settings and scratch worktrees. settings.local.json holds per-machine
@@ -87,3 +89,6 @@ scripts/env.local
 
 # Cloudflare Worker local state (miniflare KV/cache, cf.json)
 worker/.wrangler/
+
+# 운영/staging worktree 표식 (scripts/setup-worktrees.sh) — 폴더마다 다르고 커밋 대상 아님
+.deploy-worktree

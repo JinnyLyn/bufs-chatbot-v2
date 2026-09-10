@@ -82,15 +82,27 @@ require_backend_down_or_restart() {  # $1 = restart 플래그("1"|"")
     # reindex 를 진행하면 프로덕션이 잡고 있는 qdrant_db/ 를 지울 수 있으므로 중단한다.
     command -v lsof >/dev/null 2>&1 \
         || die "lsof 가 없어 백엔드 상태를 확인할 수 없습니다 — --restart 를 쓰거나 백엔드를 내린 뒤 DOC_SYNC_SKIP_PORT_CHECK=1 로 재실행하세요."
-    if lsof -ti ":$PORT" >/dev/null 2>&1; then
-        die "백엔드가 :$PORT 에 떠 있습니다 (임베디드 Qdrant 락). --restart 를 붙이거나 먼저 내리세요: systemctl --user stop $(svc_unit)"
+    # 포트가 아니라 "이 폴더의 qdrant_db 를 누가 열고 있나" 를 본다 — 폴더가 셋이라(RELEASE.md '폴더 셋')
+    # :$PORT 에 떠 있는 건 다른 폴더(운영)의 백엔드일 수 있고, 그건 이 폴더의 인덱스를 잡고 있지 않다.
+    local lock="$ROOT/qdrant_db/.lock" holders
+    holders="$(lsof -t -- "$lock" 2>/dev/null || true)"
+    if [ -n "$holders" ]; then
+        die "이 폴더의 qdrant_db 를 pid $(echo "$holders" | tr '\n' ' ')가 열고 있습니다 (임베디드 Qdrant 락 — 백엔드). --restart 를 붙이거나 먼저 내리세요."
     fi
 }
 
 # 유닛 이름: 프로세스별 유닛(scripts/systemd, install-units.sh)이 깔려 있으면 백엔드만 내렸다
 # 올린다(Qdrant 락을 쥔 건 백엔드뿐). 없으면 예전 one-shot 유닛(agentic-rag).
 svc_unit() {
-    if systemctl --user cat camchat-backend.service >/dev/null 2>&1; then echo camchat-backend; else echo agentic-rag; fi
+    if systemctl --user cat camchat-backend.service >/dev/null 2>&1; then
+        # 유닛은 운영 폴더 것 — 다른 폴더(개발)에서 --restart 하면 운영 백엔드를 내리게 된다. 거부.
+        local wd
+        wd="$(systemctl --user show -p WorkingDirectory --value camchat-backend.service 2>/dev/null || true)"
+        if [ -n "$wd" ] && [ "$wd" != "$ROOT" ]; then
+            die "camchat-backend 유닛은 $wd 를 서비스합니다 — 여기($ROOT)는 운영 폴더가 아니라 --restart 로 내릴 백엔드가 없습니다. KB 갱신은 PR → 릴리스로 (RELEASE.md)."
+        fi
+        echo camchat-backend
+    else echo agentic-rag; fi
 }
 # healthcheck 타이머(2분)가 내려간 백엔드를 "장애"로 보고 재기동해 reindex 중 Qdrant 락을 뺏지
 # 않도록, 내려 있는 동안 logs/run/maintenance 플래그를 둔다(healthcheck-cron.sh 가 건너뜀).

@@ -232,6 +232,71 @@ class TestDeploy:
         assert restart_calls(prod) == []
 
 
+class TestServingFolder:
+    """유닛이 다른 폴더를 서비스하면 배포·점검 모드는 거부, status 는 알려 준다 (CAMCHAT_UNITS_DIR 훅)."""
+
+    def _run(self, prod, *args, units_dir, check=False):
+        e = os.environ.copy()
+        e.pop("DEPLOY_SKIP_UNIT_CHECK", None)
+        e.pop("CLOUDFLARE_API_TOKEN", None)
+        e["CAMCHAT_UNITS_DIR"] = units_dir
+        p = subprocess.run(["bash", str(prod / "scripts" / "deploy.sh"), *args],
+                           capture_output=True, text=True, env=e, cwd=prod, stdin=subprocess.DEVNULL)
+        if check and p.returncode != 0:
+            raise AssertionError(f"deploy.sh {args} rc={p.returncode}\n{p.stdout}\n{p.stderr}")
+        return p
+
+    def test_deploy_refused_outside_the_serving_folder(self, prod):
+        p = self._run(prod, "v0.1.0-beta", "--yes", units_dir="/srv/elsewhere")
+        assert p.returncode != 0 and "운영 폴더에서 실행하세요: cd /srv/elsewhere" in p.stderr
+        assert restart_calls(prod) == [] and on_branch(prod) == "main"
+
+    def test_maint_refused_outside_the_serving_folder(self, prod):
+        p = self._run(prod, "maint", "on", "--local-only", units_dir="/srv/elsewhere")
+        assert p.returncode != 0 and "운영 폴더에서 실행하세요" in p.stderr
+        assert not (prod / "logs" / "run" / "maintenance").exists()
+
+    def test_status_says_which_folder_is_serving(self, prod):
+        p = self._run(prod, "status", units_dir="/srv/elsewhere", check=True)
+        assert "[folder]   여기는 운영 폴더가 아닙니다 — 유닛은 /srv/elsewhere 를 서비스합니다" in p.stdout
+
+    def test_serving_folder_itself_is_allowed(self, prod):
+        self._run(prod, "v0.1.0-beta", "--yes", units_dir=str(prod), check=True)
+        assert head(prod) == tag_sha(prod, "v0.1.0-beta")
+
+    def test_no_units_at_all_is_allowed(self, prod):
+        self._run(prod, "v0.1.0-beta", "--yes", units_dir="", check=True)
+        assert head(prod) == tag_sha(prod, "v0.1.0-beta")
+
+
+class TestSameCommitAlreadyRunning:
+    """그 커밋이 이미 체크아웃돼 있고 백엔드도 그 커밋으로 응답 중이면 재기동 없이 기록만."""
+
+    def _running(self, prod, sha):
+        (prod / "logs" / "backend").mkdir(parents=True, exist_ok=True)
+        (prod / "logs" / "backend" / "server.out").write_text(f"[backend] starting on :8000 ({sha[:7]})\n")
+
+    def test_records_without_restart(self, prod):
+        git(prod, "checkout", "-q", "--detach", "v0.1.0-beta")     # install-units.sh --move 가 띄운 상태
+        self._running(prod, tag_sha(prod, "v0.1.0-beta"))
+        p = run(prod, "v0.1.0-beta", "--yes", env={"DEPLOY_HEALTH_CMD": "true"})
+        assert "재기동 없이 기록만" in p.stdout and "Version: v0.1.0-beta" in p.stdout
+        assert restart_calls(prod) == []
+        assert deployed(prod)[0] == "v0.1.0-beta" and log_rows(prod)[-1][4] == "ok (재기동 없음)"
+
+    def test_restarts_when_backend_not_answering(self, prod):
+        git(prod, "checkout", "-q", "--detach", "v0.1.0-beta")
+        self._running(prod, tag_sha(prod, "v0.1.0-beta"))
+        run(prod, "v0.1.0-beta", "--yes", env={"DEPLOY_HEALTH_CMD": "false"})
+        assert len(restart_calls(prod)) == 1
+
+    def test_restarts_when_running_commit_differs(self, prod):
+        git(prod, "checkout", "-q", "--detach", "v0.1.0-beta")
+        self._running(prod, tag_sha(prod, "v0.2.0-beta"))           # 폴더는 v0.1 인데 도는 건 v0.2
+        run(prod, "v0.1.0-beta", "--yes", env={"DEPLOY_HEALTH_CMD": "true"})
+        assert len(restart_calls(prod)) == 1
+
+
 class TestFailureHandling:
     def test_build_failure_restores_branch_without_restart(self, prod):
         (prod / "STUB_RC").write_text("3\n")

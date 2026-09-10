@@ -32,7 +32,11 @@ targets=(frontend backend)
 case "${1:-}" in
     "") ;;
     --with-ollama)
-        if [ "$OLLAMA_LOCAL" = 1 ]; then targets+=(ollama);
+        if [ "${START_OLLAMA:-auto}" = no ]; then
+            # staging 등 남의 ollama 를 빌려 쓰는 폴더: find_service_pids ollama 는 포트로만 찾으므로
+            # 여기서 --with-ollama 를 받아 주면 운영 LLM 을 내린다.
+            echo "ollama: 이 폴더는 ollama 를 관리하지 않습니다 (START_OLLAMA=no) — --with-ollama 무시";
+        elif [ "$OLLAMA_LOCAL" = 1 ]; then targets+=(ollama);
         else echo "ollama: remote per project/.env — not managed here"; fi ;;
     *)
         # An unrecognized flag must NOT fall through to a full stop — this script

@@ -121,10 +121,14 @@ git 명령·경로 몰라도 됩니다. **이 3마디만** 기억하세요 (그�
 
 ## 🚀 머지 ≠ 배포 — 사용자에게 내보내는 건 별도 절차
 
-PR이 `main`에 머지돼도 사이트(maruvis.kr)는 바로 안 바뀝니다. 머지된 코드에 **성원(@Sung1Lim)이
-GitHub Releases에서 이름표(태그 `v0.x.y-alpha`, 학생 공개 후 `-beta`)를 발행**하고, **진서(@JinnyLyn)가 서버에서
-`./scripts/deploy.sh <태그>`** 를 쳐야 바뀝니다. 되돌리기는 `./scripts/deploy.sh rollback`.
-누가 언제 무엇을 누르는지는 **`RELEASE.md`** 한 장에 있습니다.
+PR이 `main`에 머지돼도 사이트(maruvis.kr)는 바로 안 바뀝니다. 머지된 코드는 먼저 **staging**
+(`staging.maruvis.kr`, `./scripts/staging.sh up`)에서 굴려보고, **성원(@Sung1Lim)이 GitHub Releases에서
+이름표(태그 `v0.x.y-alpha`, 학생 공개 후 `-beta`)를 발행**하고, **진서(@JinnyLyn)가 운영 폴더
+(`~/camchat-prod`)에서 `./scripts/deploy.sh <태그>`** 를 쳐야 바뀝니다. 되돌리기는
+`./scripts/deploy.sh rollback`. 누가 언제 무엇을 누르는지는 **`RELEASE.md`** 한 장에 있습니다.
+
+서버 폴더는 셋입니다 — 개발 `~/camchat`(여기서만 작업), staging `~/camchat-staging`, 운영
+`~/camchat-prod`. 뒤의 둘은 **손대지 않습니다** (커밋은 훅이 막아요).
 
 ## 🤖 Dependabot PR — 사람이 안 봐도 되는 것과 봐야 하는 것
 

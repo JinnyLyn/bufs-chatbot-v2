@@ -10,6 +10,17 @@
 
 branch=$(git symbolic-ref --short HEAD 2>/dev/null)
 
+# 운영/staging 폴더(scripts/setup-worktrees.sh 가 .deploy-worktree 마커를 둠)에서는 커밋 금지.
+# 거긴 태그/origin/main 을 꺼내 두는 곳이지 작업하는 곳이 아니다 (RELEASE.md '폴더 셋').
+root=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$root" ] && [ -f "$root/.deploy-worktree" ]; then
+  echo ""
+  echo "  ⛔ 이 폴더는 '$(cat "$root/.deploy-worktree")' 전용 체크아웃입니다 — 여기서 커밋하지 않습니다."
+  echo "     개발은 ~/camchat 에서 하세요. (RELEASE.md '폴더 셋')"
+  echo ""
+  exit 1
+fi
+
 if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
   echo ""
   echo "  ⛔ '$branch'에 직접 커밋할 수 없습니다 (운영 서버 코드)."

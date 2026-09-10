@@ -84,6 +84,14 @@ wait_http_200() {
     return 1
 }
 
+# --- 유닛이 다른 폴더(운영)를 서비스 중인데 여기는 기본 포트라면: 개발 폴더에서 실수로 친 것 ----
+# 운영 포트(:8000/:3000)를 뺏거나 "이미 떠 있음" 이라며 운영을 자기 것처럼 입양하게 된다.
+if units_present && ! units_installed && [ "$BACKEND_PORT" = 8000 ] && [ "$FRONTEND_PORT" = 3000 ]; then
+    echo "[error] 유닛이 $(units_serving_dir) 를 서비스 중입니다 — 이 폴더($REPO)에서 스택을 띄우려면" >&2
+    echo "        scripts/env.local 에 다른 포트를 지정하세요 (export BACKEND_PORT=8020 FRONTEND_PORT=3020). RELEASE.md '폴더 셋'." >&2
+    exit 2
+fi
+
 # --- systemd units installed? then they own the processes ---------------------
 # (scripts/systemd/, see install-units.sh). Starting them here keeps this script the
 # one entry point; the same readiness probes apply.
@@ -151,7 +159,9 @@ if [ "$OLLAMA_LOCAL" != 1 ]; then
     echo "[skip]  OLLAMA_BASE_URL in project/.env is remote — not managing ollama."
 elif port_open "$OLLAMA_PORT"; then
     echo "[ok]    Ollama already on :$OLLAMA_PORT"
-    adopt_pid ollama
+    # START_OLLAMA=no = 남(운영)의 ollama 를 빌려 쓰는 폴더(staging) — pid 를 입양하면 stop-all.sh
+    # --with-ollama 가 운영 LLM 을 내리게 되므로 기록하지 않는다.
+    if [ "$START_OLLAMA" = "no" ]; then drop_pid ollama; else adopt_pid ollama; fi
 elif [ "$START_OLLAMA" = "no" ]; then
     echo "[skip]  Ollama not running on :$OLLAMA_PORT (START_OLLAMA=no)"
     drop_pid ollama
