@@ -80,13 +80,13 @@ pytest -m integration -v
 
 #### H100 원격 LLM로 라이브 테스트 돌리기
 
-H100의 LLM은 **Ollama로 서빙**된다. `scripts/start-all-h100.ps1`이 SSH 터널로 원격
+H100의 LLM은 **Ollama로 서빙**된다. 서버에서는 `scripts/start-all.sh` 가 팀 소유 ollama(:11500)와 함께 스택을 띄우고, 원격
 `:11434`를 로컬 `127.0.0.1:11434`로 포워딩하므로, 라이브 테스트는 로컬 Ollama와
 동일하게 `OLLAMA_BASE_URL=http://127.0.0.1:11434`로 붙는다 (별도 API 클라이언트 불필요).
 
 ```powershell
 # 1) 터널 + 스택 기동 (멱등적 — 이미 떠 있으면 건너뜀)
-powershell -ExecutionPolicy Bypass -File scripts\start-all-h100.ps1
+./scripts/start-all.sh          # 서버에서 (ollama :11500 + backend :8000 + frontend :3000)
 
 # 2) 라이브 통합 테스트 (PowerShell 환경변수 문법)
 $env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"

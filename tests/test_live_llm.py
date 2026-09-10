@@ -3,7 +3,7 @@
 Skipped automatically when OLLAMA_BASE_URL is not set (safe for offline CI).
 
 The target LLM (local Ollama, or the remote H100 Ollama reached via the SSH
-tunnel that scripts/start-all-h100.ps1 forwards to 127.0.0.1:11434) is served
+tunnel forwarded to 127.0.0.1:11434, or the team ollama on :11500 — scripts/start-all.sh) is served
 by Ollama, so this test talks to it through the Ollama API regardless of where
 it physically runs.
 

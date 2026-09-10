@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          # Match the Python version used in the project (see README / MIGRATION_H100.md)
+          # pyproject.toml 의 python_version 과 맞춤 (서버 venv 는 3.12 — 유닛 테스트는 3.14 에서도 돌아야 한다)
           python-version: "3.14"
 
       - name: Cache pip

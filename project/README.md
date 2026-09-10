@@ -21,15 +21,9 @@ pip install -r requirements.txt
 
 ### Running the Application
 
-Start the API server (FastAPI + SSE) locally:
-
-```bash
-python project/server.py            # http://localhost:8000  (/api/chat, /health, /health/llm)
-```
-
-The chat UI is the Next.js app in `frontend/` (`npm run dev`, proxies `/api/*` to :8000).
-On the server the whole stack is started with `scripts/start-all.sh`; production is deployed
-from a release tag with `scripts/deploy.sh` (see `RELEASE.md`).
+실행 방법은 루트 `README.md` 의 **빠른 시작** 한 곳에만 둔다 (백엔드 `python project/server.py` :8000,
+프론트 `frontend/`, 서버 스택 `scripts/start-all.sh`, 운영 배포 `scripts/deploy.sh` — `RELEASE.md`).
+여기서는 되풀이하지 않는다.
 
 ### Prerequisites
 
@@ -62,7 +56,7 @@ PDF → Markdown Conversion → Parent/Child Chunking → Vector Indexing → Ag
 
 | File | Purpose |
 |------|---------|
-| `project/server.py` | API entry point (FastAPI + SSE), started by `scripts/run-backend.sh` |
+| `project/server.py` | API 진입점 (FastAPI + SSE) — `scripts/run-backend.sh` 가 띄움 |
 | `project/config.py` | **Central configuration hub** - edit this for provider/model/chunking changes |
 | `project/utils.py` | PDF to Markdown conversion and context token estimation |
 | `project/document_chunker.py` | Parent/child splitting logic with cleaning and merging rules |

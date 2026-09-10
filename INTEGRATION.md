@@ -139,8 +139,8 @@ scripts/stop-all.sh            # stop them (ollama stays up)
 scripts/healthcheck.sh         # probe everything
 scripts/install-units.sh       # systemd --user units: autostart + Restart=on-failure (MIGRATION_H100.md 3-6)
 ```
-Production runs from a release tag via `scripts/deploy.sh` (RELEASE.md); the Windows-era `.ps1`
-scripts were removed 2026-09-11 (git history has them).
+Production runs from a release tag via `scripts/deploy.sh` (RELEASE.md). The Windows-era `.ps1`
+scripts are gone — what replaced each one: MIGRATION_H100.md §3-4.
 
 ## Notes / limitations
 - agentic-RAG sources are local filenames (no notice URLs), so the Source panel shows

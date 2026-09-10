@@ -14,7 +14,7 @@ def confined_path(root, path):
     absolute ``path`` makes ``os.path.join`` drop ``root``, and the prefix check then decides.
 
     The single containment primitive for every file the app reads or writes on a caller's
-    behalf: the KB markdown target, the Gradio upload source, the parent store. Symlinks are
+    behalf: the KB markdown target, the upload source, the parent store. Symlinks are
     resolved before the check, so a link inside ``root`` that points outside (or a dangling
     one a write would follow) is rejected. ``root`` itself is never accepted, and a root of
     ``/`` rejects everything rather than accepting everything — there is no containment to
