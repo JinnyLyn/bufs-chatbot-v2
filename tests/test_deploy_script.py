@@ -5,6 +5,7 @@
 운영 체크아웃 역할의 클론을 만들어 git 동작(태그 검증·체크아웃·복원)은 진짜로 돌린다.
 DEPLOY_SKIP_UNIT_CHECK=1 로 "systemd 가 서비스하는 체크아웃인가" 가드만 건너뛴다.
 """
+import json
 import os
 import stat
 import subprocess
@@ -55,6 +56,9 @@ def prod(tmp_path):
     _executable(src / "scripts" / "restart-all.sh", STUB_RESTART)
     _executable(src / "scripts" / "healthcheck.sh", STUB_HEALTH)
     (src / ".gitignore").write_text("logs/\nSTUB_RC\nSTUB_TOUCH\n")
+    (src / "frontend").mkdir()
+    (src / "frontend" / "package-lock.json").write_text('{"lockfileVersion": 3, "v": 1}\n')
+    (src / "requirements.txt").write_text("fastapi==0.1\n")
     (src / "app.txt").write_text("first\n")
     git(src, "add", "-A")
     git(src, "commit", "-qm", "first")
@@ -74,10 +78,33 @@ def prod(tmp_path):
     return clone
 
 
+STUB_GH = """#!/usr/bin/env bash
+# gh 스텁: 릴리스 읽기는 release.json 을, PATCH 는 --input 파일을 patch.json 으로 저장
+root="$STUB_ROOT"
+echo "gh $*" >>"$root/gh-calls"
+[ -f "$root/gh-fail" ] && exit 1
+if [ "$1" = api ] && [ "$2" = -X ]; then cp "$6" "$root/patch.json"; exit 0; fi
+if [ "$1" = api ]; then cat "$root/release.json"; exit 0; fi
+exit 1
+"""
+
+
 def run(root, *args, check=True, env=None):
     e = os.environ.copy()
     e["DEPLOY_SKIP_UNIT_CHECK"] = "1"
     e.pop("CLOUDFLARE_API_TOKEN", None)          # the Worker step must never run from tests
+    for name in ("npm", "pip"):                     # 훅은 단어 분리만 하므로 따옴표 없는 스텁 파일로
+        stub = root / f"stub-{name}.sh"
+        if not stub.exists():
+            _executable(stub, f"#!/usr/bin/env bash\necho {name} >>'{root}/deps-calls'\n")
+        e.setdefault(f"DEPLOY_{name.upper()}_CMD", f"bash {stub}")
+    gh = root / "stub-gh.sh"
+    if not gh.exists():
+        _executable(gh, STUB_GH)
+    if not (root / "release.json").exists():
+        (root / "release.json").write_text('{"id": 7, "html_url": "https://example/rel", "body": "## 릴리스 확인\\n- [ ] staging\\n\\nVersion: v0.__.__\\nCommit: (배포 후)\\nReleased: (배포 후)\\nApproved by: 성원\\nDeployed by: (배포 후)\\nPrevious version: v0.__.__\\nRollback target: v0.__.__\\n"}')
+    e.setdefault("DEPLOY_GH_CMD", f"bash {gh}")
+    e.setdefault("STUB_ROOT", str(root))
     e.update(env or {})
     p = subprocess.run(
         ["bash", str(root / "scripts" / "deploy.sh"), *args],
@@ -116,6 +143,16 @@ def deployed(root):
 
 def origin(root):
     return root.parent / "origin.git"
+
+
+def deps_calls(root):
+    f = root / "deps-calls"
+    return f.read_text().split() if f.exists() else []
+
+
+def patched_body(root):
+    f = root / "patch.json"
+    return json.loads(f.read_text())["body"] if f.exists() else None
 
 
 def log_rows(root):
@@ -297,6 +334,81 @@ class TestSameCommitAlreadyRunning:
         assert len(restart_calls(prod)) == 1
 
 
+class TestDependencyInstall:
+    """선언(package-lock / requirements)이 바뀐 릴리스만 설치; 실패는 빌드 실패처럼 체크아웃 복원."""
+
+    def _dep_bump(self, prod, tag):
+        (prod / "frontend" / "package-lock.json").write_text('{"lockfileVersion": 3, "v": 2}\n')
+        (prod / "requirements.txt").write_text("fastapi==0.2\n")
+        git(prod, "commit", "-qam", "deps bump")
+        git(prod, "tag", tag)
+        git(prod, "push", "-q", "origin", "main", tag)
+
+    def test_installs_only_when_declarations_changed(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        run(prod, "v0.2.0-beta", "--yes")                       # app.txt 만 다름
+        assert deps_calls(prod) == []
+        git(prod, "checkout", "-q", "main")
+        self._dep_bump(prod, "v0.3.0-beta")
+        run(prod, "v0.2.0-beta", "--yes")                       # main(HEAD=새 의존성) → v0.2: 되돌아가는 것도 설치
+        assert deps_calls(prod) == ["npm", "pip"]
+        run(prod, "v0.3.0-beta", "--yes")                       # v0.2 → v0.3: 둘 다 바뀜
+        assert deps_calls(prod) == ["npm", "pip", "npm", "pip"]
+
+    def test_install_failure_restores_checkout_without_restart(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        git(prod, "checkout", "-q", "main")
+        self._dep_bump(prod, "v0.3.0-beta")
+        run(prod, "v0.1.0-beta", "--yes")
+        n = len(restart_calls(prod))
+        p = run(prod, "v0.3.0-beta", "--yes", check=False, env={"DEPLOY_PIP_CMD": "false"})
+        assert p.returncode == 3 and "의존성 설치 실패" in p.stderr
+        assert head(prod) == tag_sha(prod, "v0.1.0-beta")
+        assert len(restart_calls(prod)) == n                    # 재기동 없음
+        assert log_rows(prod)[-1][4] == "deps-failed" and deployed(prod)[0] == "v0.1.0-beta"
+
+    def test_deps_command_installs_unconditionally(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        p = run(prod, "deps")
+        assert deps_calls(prod) == ["npm", "pip"] and "완료" in p.stdout
+
+
+class TestReleaseRecordAutofill:
+    """배포 성공 시 GitHub 릴리스 설명의 배포 기록 줄을 gh 로 채운다 (실패해도 배포는 성공)."""
+
+    def test_fills_existing_record_lines(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        p = run(prod, "v0.2.0-beta", "--yes", env={"DEPLOY_BY": "진서"})
+        body = patched_body(prod)
+        assert body is not None and "배포 기록을 채웠습니다" in p.stdout
+        sha = tag_sha(prod, "v0.2.0-beta")[:7]
+        for line in ("Version: v0.2.0-beta", f"Commit: {sha}", "Deployed by: 진서",
+                     "Previous version: v0.1.0-beta", "Rollback target: v0.1.0-beta", "Approved by: 성원"):
+            assert line in body, line
+        assert "- [ ] staging" in body                            # 성원 몫 체크박스는 그대로
+        calls = (prod / "gh-calls").read_text()
+        assert "releases/tags/v0.2.0-beta" in calls and "-X PATCH" in calls
+
+    def test_appends_block_when_release_has_no_record(self, prod):
+        (prod / "release.json").write_text('{"id": 8, "html_url": "u", "body": "성원이 쓴 메모"}')
+        run(prod, "v0.1.0-beta", "--yes")
+        body = patched_body(prod)
+        assert body.startswith("성원이 쓴 메모") and "## 배포 기록" in body and "Version: v0.1.0-beta" in body
+        assert "Previous version: 없음" in body
+
+    def test_gh_failure_does_not_fail_the_deploy(self, prod):
+        (prod / "gh-fail").write_text("1")
+        p = run(prod, "v0.1.0-beta", "--yes")
+        assert "손으로 붙여 넣으세요" in p.stderr and deployed(prod)[0] == "v0.1.0-beta"
+
+    def test_rollback_does_not_touch_the_release(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        run(prod, "v0.2.0-beta", "--yes")
+        (prod / "gh-calls").unlink()
+        run(prod, "rollback")
+        assert not (prod / "gh-calls").exists()
+
+
 class TestFailureHandling:
     def test_build_failure_restores_branch_without_restart(self, prod):
         (prod / "STUB_RC").write_text("3\n")
@@ -452,6 +564,11 @@ class TestStatusAndTags:
         git(prod, "checkout", "-q", "main")
         p = run(prod, "status")
         assert "[checkout] main" in p.stdout and "!= 운영중" in p.stdout
+
+    def test_status_fetches_new_tags(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        git(origin(prod), "tag", "v0.3.0-beta", "main")           # 다른 곳(성원)에서 발행됨
+        assert "origin 최신 태그: v0.3.0-beta" in run(prod, "status").stdout
 
     def test_tags_newest_first_marks_live(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
