@@ -434,6 +434,14 @@ class TestReleaseRecordAutofill:
         body = patched_body(prod)
         assert "Approved by: 진서 (성원 휴가로 대행)" in body and body.count("Approved by:") == 1
 
+    def test_missing_approved_by_is_inserted_next_to_existing_record_lines(self, prod):
+        body0 = "Version: v0.__\nCommit: (배포 후)\nReleased: (배포 후)\nDeployed by: (배포 후)\nPrevious version: x\nRollback target: x\n"
+        (prod / "release.json").write_text(json.dumps({"id": 9, "html_url": "u", "author": {"login": "Sung1Lim"}, "body": body0}))
+        run(prod, "v0.1.0-beta", "--yes")
+        body = patched_body(prod)
+        assert "## 배포 기록" not in body                          # 새 절을 만들지 않고
+        assert body.index("Released: ") < body.index("Approved by: Sung1Lim") < body.index("Deployed by: ")
+
     def test_append_keeps_existing_approved_by_without_placeholder(self, prod):
         # 새 RELEASE.md 체크리스트: 기록 줄 없이 "Approved by: 성원" 만 있음 → 절을 덧붙이되 Approved 는 한 줄만
         (prod / "release.json").write_text(json.dumps({"id": 9, "html_url": "u", "body": "## 릴리스 확인\n- [ ] staging\n\nApproved by: 성원\n"}))

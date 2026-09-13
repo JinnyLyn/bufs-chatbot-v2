@@ -310,7 +310,12 @@ m = re.search(r"^Approved by:(.*)$", body, re.M)
 if m and "(릴리스 발행자)" in m.group(1):
     body = body[:m.start()] + f"Approved by: {publisher}" + body[m.end():]
 elif not m:
-    missing.insert(3 if len(missing) >= 3 else len(missing), f"Approved by: {publisher}")
+    rel = re.search(r"^Released:.*$", body, re.M)
+    if rel and not missing:
+        # 기록 줄은 다 있는데 Approved 만 없다 — 그 자리(Released 다음)에 끼워 넣는다
+        body = body[:rel.end()] + f"\nApproved by: {publisher}" + body[rel.end():]
+    else:
+        missing.insert(3 if len(missing) >= 3 else len(missing), f"Approved by: {publisher}")
 if missing:
     body = body.rstrip("\n") + "\n\n## 배포 기록\n" + "\n".join(missing) + "\n"
 json.dump({"body": body}, open(out, "w"), ensure_ascii=False)
