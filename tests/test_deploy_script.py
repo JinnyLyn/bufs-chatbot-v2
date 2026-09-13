@@ -369,7 +369,7 @@ class TestDependencyInstall:
         run(prod, "v0.1.0-beta", "--yes")
         n = len(restart_calls(prod))
         p = run(prod, "v0.3.0-beta", "--yes", check=False, env={"DEPLOY_PIP_CMD": "false"})
-        assert p.returncode == 3 and "의존성 설치 실패" in p.stderr and "복구도 실패" in p.stderr
+        assert p.returncode == 3 and "의존성 설치 실패" in p.stderr and "의존성 복구 실패" in p.stderr
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
         assert len(restart_calls(prod)) == n                    # 재기동 없음
         assert log_rows(prod)[-1][4] == "deps-failed" and deployed(prod)[0] == "v0.1.0-beta"
@@ -468,6 +468,23 @@ class TestFailureHandling:
         assert head(prod) == tag_sha(prod, "v0.1.0-beta")
         assert deployed(prod)[0] == "v0.1.0-beta"
 
+    def test_build_failure_also_restores_dependencies(self, prod):
+        # v0.3 은 lock+requirements 가 다르다: 설치(npm,pip) 뒤 빌드가 실패하면 v0.1 기준으로 다시 설치돼야 한다
+        run(prod, "v0.1.0-beta", "--yes")
+        git(prod, "checkout", "-q", "main")
+        (prod / "frontend" / "package-lock.json").write_text('{"lockfileVersion": 3, "v": 2}\n')
+        (prod / "requirements.txt").write_text("fastapi==0.2\n")
+        git(prod, "commit", "-qam", "deps bump")
+        git(prod, "tag", "v0.3.0-beta")
+        git(prod, "push", "-q", "origin", "main", "v0.3.0-beta")
+        run(prod, "v0.1.0-beta", "--yes")
+        (prod / "deps-calls").unlink()
+        (prod / "STUB_RC").write_text("3\n")
+        p = run(prod, "v0.3.0-beta", "--yes", check=False)
+        assert p.returncode == 3 and "이전 의존성으로 복구됨" in p.stderr
+        assert head(prod) == tag_sha(prod, "v0.1.0-beta")
+        assert deps_calls(prod) == ["npm", "pip", "npm", "pip"]   # 새 태그 설치 → 되돌린 커밋으로 재설치
+
     def test_restart_failure_rolls_back_to_previous_deploy(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
         (prod / "STUB_RC").write_text("1\n")           # first restart fails, rollback restart succeeds
@@ -484,10 +501,12 @@ class TestFailureHandling:
     def test_restart_failure_on_first_deploy_returns_to_previous_checkout(self, prod):
         before = head(prod)                            # main, nothing recorded yet
         (prod / "STUB_RC").write_text("1\n")
+        (prod / "deps-calls").unlink(missing_ok=True)
         p = run(prod, "v0.1.0-beta", "--yes", check=False)
         assert p.returncode == 1 and "복원: main" in p.stderr
         assert head(prod) == before and on_branch(prod) == "main"
         assert len(restart_calls(prod)) == 2
+        assert deps_calls(prod) == ["pip", "npm", "pip"]           # 새 태그 pip → 복원 후 npm+pip → 그다음 재기동
         assert deployed(prod) == []                            # a branch is not a release
         assert log_rows(prod)[-1][1] == "auto-rollback" and log_rows(prod)[-1][4].startswith("restored")
         assert "첫 배포 전" in run(prod, "status").stdout

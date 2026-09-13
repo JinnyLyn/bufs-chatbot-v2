@@ -331,6 +331,18 @@ restore_checkout() {  # $1 = 브랜치 이름 또는 "", $2 = sha
     if [ -n "$1" ]; then g checkout --quiet "$1"; else g checkout --quiet --detach "$2"; fi
 }
 
+# 체크아웃을 되돌린 뒤 의존성도 그 커밋 기준으로 되돌린다 — install_deps 가 이미 새 태그의 의존성을
+# 깔았을 수 있고(npm ci 는 node_modules 를 비우고 시작), 코드만 되돌리면 실행 환경이 어긋난다.
+# 실패해도 계속(0) — 대신 복구 명령을 알려 준다.
+restore_deps() {  # $1 = 되돌린 sha
+    if install_deps all "$1" >/dev/null 2>&1; then
+        say "[undo]   이전 의존성으로 복구됨." >&2
+    else
+        say "[error]  이전 의존성 복구 실패 — node_modules/.venv 가 어긋나 있을 수 있음. 네트워크 확인 뒤: ./scripts/deploy.sh deps" >&2
+    fi
+    return 0
+}
+
 # 전환이 끝난 뒤: 수동 `maint on` 플래그가 있었으면 되돌리고, 아니면 플래그를 확실히 지운다.
 restore_maint() {  # $1 = 보관해 둔 수동 플래그 내용, 또는 ""
     if [ -n "$1" ]; then printf '%s\n' "$1" >"$MAINT_FLAG"; else maint_off; fi
@@ -373,13 +385,8 @@ switch_to() {
             return 3
         fi
         restore_checkout "$pre_branch" "$pre_sha"
-        # npm ci 는 node_modules 를 비우고 시작하고 pip 은 도중까지 깔렸을 수 있다 — 되돌린 커밋 기준으로 다시 맞춘다.
         say "[undo]   의존성 설치 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌리고 그 의존성으로 재설치 시도" >&2
-        if install_deps all "$pre_sha" >/dev/null 2>&1; then
-            say "[undo]   이전 의존성으로 복구됨." >&2
-        else
-            say "[error]  이전 의존성 복구도 실패 — node_modules/.venv 가 어긋나 있을 수 있음. 네트워크 확인 뒤: ./scripts/deploy.sh deps" >&2
-        fi
+        restore_deps "$pre_sha"
         restore_maint "$maint_saved"
         trap - EXIT
         return 3
@@ -398,10 +405,12 @@ switch_to() {
             if [ "$action" = deploy ]; then release_record "$tag" "$sha" "$prev_tag"; fi
             return 0 ;;
         3)
-            # 프론트 빌드 실패 — restart-all.sh 가 서버를 건드리지 않았다
+            # 프론트 빌드 실패 — restart-all.sh 가 서버를 건드리지 않았다. 의존성은 이미 새 태그 것으로
+            # 바뀌었을 수 있으니 코드와 함께 되돌린다.
             record "$action" "$tag" "$sha" build-failed
             restore_checkout "$pre_branch" "$pre_sha"
-            say "[undo]   프론트 빌드 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌렸습니다." >&2
+            say "[undo]   프론트 빌드 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌리고 그 의존성으로 재설치" >&2
+            restore_deps "$pre_sha"
             return 3 ;;
         4)
             # 백엔드는 응답, LLM 확인만 실패 — 코드는 이미 운영 중이다. 다시 재기동해도 ollama 가
@@ -435,6 +444,7 @@ switch_to() {
                 say "[undo]   재기동 실패 (rc=$rc) — 이전 릴리스 기록이 없음. 복원: $where" >&2
                 maint_on "deploy.sh restore $where"
                 restore_checkout "$pre_branch" "$pre_sha"
+                restore_deps "$pre_sha"   # 재기동 전에 되돌린 커밋의 의존성으로
                 run_restart || rc2=$?
                 restore_maint "$maint_saved"
                 record auto-rollback "$where" "$pre_sha" "restored(rc=$rc2)"
