@@ -9,6 +9,7 @@
 #   ./scripts/deploy.sh status                # 운영 중 태그 / 체크아웃 / 실제 도는 프로세스 / 헬스 / 점검 모드
 #   ./scripts/deploy.sh tags                  # origin 의 릴리스 태그 최신순, 운영 중인 것 표시
 #   ./scripts/deploy.sh maint on|off          # 점검 모드: Worker 503 안내 페이지 + healthcheck 자동 재기동 중지
+#   ./scripts/deploy.sh deps                  # 현재 체크아웃의 의존성을 강제로 설치 (npm ci + pip, torch 는 고정)
 #
 # 플래그: --yes                y/N 확인 생략 (배포만)
 #         --dry-run            검사만 하고 아무것도 바꾸지 않음
@@ -21,8 +22,12 @@
 #      (rollback 은 대신 stash 해 둠 — 비상시에 남의 수정 때문에 멈추면 안 되니까)
 #   3. 새로 나가는(또는 빠지는) 커밋을 보여주고 확인
 #   4. git checkout --detach <태그>
-#   5. restart-all.sh — 필요하면 프론트 재빌드, stop, start, /health + /health/llm 확인
-#   6. logs/run/deploys.log 에 한 줄 추가 — 마지막 "ok" 행이 곧 운영 중인 버전
+#   5. 의존성이 바뀌었으면 설치: package-lock.json → npm ci, requirements.txt → pip (공유 .venv,
+#      torch 는 지금 버전으로 고정). 설치 실패는 빌드 실패처럼 취급 — 서버는 안 건드리고 체크아웃 복원.
+#   6. restart-all.sh — 필요하면 프론트 재빌드, stop, start, /health + /health/llm 확인
+#   7. logs/run/deploys.log 에 한 줄 추가 — 마지막 "ok" 행이 곧 운영 중인 버전
+#   8. GitHub 릴리스 설명의 "배포 기록" 줄을 gh 로 채운다 (Version/Commit/Released/Deployed by/
+#      Previous/Rollback). 태그는 안 건드리니 태그 규칙에 안 걸림. 실패해도 배포 결과엔 영향 없음.
 # restart-all.sh 종료 코드와 그다음:
 #   0  정상                                   → 운영 중으로 기록
 #   3  프론트 빌드 실패, 서버는 안 건드림       → 체크아웃만 되돌림, 재기동 없음
@@ -32,7 +37,8 @@
 # 누가 태그를 발행하고 누가 배포하는지, 버전 이름 규칙: RELEASE.md.
 #
 # 테스트 훅 (healthcheck-cron.sh 와 같은 방식): DEPLOY_RESTART_CMD 가 restart-all.sh 를,
-# DEPLOY_HEALTH_CMD 가 /health 확인을 대신. DEPLOY_SKIP_UNIT_CHECK=1 이면 "systemd 가 서비스하는
+# DEPLOY_HEALTH_CMD 가 /health 확인을, DEPLOY_NPM_CMD / DEPLOY_PIP_CMD 가 의존성 설치를,
+# DEPLOY_GH_CMD 가 gh 를 대신. DEPLOY_SKIP_UNIT_CHECK=1 이면 "systemd 가 서비스하는
 # 체크아웃인가" 검사를 건너뜀 (CAMCHAT_UNITS_DIR 로 유닛 경로를 흉내낼 수도 있음 — _common.sh).
 
 set -Eeuo pipefail
@@ -75,6 +81,12 @@ read_deployed() {
 
 record() {  # $1 동작  $2 태그  $3 sha  $4 결과
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(now)" "$1" "$2" "$3" "$4" "${USER:-?}" >>"$DEPLOY_LOG"
+}
+
+# 이 태그 직전에 운영 중이던 "다른" 태그 (같은 태그를 다시 배포해도 Previous 가 자기 자신이 되지 않게).
+previous_of() {  # $1 = 태그
+    [ -f "$DEPLOY_LOG" ] || return 0
+    awk -F'\t' -v re="$TAG_RE" -v me="$1" '$5 ~ /^ok/ && $3 ~ re && $3 != me { t = $3 } END { print t }' "$DEPLOY_LOG"
 }
 
 # 롤백 대상: 성공한 행을 거꾸로 훑으며, 운영 중이 아니고 그 뒤에 롤백으로 떠난 적도 없는
@@ -151,11 +163,21 @@ stash_if_dirty() {
     say "         복구: git stash pop" >&2
 }
 
-# 태그의 기준은 origin: 로컬에만 있는 태그는 지우고(아무도 발행 안 한 태그는 릴리스가 아니다),
-# 옮겨진 태그는 따라가고(--force), origin 에서 지운 태그는 사라진다.
+# 태그의 기준은 origin: 옮겨진 태그는 따라가고(--force), origin 에서 지운 태그는 사라진다.
+# 로컬에만 있는 태그를 지우는 --prune-tags 는 운영 폴더에서만 — 개발 폴더의 wip 태그를 status 가
+# 조용히 지우면 안 된다 (운영 폴더엔 아무도 로컬 태그를 만들지 않는다).
+# --soft: 8초 제한, 못 닿으면 경고만 하고 마지막 fetch 기준으로 계속 (status 용).
 fetch_tags() {
-    g fetch origin --prune --prune-tags --force --tags --quiet \
-        || die "git fetch 실패 — 네트워크가 없거나 origin 에 닿지 않습니다."
+    local prune=() soft=0
+    [ "${1:-}" = --soft ] && soft=1
+    units_installed && prune=(--prune-tags)
+    if [ "$soft" = 1 ]; then
+        timeout 8 git -C "$REPO" fetch origin --prune "${prune[@]}" --force --tags --quiet 2>/dev/null \
+            || say "[tags]     origin 에 못 닿음 — 태그 목록은 마지막 fetch 기준"
+    else
+        g fetch origin --prune "${prune[@]}" --force --tags --quiet \
+            || die "git fetch 실패 — 네트워크가 없거나 origin 에 닿지 않습니다."
+    fi
 }
 
 # 릴리스 태그 검증: 이름 패턴, origin 에 발행됨, origin/main 에서 닿음. TAG_SHA 를 채운다.
@@ -193,23 +215,132 @@ run_restart() {
     fi
 }
 
+# 의존성 설치 — 태그가 말하는 버전으로 돌게 한다.
+#   pip:  매번 `pip install -r requirements.txt` (이미 맞으면 몇 초 만에 no-op). 선언 diff 가 아니라
+#         설치 상태를 기준으로 삼아야 공유 .venv 에 누가 손으로 뭘 깔았어도 배포 때 선언대로 돌아온다.
+#         torch 계열은 지금 설치된 버전에 고정 — PyPI 기본 torch 는 CUDA 13 휠이라 이 서버에서 못 돈다
+#         (MIGRATION_H100.md). 고정할 torch 를 못 찾으면 설치하지 않고 실패시킨다.
+#   npm:  느리므로(1분) package-lock.json 이 $1..$2 사이에 바뀌었거나, node_modules 가 없거나 lock 보다
+#         오래됐거나(지난 npm ci 가 중간에 죽은 경우), $1 = all 일 때만 `npm ci`.
+# 실패하면 1.
+install_deps() {  # $1 = 이전 sha 또는 all   $2 = 지금 sha
+    local need_npm=0 lock="$REPO/frontend/package-lock.json" marker="$REPO/frontend/node_modules/.package-lock.json"
+    if [ -f "$lock" ]; then
+        if [ "$1" = all ]; then need_npm=1
+        elif [ ! -f "$marker" ] || [ "$lock" -nt "$marker" ]; then need_npm=1
+        elif ! g diff --quiet "$1" "$2" -- frontend/package-lock.json 2>/dev/null; then need_npm=1
+        fi
+    fi
+    if [ "$need_npm" = 1 ]; then
+        say "[deps]   npm ci (package-lock 변경 또는 node_modules 오래됨, 로그: logs/frontend/npm-ci.log)"
+        if [ -n "${DEPLOY_NPM_CMD:-}" ]; then
+            # shellcheck disable=SC2086  # 테스트 훅
+            $DEPLOY_NPM_CMD || return 1
+        else
+            (cd "$REPO/frontend" && npm ci --no-audit --no-fund >"$LOG_DIR/frontend/npm-ci.log" 2>&1) \
+                || { say "[error]  npm ci 실패 — $LOG_DIR/frontend/npm-ci.log" >&2; return 1; }
+        fi
+    fi
+    if [ -f "$REPO/requirements.txt" ]; then
+        say "[deps]   pip install -r requirements.txt (torch 계열은 현재 버전 고정, 로그: logs/backend/pip-install.log)"
+        if [ -n "${DEPLOY_PIP_CMD:-}" ]; then
+            # shellcheck disable=SC2086  # 테스트 훅
+            $DEPLOY_PIP_CMD || return 1
+        else
+            local py="$REPO/.venv/bin/python" cons="$RUN_DIR/pip-constraints.txt"
+            [ -x "$py" ] || { say "[error]  $REPO/.venv/bin/python 이 없습니다 — venv 확인" >&2; return 1; }
+            "$py" -m pip freeze 2>/dev/null | grep -iE '^(torch|torchvision|torchaudio)==' >"$cons" || true
+            if ! grep -q '^torch==' "$cons"; then
+                say "[error]  .venv 에서 torch 를 못 찾았습니다 — 고정할 버전이 없어 설치를 멈춥니다 (MIGRATION_H100.md torch cu126)." >&2
+                return 1
+            fi
+            "$py" -m pip install -q -r "$REPO/requirements.txt" -c "$cons" >"$LOG_DIR/backend/pip-install.log" 2>&1 \
+                || { say "[error]  pip install 실패 — $LOG_DIR/backend/pip-install.log" >&2; return 1; }
+        fi
+    fi
+    return 0
+}
+
+gh_cmd() {
+    if [ -n "${DEPLOY_GH_CMD:-}" ]; then
+        # shellcheck disable=SC2086  # 테스트 훅
+        $DEPLOY_GH_CMD "$@"
+    else
+        (cd "$REPO" && gh "$@")
+    fi
+}
+
+# GitHub 릴리스 설명의 "배포 기록" 줄들을 채운다. 없으면 절을 덧붙인다. 태그 자체는 안 건드리므로
+# 태그 규칙(성원만)에 안 걸린다. gh 가 없거나 실패하면 경고만 — 사람이 [record] 블록을 붙여 넣으면 된다.
+update_release_record() {  # $1 = 태그  $2 = sha  $3 = 직전 운영 태그 (없으면 "")
+    if [ -z "${DEPLOY_GH_CMD:-}" ] && ! command -v gh >/dev/null 2>&1; then
+        say "[record] gh 가 없어 GitHub 릴리스 설명은 손으로 붙여 넣으세요."; return 0
+    fi
+    local json tmp meta rid url
+    json="$(gh_cmd api "repos/{owner}/{repo}/releases/tags/$1" 2>/dev/null)" \
+        || { say "[record] GitHub 릴리스($1)를 못 읽었습니다 — 위 블록을 손으로 붙여 넣으세요." >&2; return 0; }
+    tmp="$(mktemp)"
+    printf '%s' "$json" >"$tmp.in"
+    # 한 번의 python: 있는 줄은 바꾸고, 없는 줄만 "## 배포 기록" 절에 덧붙인다. "Approved by" 는 성원이
+    # 체크리스트에 이미 썼으면 그대로, 어디에도 없을 때만 자리표시. 출력: PATCH 본문 → $tmp, id/url → stdout.
+    meta="$(python3 - "$1" "${2:0:7}" "$(date '+%Y-%m-%d')" "${DEPLOY_BY:-${USER:-?}}" "${3:-없음}" "$tmp" "$tmp.in" <<'PY'
+import json, re, sys
+tag, sha, released, by, prev, out, src = sys.argv[1:8]
+r = json.load(open(src)); body = r.get("body") or ""
+vals = [("Version", tag), ("Commit", sha), ("Released", released), ("Deployed by", by),
+        ("Previous version", prev), ("Rollback target", prev)]
+missing = []
+for k, v in vals:
+    body, n = re.subn(rf"^{re.escape(k)}:.*$", f"{k}: {v}", body, count=1, flags=re.M)
+    if n == 0:
+        missing.append(f"{k}: {v}")
+if missing:
+    if not re.search(r"^Approved by:", body, re.M):
+        missing.insert(3 if len(missing) >= 3 else len(missing), "Approved by: (릴리스 발행자)")
+    body = body.rstrip("\n") + "\n\n## 배포 기록\n" + "\n".join(missing) + "\n"
+json.dump({"body": body}, open(out, "w"), ensure_ascii=False)
+print(f"{r['id']}\t{r.get('html_url', '')}")
+PY
+)" || { rm -f "$tmp" "$tmp.in"; say "[record] 릴리스 설명 갱신 준비 실패 — 위 블록을 손으로 붙여 넣으세요." >&2; return 0; }
+    rid="${meta%%$'\t'*}"; url="${meta#*$'\t'}"
+    if gh_cmd api -X PATCH "repos/{owner}/{repo}/releases/$rid" --input "$tmp" >/dev/null 2>&1; then
+        say "[record] GitHub 릴리스 설명에 배포 기록을 채웠습니다: $url"
+    else
+        say "[record] GitHub 릴리스 설명 갱신 실패 — 위 블록을 손으로 붙여 넣으세요." >&2
+    fi
+    rm -f "$tmp" "$tmp.in"
+}
+
 # 릴리스 체크리스트(RELEASE.md)가 요구하는 기록, 채워서 출력 — GitHub Release 에 붙여넣는다.
 # 서버 계정은 공용이라 DEPLOY_BY (scripts/env.local) 로 사람 이름을 넣는다.
 release_record() {  # $1 = 태그  $2 = sha  $3 = 직전 운영 태그 (없으면 "")
     say
-    say "[record] GitHub Release 설명(Edit release)에 붙여넣으세요:"
+    say "[record] 배포 기록:"
     say "         Version: $1"
     say "         Commit: ${2:0:7}"
     say "         Released: $(date '+%Y-%m-%d')"
     say "         Approved by: (릴리스 발행자)"
-    say "         Deployed by: ${DEPLOY_BY:-$USER}"
+    say "         Deployed by: ${DEPLOY_BY:-${USER:-?}}"
     say "         Previous version: ${3:-없음}"
     say "         Rollback target: ${3:-없음}"
+    update_release_record "$1" "$2" "$3"
 }
 
 # 배포 시도 전의 체크아웃으로 복귀 (브랜치였으면 브랜치로).
 restore_checkout() {  # $1 = 브랜치 이름 또는 "", $2 = sha
     if [ -n "$1" ]; then g checkout --quiet "$1"; else g checkout --quiet --detach "$2"; fi
+}
+
+# 체크아웃을 되돌린 뒤 의존성도 그 커밋 기준으로 되돌린다 — install_deps 가 이미 새 태그의 의존성을
+# 깔았을 수 있고(npm ci 는 node_modules 를 비우고 시작), 코드만 되돌리면 실행 환경이 어긋난다.
+# 실패해도 계속(0) — 대신 복구 명령을 알려 준다.
+restore_deps() {  # $1 = 되돌린 sha
+    if install_deps all "$1" >/dev/null 2>&1; then
+        say "[undo]   이전 의존성으로 복구됨." >&2
+    else
+        say "[error]  이전 의존성 복구 실패 — node_modules/.venv 가 어긋나 있을 수 있음. 네트워크 확인 뒤: ./scripts/deploy.sh deps" >&2
+    fi
+    return 0
 }
 
 # 전환이 끝난 뒤: 수동 `maint on` 플래그가 있었으면 되돌리고, 아니면 플래그를 확실히 지운다.
@@ -226,7 +357,7 @@ switch_to() {
     local pre_branch pre_sha prev_tag maint_saved="" rc=0
     pre_branch="$(g symbolic-ref --short -q HEAD || true)"
     pre_sha="$(g rev-parse HEAD)"
-    read_deployed; prev_tag="$DEP_TAG"
+    prev_tag="$(previous_of "$tag")"
 
     # 전환 내내 healthcheck 를 세워 둔다: 체크아웃 + 프론트 빌드 구간이 몇 분이라, 그 사이
     # 타이머가 재기동하면 반쯤 빌드된 .next 로 프론트를 띄운다. restart-all.sh 는 자기 구간에서
@@ -245,6 +376,22 @@ switch_to() {
         return 1
     fi
 
+    if ! install_deps "$pre_sha" "$sha"; then
+        record "$action" "$tag" "$sha" deps-failed
+        if [ "$action" = auto-rollback ]; then
+            # 롤백 중에 실패: 새(깨진) 태그로 되돌아가느니 롤백 대상 코드에 머문다.
+            restore_maint "$maint_saved"; trap - EXIT
+            say "[error]  롤백 대상 $tag 의 의존성 설치 실패 — 체크아웃은 $tag 에 둠. 복구: ./scripts/deploy.sh deps && ./scripts/restart-all.sh" >&2
+            return 3
+        fi
+        restore_checkout "$pre_branch" "$pre_sha"
+        say "[undo]   의존성 설치 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌리고 그 의존성으로 재설치 시도" >&2
+        restore_deps "$pre_sha"
+        restore_maint "$maint_saved"
+        trap - EXIT
+        return 3
+    fi
+
     say "[switch] restart-all.sh"
     run_restart || rc=$?
     restore_maint "$maint_saved"
@@ -258,10 +405,12 @@ switch_to() {
             if [ "$action" = deploy ]; then release_record "$tag" "$sha" "$prev_tag"; fi
             return 0 ;;
         3)
-            # 프론트 빌드 실패 — restart-all.sh 가 서버를 건드리지 않았다
+            # 프론트 빌드 실패 — restart-all.sh 가 서버를 건드리지 않았다. 의존성은 이미 새 태그 것으로
+            # 바뀌었을 수 있으니 코드와 함께 되돌린다.
             record "$action" "$tag" "$sha" build-failed
             restore_checkout "$pre_branch" "$pre_sha"
-            say "[undo]   프론트 빌드 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌렸습니다." >&2
+            say "[undo]   프론트 빌드 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌리고 그 의존성으로 재설치" >&2
+            restore_deps "$pre_sha"
             return 3 ;;
         4)
             # 백엔드는 응답, LLM 확인만 실패 — 코드는 이미 운영 중이다. 다시 재기동해도 ollama 가
@@ -295,6 +444,7 @@ switch_to() {
                 say "[undo]   재기동 실패 (rc=$rc) — 이전 릴리스 기록이 없음. 복원: $where" >&2
                 maint_on "deploy.sh restore $where"
                 restore_checkout "$pre_branch" "$pre_sha"
+                restore_deps "$pre_sha"   # 재기동 전에 되돌린 커밋의 의존성으로
                 run_restart || rc2=$?
                 restore_maint "$maint_saved"
                 record auto-rollback "$where" "$pre_sha" "restored(rc=$rc2)"
@@ -328,9 +478,10 @@ cmd_deploy() {  # $1 = 태그
     if [ "$TAG_SHA" = "$(g rev-parse HEAD)" ] && [ -n "$rsha" ] && [ "${TAG_SHA:0:${#rsha}}" = "$rsha" ] && backend_alive; then
         say "[deploy] 그 커밋이 이미 떠 있고 응답 중 — 재기동 없이 기록만 남깁니다."
         if [ "$dry_run" = 1 ]; then say "[dry-run] 아무것도 바꾸지 않았습니다."; return 0; fi
+        local prev; prev="$(previous_of "$tag")"
         record deploy "$tag" "$TAG_SHA" "ok (재기동 없음)"
         say "[done]   $tag (${TAG_SHA:0:7}) 운영 중."
-        release_record "$tag" "$TAG_SHA" "$DEP_TAG"
+        release_record "$tag" "$TAG_SHA" "$prev"
         return 0
     fi
     if [ "$TAG_SHA" = "$from" ]; then
@@ -386,6 +537,7 @@ cmd_tags() {
 }
 
 cmd_status() {
+    fetch_tags --soft   # 방금 발행된 태그가 보이도록; 못 닿으면 마지막 fetch 기준
     read_deployed
     local head_sha head_ref
     head_sha="$(g rev-parse HEAD)"
@@ -511,6 +663,13 @@ cmd_maint() {  # $1 = on|off
     return "$rc"
 }
 
+cmd_deps() {
+    check_serving_repo
+    say "[deps]   현재 체크아웃($(g rev-parse --short HEAD))의 의존성을 강제로 설치합니다"
+    install_deps all "$(g rev-parse HEAD)" || die "의존성 설치 실패."
+    say "[deps]   완료 — 적용하려면 재기동: ./scripts/restart-all.sh"
+}
+
 main() {
     local arg
     for arg in "$@"; do
@@ -531,6 +690,7 @@ main() {
         tags)      cmd_tags ;;
         rollback)  cmd_rollback "${positional[1]:-}" ;;
         maint)     cmd_maint "${positional[1]:-}" ;;
+        deps)      cmd_deps ;;
         v*)        cmd_deploy "$cmd" ;;
         *)         echo "알 수 없는 명령: $cmd" >&2; usage >&2; exit 2 ;;
     esac

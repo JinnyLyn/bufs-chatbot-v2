@@ -38,7 +38,9 @@
   거기서 뭘 바꾸면 다음 `deploy.sh` 가 "커밋 안 된 수정" 으로 거부합니다. 개발은 `~/camchat` 에서.
 - 개발 폴더에서 뭘 해도 사용자한테 영향 없습니다 — 운영은 다른 폴더의 다른 프로세스입니다.
 - `.venv`(파이썬 라이브러리, 9.5 GB)는 셋이 **공유**합니다(심링크). 개발 폴더에서 `pip install` 로
-  뭘 바꾸면 운영도 같이 바뀌니, 의존성 변경은 PR 로만 하고 배포 때 `pip install -r requirements.txt`.
+  뭘 바꾸면 운영도 같이 바뀌니, 의존성 변경은 PR 로만 — 배포 때 `deploy.sh` 가 바뀐 만큼 설치합니다.
+  staging 은 python 의존성을 설치하지 않습니다(운영 venv 를 건드리게 되므로) — 새 라이브러리가 필요한
+  PR 은 staging 에서 그 부분이 안 돌 수 있고, 배포 때 설치됩니다.
 - 처음 만드는 법: `MIGRATION_H100.md` 3-7 (`scripts/setup-worktrees.sh`).
 
 ## 버전 이름 규칙 — 단계(alpha → beta → 정식) + 숫자
@@ -99,7 +101,8 @@ staging 은 LLM(ollama)을 운영과 같이 쓰므로 답변 속도는 운영과
 **1. PR 확인 + staging.** 각 PR 본문의 **제품 검증** 칸(요구사항 일치 / 사용자 영향 /
 운영 정책)이 채워져 있는지 보고, `staging.maruvis.kr` 에서 직접 눌러 봅니다 — 사용자에게 보이는
 변경이면 무엇이 어떻게 바뀌었는지 눈으로 확인. 애매하면 PR에 댓글로 물어보고 **발행을 미루는 게
-정상**입니다.
+정상**입니다. 발행 **직전**에 진서에게 "staging 이 main 최신인가요?" 한 번 더 — 그 사이 Dependabot
+이 자동 머지한 PR 이 끼어들 수 있어서(`staging.sh status` 로 확인).
 
 **2. 릴리스 페이지.** `github.com/JinnyLyn/bufs-chatbot-v2` → 오른쪽 **Releases** →
 **Draft a new release**.
@@ -110,27 +113,22 @@ publish** 클릭. Target 은 `main` 그대로.
 **4. 내용 자동 채우기.** **Generate release notes** 버튼 → 지난 릴리스 이후 머지된 PR 목록이
 자동으로 들어갑니다. 진서가 알려준 PR 번호와 맞는지 눈으로 한 번 비교합니다.
 
-**5. 체크리스트.** 아래를 설명란 맨 위에 붙여넣고 확인한 항목에 `[x]`:
+**5. 체크리스트.** 아래를 설명란 맨 위에 붙여넣고 확인한 항목의 `[ ]` 를 `[x]` 로 고칩니다
+(릴리스 설명의 체크박스는 **클릭이 안 됩니다** — 텍스트를 고치는 겁니다):
 
 ```markdown
 ## 릴리스 확인 (@Sung1Lim)
-- [ ] 포함된 PR 모두 Product verification 완료
+- [ ] 포함된 PR 모두 제품 검증 완료
 - [ ] 사용자에게 보이는 변화 파악함 (없으면 "없음")
 - [ ] 운영 정책과 충돌 없음
 - [ ] 배포 후 maruvis.kr 에서 질문 3개 정상 답변 (배포 후에 체크)
 
-Version: v0.__.__-alpha
-Commit: (배포 후)
-Released: (배포 후)
 Approved by: 성원
-Deployed by: (배포 후)
-Previous version: v0.__.__-alpha
-Rollback target: v0.__.__-alpha
 ```
 
-발행 때는 Version / Approved by / Previous version / Rollback target 만 채우면 됩니다.
-나머지는 배포가 끝나면 `deploy.sh` 가 그대로 찍어 주니 진서가 릴리스 설명을 편집해 붙입니다
-(이 일곱 줄이 "누가 언제 무엇을 승인·배포했나"의 기록입니다).
+"배포 기록"(Version / Commit / Released / Deployed by / Previous version / Rollback target)은 배포가
+끝나면 `deploy.sh` 가 릴리스 설명에 **자동으로 채워 넣습니다** — 손으로 쓰지 않아도 됩니다. 이 줄들이
+"누가 언제 무엇을 승인·배포했나"의 기록입니다.
 
 **6. Set as a pre-release** 체크 (alpha·beta 동안은 항상).
 
@@ -139,7 +137,8 @@ Rollback target: v0.__.__-alpha
 
 **8. 배포 후 확인.** 진서가 "떴어요" 하면 `maruvis.kr` 에서 질문 3개(예: 수강신청 기간,
 휴학 절차, 장학금 종류)를 해보고 답이 정상인지 봅니다. 이상하면 진서에게 **"롤백"** 한마디.
-정상이면 릴리스 설명의 마지막 체크박스를 채웁니다.
+정상이면 릴리스 페이지 오른쪽 위 연필(**Edit release**) → 마지막 줄을 `- [x] 배포 후 …` 로 고치고 →
+**Update release**.
 
 ## 진서: 배포 (서버 터미널, 2분)
 
@@ -151,8 +150,13 @@ cd ~/camchat-prod                   # 운영 폴더 (개발 폴더 ~/camchat 아
 
 끝나면 `[done]   v0.2.0-alpha (abc1234) 운영 중.` 가 찍힙니다. 성원에게 "떴어요".
 그 아래 `[record]` 블록(Version / Commit / Released / Deployed by / Previous version / Rollback
-target)이 같이 찍힙니다 — GitHub Release 설명(Edit release)의 기록 칸에 붙여넣으세요. `Deployed by`
-에 이름을 넣으려면 `scripts/env.local` 에 `export DEPLOY_BY=진서` 한 줄.
+target)이 찍히고, **같은 내용이 GitHub 릴리스 설명에 자동으로 기입됩니다**(`gh`, 태그는 안 건드려서
+태그 규칙에 안 걸림). "기입함" 대신 "손으로 붙여 넣으세요" 가 뜨면 그때만 Edit release 로 붙여 넣기.
+`Deployed by` 에 이름을 넣으려면 `scripts/env.local` 에 `export DEPLOY_BY=진서` 한 줄.
+
+`requirements.txt` 나 `frontend/package-lock.json` 이 바뀐 릴리스는 `deploy.sh` 가 **설치까지**
+합니다(`pip install` / `npm ci`, torch 계열은 지금 버전 고정). 설치가 실패하면 서버는 건드리지 않고
+체크아웃만 되돌립니다. 지금 체크아웃에 맞춰 강제로 다시 설치하려면 `./scripts/deploy.sh deps`.
 
 **문제가 생기면:**
 
@@ -176,6 +180,7 @@ target)이 같이 찍힙니다 — GitHub Release 설명(Edit release)의 기록
 | `deploy.sh status` | 떠 있는 버전 / 체크아웃된 버전 / 실제 도는 프로세스 / 헬스 / 점검 모드 |
 | `deploy.sh tags` | 릴리스 태그 목록(최신순), 떠 있는 것 표시 |
 | `deploy.sh maint on\|off` | 점검 모드 (아래) |
+| `deploy.sh deps` | 현재 체크아웃의 의존성 강제 설치 (npm ci + pip, torch 고정) |
 
 ## 점검 모드 — 오래 내려야 할 때만
 
