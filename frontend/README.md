@@ -107,7 +107,7 @@ frontend/
 
 외부 노출은 Cloudflare Tunnel (`~/.cloudflared/config.yml`) 로 `maruvis.kr` 도메인에 매핑.
 (위 Docker 구성은 원본 CamChat 프로젝트의 것 — 이 레포의 실제 서빙은 루트
-`scripts/start-all.sh` + `MIGRATION_H100.md` 참조.)
+`scripts/stack.sh start` + `MIGRATION_H100.md` 참조.)
 
 ## 자주 겪는 이슈
 

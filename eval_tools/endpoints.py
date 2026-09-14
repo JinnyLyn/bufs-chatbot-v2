@@ -11,7 +11,7 @@ project/.env의 OLLAMA_BASE_URL** — scripts/_common.sh의 derive_ollama_port�
                        (최후 상수는 .env조차 없는 클론 직후 환경용 — 백엔드가 돌고
                         있는 박스라면 .env가 반드시 있으므로 사실상 도달하지 않는다)
   backend_url():       $BUFS_BACKEND_URL (kpi_profiles.yaml 규약)
-                       → http://localhost:$BACKEND_PORT (scripts/start-all.sh 규약)
+                       → http://localhost:$BACKEND_PORT (scripts/stack.sh 규약)
                        → http://localhost:8000
 """
 from __future__ import annotations

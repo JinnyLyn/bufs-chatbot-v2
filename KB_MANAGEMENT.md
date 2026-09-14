@@ -18,7 +18,7 @@
 
 - **백엔드를 먼저 내려라.** Qdrant는 embedded(단일 프로세스 락)라 서버가 살아있으면 ingest/reindex가 DB를 못 연다.
   - H100 운영 서버: `systemctl --user stop camchat-backend` / 끝나면 `systemctl --user start camchat-backend` (백엔드 유닛만 — 프론트·ollama 는 그대로. `scripts/doc_sync.sh … --restart` 가 이걸 자동으로 감싸고 healthcheck 자동복구도 잠시 멈춘다; 유닛 전환 전 구형 박스는 `agentic-rag`)
-    (`start-all.sh` 재실행으로 올리지 말 것 — 살아있는 포트 위에 재실행하면 pidfile이 유실된다.)
+    (`stack.sh start` 재실행으로 올리지 말 것 — 살아있는 포트 위에 재실행하면 pidfile이 유실된다.)
 - 파이썬은 프로젝트 venv로: `~/camchat/.venv/bin/python` (conda python은 fastapi 등이 없다).
 
 ## 절차 — `scripts/doc_sync.sh` 사용 (#266, 권장)

@@ -1,20 +1,4 @@
 #!/usr/bin/env bash
-# run-frontend.sh — ExecStart for camchat-frontend.service: the Next.js standalone server
-# in the foreground on FRONTEND_PORT (default 3000). Stages .next/static and public/
-# beside server.js first (the standalone bundle does not include them), so a deploy is
-# `npm run build` followed by a restart of this unit.
-set -Eeuo pipefail
-# shellcheck source=scripts/_common.sh
-. "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
-FRONTEND_PORT="${FRONTEND_PORT:-3000}"
-FRONTEND="$REPO/frontend"
-SA="$FRONTEND/.next/standalone"
-if [ ! -f "$SA/server.js" ]; then
-    echo "[frontend] no standalone build at $SA/server.js — run: cd frontend && npm run build" >&2
-    exit 1
-fi
-command -v node >/dev/null 2>&1 || { echo "[frontend] 'node' not on PATH (scripts/env.local PATH?)" >&2; exit 1; }
-stage_standalone
-cd "$SA"
-echo "[frontend] starting standalone server on 127.0.0.1:$FRONTEND_PORT (build $(cat "$FRONTEND/.next/BUILD_ID" 2>/dev/null || echo '?'))"
-exec env PORT="$FRONTEND_PORT" HOSTNAME=127.0.0.1 node server.js
+# run-frontend.sh — 호환용 셈. 본체는 `scripts/stack.sh run frontend` (2026-09-14 통합). 설치된 유닛 파일이
+# 아직 이 이름을 가리키므로 한 릴리스 동안 남긴다 — 다음 PR 에서 ExecStart 를 바꾸고 이 파일을 지운다.
+exec "$(dirname -- "${BASH_SOURCE[0]}")/stack.sh" run frontend "$@"

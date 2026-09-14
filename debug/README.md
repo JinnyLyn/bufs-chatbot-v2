@@ -264,3 +264,16 @@ python -m pytest tests/debug/ -q
 - 증상에서 출발하려면: [`docs/debugging/README.md`](../docs/debugging/README.md) (런북 인덱스, 영문)
 - 전 과정 워크스루 (290초 폭주 실사례): [`trace-to-root-cause.md`](../docs/debugging/trace-to-root-cause.md)
 - 운영 박스 콜드스타트 (.venv 만들기부터): [`docs/debugging/README.md` Quickstart](../docs/debugging/README.md#quickstart-cold-start-on-the-production-server)
+
+---
+
+## 부록 — 프론트 장애 화면 리허설 (`mock_outage_backend`)
+
+운영 백엔드를 건드리지 않고 프론트의 장애 처리 화면(대기·재시도·503 안내 등, `docs/OUTAGE_DRILLS.md`)을
+노트북에서 재현하는 가짜 백엔드. 질문 텍스트로 실패 유형을 고른다 (`busy`, `stall`, `cut`, `http500` … —
+파일 상단 docstring 에 표).
+
+```bash
+python -m debug.mock_outage_backend --port 8099
+cd frontend && BACKEND_ORIGIN=http://localhost:8099 npx next dev -p 3100   # http://localhost:3100/ko/chat
+```

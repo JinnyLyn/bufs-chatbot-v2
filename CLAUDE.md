@@ -22,7 +22,7 @@
 4. **다음 작업은 머지를 기다리지 말고, 다시 최신 `main`에서 새 브랜치를 판다.**
    이전 브랜치 위에 다음 작업을 얹지 않는다.
 5. **머지 ≠ 배포.** 운영 서버는 릴리스 태그(`v0.x.y-alpha` → 학생 공개 후 `-beta` → 정식 `v1.0.0`)를 돌린다 (`RELEASE.md`). 에이전트는
-   `scripts/deploy.sh`(배포·롤백·점검 모드)와 `restart-all.sh`, `staging.sh` 를 **사용자의 명시적 지시 없이
+   `scripts/deploy.sh`(배포·롤백·점검 모드)와 `stack.sh`(start/stop/restart), `staging.sh`, `setup.sh` 를 **사용자의 명시적 지시 없이
    실행하지 않는다.** 태그 발행은 성원(@Sung1Lim)의 몫 — 에이전트가 태그를 만들거나 push 하지 않는다.
 6. **폴더 셋.** 서버의 `~/camchat` 만 개발 폴더다. `~/camchat-prod`(운영, 릴리스 태그)와
    `~/camchat-staging`(origin/main)은 **사람·에이전트가 직접 건드리지 않는다** — 파일 편집·커밋·
@@ -39,7 +39,7 @@ WORKFLOW.md, README 류), PR 템플릿·PR 본문, 릴리스 노트, CODEOWNERS 
 테스트 docstring, **스크립트(`scripts/*.sh`)의 주석과 실행 메시지도 포함**. 예외는 그대로 둔다:
 GitHub 화면의 버튼 이름("Publish release"), 명령어·코드·식별자·`[done]` 같은 로그 태그, 고유명사·
 기술 용어(필요하면 한국어 뒤에 괄호로 영어 병기), 그리고 **다른 스크립트가 grep 하는 문자열**
-(예: healthcheck.sh 의 `DOWN`, run-backend.sh 의 `[backend] starting on`) 과 종료 코드 — 이건
+(예: healthcheck.sh 의 `DOWN`, `stack.sh run backend` 의 `[backend] starting on`) 과 종료 코드 — 이건
 번역하면 동작이 깨진다. 예전에 영어로 쓰인 스크립트는 손대는 부분부터 한국어로 바꾼다(한꺼번에
 전부 번역하는 PR 은 따로). 이 규칙은 2026-09-10 사용자 지시.
 

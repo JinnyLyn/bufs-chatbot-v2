@@ -26,7 +26,7 @@ python -m eval_tools.kpi run --profile h100-fast --backend-url http://localhost:
 은퇴시킨 뒤(#271)로는 22문항의 정답이 KB에 아예 없어(개강일·시험기간·수강신청 기간 등
 학사일정) 이 셋의 점수가 구조적으로 눌린다 — 같은 배포 구성에서 85.2% → 60.5% 실측.
 따라서 **현재 기준 측정과 floor 확정은 `datasets/qa_dataset_sem2_100.json`(+ `--format qa`)로**
-한다. `scripts/kpi-baseline-h100.sh`의 기본값이 이 셋이며 `TESTSET`/`TESTSET_FORMAT`으로
+한다. `eval_tools/kpi/baseline-h100.sh`의 기본값이 이 셋이며 `TESTSET`/`TESTSET_FORMAT`으로
 바꿀 수 있다. combined88은 과거 리포트와의 비교선으로만 남긴다(같은 셋끼리만 비교 유효).
 
 레포 골든셋은 참조답안 키가 `expected_answer`다. 로더가 이를 `ground_truth`로 매핑하므로
@@ -69,7 +69,7 @@ H100에서 N=3 캡처 후 `baseline-update --set-floors`로 floor를 실측하�
 
 ```bash
 # H100 박스에서 원커맨드 (백엔드 떠 있는 상태): N=3 캡처 → floors 확정 → blocking 전환
-./scripts/kpi-baseline-h100.sh
+./eval_tools/kpi/baseline-h100.sh
 # 끝나면 kpi_profiles.yaml + baselines/h100-fast.json 커밋
 ```
 
