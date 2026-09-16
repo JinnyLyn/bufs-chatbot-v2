@@ -106,7 +106,7 @@ npm run dev                   # :3000 (프로덕션: npm run build && npm start)
 전체 통합·운영 가이드는 [INTEGRATION.md](INTEGRATION.md) 참조.
 KB 문서 추가·제거(학기/연도 전환)는 [KB_MANAGEMENT.md](KB_MANAGEMENT.md) 참조.
 **H100 리눅스 서버로의 서빙 이관**(cloudflared 터널 포함)은 [MIGRATION_H100.md](MIGRATION_H100.md) 참조
-— 기동·중지·점검은 `scripts/start-all.sh` / `stop-all.sh` / `healthcheck.sh`, 릴리스 배포는 `scripts/deploy.sh` (RELEASE.md).
+— 기동·중지·재기동은 `scripts/stack.sh start|stop|restart`, 점검은 `scripts/healthcheck.sh`, 릴리스 배포는 `scripts/deploy.sh` (RELEASE.md).
 
 ## 프로젝트 구조
 

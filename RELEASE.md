@@ -41,7 +41,7 @@
   뭘 바꾸면 운영도 같이 바뀌니, 의존성 변경은 PR 로만 — 배포 때 `deploy.sh` 가 바뀐 만큼 설치합니다.
   staging 은 python 의존성을 설치하지 않습니다(운영 venv 를 건드리게 되므로) — 새 라이브러리가 필요한
   PR 은 staging 에서 그 부분이 안 돌 수 있고, 배포 때 설치됩니다.
-- 처음 만드는 법: `MIGRATION_H100.md` 3-7 (`scripts/setup-worktrees.sh`).
+- 처음 만드는 법: `MIGRATION_H100.md` 3-7 (`scripts/setup.sh worktrees`).
 
 ## 버전 이름 규칙 — 단계(alpha → beta → 정식) + 숫자
 

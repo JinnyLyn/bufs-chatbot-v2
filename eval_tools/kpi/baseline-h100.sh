@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# kpi-baseline-h100.sh — H100 floor 실측 원커맨드 (N=3 캡처 → baseline-update --set-floors)
+# baseline-h100.sh — H100 floor 실측 원커맨드 (N=3 캡처 → baseline-update --set-floors)
 #
 # h100-fast 프로파일의 FLAG(미측정) floor를 실측값으로 확정하고 KPI 게이트를
 # advisory → blocking 으로 전환한다. H100 박스에서, 백엔드가 배포 config
 # (MIGRATION_H100.md 3-2의 .env)로 떠 있는 상태에서 repo 루트 기준 실행:
 #
-#   ./scripts/kpi-baseline-h100.sh
+#   ./eval_tools/kpi/baseline-h100.sh
 #
 # Env: BACKEND_URL (기본: $BUFS_BACKEND_URL → localhost:$BACKEND_PORT → :8000),
 #      N (기본 3), PYTHON (기본 python3),
@@ -18,11 +18,11 @@
 #   eval_tools/baselines/h100-fast.json
 
 set -euo pipefail
-SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
-cd "$SCRIPT_DIR/.."
+REPO="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
+cd "$REPO"
 
 # shellcheck disable=SC1091
-[ -f "$SCRIPT_DIR/env.local" ] && . "$SCRIPT_DIR/env.local"
+[ -f "$REPO/scripts/env.local" ] && . "$REPO/scripts/env.local"
 
 BACKEND_URL="${BACKEND_URL:-${BUFS_BACKEND_URL:-http://localhost:${BACKEND_PORT:-8000}}}"
 N="${N:-3}"
@@ -38,7 +38,7 @@ TESTSET_FORMAT="${TESTSET_FORMAT:-qa}"
 #    (build_stamp는 라이브 값을 안 본다), 백엔드가 실제로 그 config로 떠 있는지
 #    여기서 확인하지 않으면 "다른 운영점에서 잰 floor"가 게이트 기준이 되어 버린다.
 health_json="$(curl -fsS --max-time 5 "$BACKEND_URL/health")" || {
-    echo "ERROR: backend not reachable at $BACKEND_URL — ./scripts/start-all.sh 먼저" >&2
+    echo "ERROR: 백엔드에 닿지 않음 ($BACKEND_URL) — ./scripts/stack.sh start 먼저" >&2
     exit 2
 }
 live_ctx="$(printf '%s' "$health_json" | "$PYTHON" -c \
@@ -68,7 +68,7 @@ for i in $(seq 1 "$N"); do
         --testset "$TESTSET" --format "$TESTSET_FORMAT" --seed 42 || rc=$?
     if [ "$rc" -ge 2 ]; then
         # exit 2 = 측정 자체가 실패(ERROR) — 덤프를 믿을 수 없으니 중단
-        echo "ERROR: kpi run failed (exit $rc, measurement ERROR) — abort" >&2
+        echo "ERROR: kpi run 실패 (exit $rc, 측정 자체가 ERROR) — 중단" >&2
         exit "$rc"
     elif [ "$rc" -eq 1 ]; then
         # exit 1 = blocking 게이트의 NO-GO 판정. floors "재측정"이 필요한 상황이
@@ -79,7 +79,7 @@ for i in $(seq 1 "$N"); do
     # 아래 진단 메시지가 영영 안 나온다 (scripts/_common.sh의 동일 패턴 참고)
     latest="$(ls -td eval_tools/runs/*-"$PROFILE"-*/ 2>/dev/null | head -1 || true)"
     if [ -z "$latest" ] || [ ! -f "$latest/predictions.json" ]; then
-        echo "ERROR: predictions.json not found under eval_tools/runs/ (latest='$latest')" >&2
+        echo "ERROR: eval_tools/runs/ 아래에 predictions.json 이 없음 (latest='$latest')" >&2
         exit 2
     fi
     cp "$latest/predictions.json" "$CAP_DIR/predictions_$i.json"

@@ -23,7 +23,7 @@ reports/CamChat-장애대응.pdf §7 / §16 can be reproduced on a laptop:
     down            drop the TCP connection without a response
 
 Run:
-    python3 scripts/mock-outage-backend.py --port 8099
+    python3 -m debug.mock_outage_backend --port 8099
     cd frontend && BACKEND_ORIGIN=http://localhost:8099 npx next dev -p 3100
 
 Then open http://localhost:3100/ko/chat and send one of the words above as the question.

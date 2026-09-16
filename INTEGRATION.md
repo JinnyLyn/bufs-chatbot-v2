@@ -134,10 +134,10 @@ callback is already wired (`api/runtime.py:build_config`); it stays off and harm
 
 ### Run / autostart scripts
 ```bash
-scripts/start-all.sh           # ollama (:11500) + backend (:8000) + frontend (:3000), logs to logs/
-scripts/stop-all.sh            # stop them (ollama stays up)
+scripts/stack.sh start         # ollama (:11500) + backend (:8000) + frontend (:3000), logs to logs/
+scripts/stack.sh stop          # stop them (ollama stays up)
 scripts/healthcheck.sh         # probe everything
-scripts/install-units.sh       # systemd --user units: autostart + Restart=on-failure (MIGRATION_H100.md 3-6)
+scripts/setup.sh units         # systemd --user units: autostart + Restart=on-failure (MIGRATION_H100.md 3-6)
 ```
 Production runs from a release tag via `scripts/deploy.sh` (RELEASE.md). The Windows-era `.ps1`
 scripts are gone — what replaced each one: MIGRATION_H100.md §3-4.

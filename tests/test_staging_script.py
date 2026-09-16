@@ -1,6 +1,6 @@
 """scripts/staging.sh 테스트 — origin/main 을 staging 폴더에 꺼내 띄우는 흐름.
 
-restart-all.sh / stop-all.sh 는 STAGING_RESTART_CMD / STAGING_STOP_CMD 로 스텁하고(무엇을
+stack.sh restart / stop 은 STAGING_RESTART_CMD / STAGING_STOP_CMD 로 스텁하고(무엇을
 어떤 커밋·BACKEND_ORIGIN 으로 불렀는지만 기록), tmp 에 bare origin + staging 클론
 (.deploy-worktree 마커)을 만들어 git 동작(fetch·detached checkout·뒤처짐 계산)은 진짜로 돌린다.
 """
@@ -105,7 +105,7 @@ class TestUp:
 
     def test_refuses_without_folder_or_marker(self, env):
         p = run(env, "up", check=False, staging_dir=env["tmp"] / "nope")
-        assert p.returncode != 0 and "setup-worktrees.sh" in p.stderr
+        assert p.returncode != 0 and "setup.sh worktrees" in p.stderr
         (env["staging"] / ".deploy-worktree").write_text("prod\n")   # STAGING_DIR 가 운영 폴더를 가리킴
         p = run(env, "down", check=False)
         assert p.returncode != 0 and "staging 폴더가 아닙니다" in p.stderr

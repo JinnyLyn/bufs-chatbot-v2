@@ -115,7 +115,7 @@ if __name__ == "__main__":
     # harness — so the public path is the tunnel and nothing else. Binding 0.0.0.0
     # additionally published this unauthenticated API (plus /docs and /health) to the
     # whole LAN subnet, bypassing Cloudflare's TLS, WAF and rate limiting. The frontend
-    # already pins HOSTNAME=127.0.0.1 in scripts/start-all.sh; this matches it.
+    # already pins HOSTNAME=127.0.0.1 in scripts/stack.sh; this matches it.
     # Override with HOST=0.0.0.0 only behind a firewall that blocks the port.
     host = os.getenv("HOST", "127.0.0.1")
     # The chat endpoint carries the user's question in the query string, so uvicorn's

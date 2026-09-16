@@ -1,6 +1,6 @@
 """Tests for scripts/deploy.sh — 릴리스 태그 배포 / 롤백 / 점검 모드 / 상태.
 
-실제 재기동(restart-all.sh)은 스택을 건드리므로 스텁으로 바꿔 호출 기록과 종료 코드만
+실제 재기동(stack.sh restart)은 스택을 건드리므로 스텁으로 바꿔 호출 기록과 종료 코드만
 흉내 낸다(0 정상, 3 프론트 빌드 실패, 1 재기동 후 실패). tmp 디렉터리에 bare origin +
 운영 체크아웃 역할의 클론을 만들어 git 동작(태그 검증·체크아웃·복원)은 진짜로 돌린다.
 DEPLOY_SKIP_UNIT_CHECK=1 로 "systemd 가 서비스하는 체크아웃인가" 가드만 건너뛴다.
@@ -15,7 +15,7 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 
-# 실제 restart-all.sh 처럼 종료 시 maintenance 플래그를 지운다(플래그 복원 로직 검증용).
+# 실제 stack.sh restart 처럼 종료 시 maintenance 플래그를 지운다(플래그 복원 로직 검증용).
 # 종료 코드는 레포 루트의 STUB_RC 첫 줄을 한 번 쓰고 지운다 — "첫 호출 실패, 롤백 호출 성공" 시나리오.
 STUB_RESTART = """#!/usr/bin/env bash
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -53,7 +53,7 @@ def prod(tmp_path):
     (src / "scripts").mkdir()
     (src / "scripts" / "_common.sh").write_bytes((SCRIPTS / "_common.sh").read_bytes())
     _executable(src / "scripts" / "deploy.sh", (SCRIPTS / "deploy.sh").read_text(encoding="utf-8"))
-    _executable(src / "scripts" / "restart-all.sh", STUB_RESTART)
+    _executable(src / "scripts" / "stack.sh", STUB_RESTART)
     _executable(src / "scripts" / "healthcheck.sh", STUB_HEALTH)
     (src / ".gitignore").write_text("logs/\nSTUB_RC\nSTUB_TOUCH\n")
     (src / "frontend").mkdir()
@@ -315,7 +315,7 @@ class TestSameCommitAlreadyRunning:
         (prod / "logs" / "backend" / "server.out").write_text(f"[backend] starting on :8000 ({sha[:7]})\n")
 
     def test_records_without_restart(self, prod):
-        git(prod, "checkout", "-q", "--detach", "v0.1.0-beta")     # install-units.sh --move 가 띄운 상태
+        git(prod, "checkout", "-q", "--detach", "v0.1.0-beta")     # setup.sh units --move 가 띄운 상태
         self._running(prod, tag_sha(prod, "v0.1.0-beta"))
         p = run(prod, "v0.1.0-beta", "--yes", env={"DEPLOY_HEALTH_CMD": "true"})
         assert "재기동 없이 기록만" in p.stdout and "Version: v0.1.0-beta" in p.stdout
@@ -485,7 +485,7 @@ class TestFailureHandling:
         assert on_branch(prod) == "main"                                 # back on the branch it left
         assert len(restart_calls(prod)) == 1                             # the failed attempt only
         assert deployed(prod) == []
-        assert log_rows(prod)[-1][4] == "build-failed"
+        assert log_rows(prod)[-1][4] == "precheck-failed"
 
     def test_build_failure_restores_previous_tag(self, prod):
         run(prod, "v0.1.0-beta", "--yes")
@@ -727,8 +727,45 @@ class TestMaintenance:
         run(prod, "maint", "on", "--local-only")
         flag = prod / "logs" / "run" / "maintenance"
         content = flag.read_text()
-        run(prod, "v0.1.0-beta", "--yes")             # the stub deletes the flag like restart-all.sh does
+        run(prod, "v0.1.0-beta", "--yes")             # the stub deletes the flag like stack.sh restart does
         assert flag.exists() and flag.read_text() == content
 
     def test_bad_mode(self, prod):
         assert run(prod, "maint", "sideways", check=False).returncode != 0
+
+
+STUB_LEGACY_RESTART = """#!/usr/bin/env bash
+root="$(cd "$(dirname "$0")/.." && pwd)"
+echo "legacy $(git -C "$root" rev-parse --short HEAD)" >>"$root/logs/run/restart-calls"
+rm -f "$root/logs/run/maintenance"
+"""
+
+
+class TestPreStackTag:
+    """stack.sh 가 없던 태그(2026-09-14 통합 전)로 가면 그 트리의 restart-all.sh 를 부른다 — 롤백 경로."""
+
+    def _legacy_tag(self, prod, tag):
+        git(prod, "checkout", "-q", "main")
+        git(prod, "rm", "-q", "scripts/stack.sh")
+        _executable(prod / "scripts" / "restart-all.sh", STUB_LEGACY_RESTART)
+        git(prod, "add", "scripts")                         # 스텁 기록 파일(deps-calls 등)은 커밋하지 않는다
+        git(prod, "commit", "-qm", f"legacy tree {tag}")
+        git(prod, "tag", tag)
+        git(prod, "push", "-q", "origin", "main", "--tags")
+
+    def test_deploy_uses_restart_all_when_tag_has_no_stack_sh(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        self._legacy_tag(prod, "v0.3.0-beta")
+        run(prod, "v0.3.0-beta", "--yes")
+        calls = restart_calls(prod)
+        assert calls[-1].startswith("legacy ") and calls[-2].startswith("restart ")
+        assert deployed(prod)[0] == "v0.3.0-beta"
+
+    def test_rollback_to_legacy_tag(self, prod):
+        run(prod, "v0.1.0-beta", "--yes")
+        self._legacy_tag(prod, "v0.3.0-beta")
+        run(prod, "v0.3.0-beta", "--yes")
+        run(prod, "v0.2.0-beta", "--yes")                   # stack.sh 가 있는 태그로
+        run(prod, "rollback")                               # 직전 = 옛 트리
+        assert head(prod) == tag_sha(prod, "v0.3.0-beta")
+        assert restart_calls(prod)[-1].startswith("legacy ")

@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
-# run-backend.sh — ExecStart for camchat-backend.service: the FastAPI server in the
-# foreground, from the repo venv, on BACKEND_PORT (default 8000). Same environment rules
-# as start-all.sh (scripts/env.local is sourced by _common.sh).
-set -Eeuo pipefail
-# shellcheck source=scripts/_common.sh
-. "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
-BACKEND_PORT="${BACKEND_PORT:-8000}"
-resolve_python || exit 1
-cd "$REPO"
-echo "[backend] starting on :$BACKEND_PORT ($(git rev-parse --short HEAD 2>/dev/null || echo '?'))"
-exec env PORT="$BACKEND_PORT" "$PYTHON" project/server.py
+# run-backend.sh — 호환용 셈. 본체는 `scripts/stack.sh run backend` (2026-09-14 통합). 설치된 유닛 파일이
+# 아직 이 이름을 가리키므로 한 릴리스 동안 남긴다 — 다음 PR 에서 scripts/systemd/* 의 ExecStart 를
+# stack.sh 로 바꾸고 이 파일을 지운다 (배포 때 _common.sh units_refresh 가 유닛을 갱신한다).
+exec "$(dirname -- "${BASH_SOURCE[0]}")/stack.sh" run backend "$@"

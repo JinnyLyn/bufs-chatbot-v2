@@ -7,16 +7,16 @@
 #   ./scripts/staging.sh down     # 내림 (평소엔 내려 두면 자원 0)
 #   ./scripts/staging.sh status   # 어느 커밋이 떠 있는지, origin/main 보다 뒤졌는지, 헬스
 #
-# 환경: STAGING_DIR (기본 $HOME/camchat-staging — scripts/setup-worktrees.sh 가 만든다)
+# 환경: STAGING_DIR (기본 $HOME/camchat-staging — scripts/setup.sh worktrees 가 만든다)
 #       STAGING_REF (기본 origin/main)
 # staging 폴더의 scripts/env.local 이 포트·START_OLLAMA=no 를 정한다 (ollama 는 운영 것을
 # 같이 쓴다 — LLM 은 복제하지 않는다). 프론트의 /api 프록시 대상은 빌드 때 박히므로
-# BACKEND_ORIGIN 을 그 포트로 넣고 restart-all.sh 를 부른다.
+# BACKEND_ORIGIN 을 그 포트로 넣고 stack.sh restart 를 부른다.
 #
 # 자동 복구·healthcheck 타이머 없음: 시험용이라 죽으면 죽은 채로 둔다 (`up` 이 다시 띄운다).
 #
-# 테스트 훅: STAGING_RESTART_CMD / STAGING_STOP_CMD 가 staging 폴더의 restart-all.sh /
-# stop-all.sh 를 대신한다.
+# 테스트 훅: STAGING_RESTART_CMD / STAGING_STOP_CMD 가 staging 폴더의 stack.sh restart /
+# stack.sh stop 을 대신한다.
 
 set -Eeuo pipefail
 
@@ -28,8 +28,8 @@ say() { echo "$*"; }
 g() { git -C "$STAGING_DIR" "$@"; }
 
 check_dir() {
-    [ -e "$STAGING_DIR/.git" ] || die "staging 폴더가 없습니다: $STAGING_DIR — 먼저 scripts/setup-worktrees.sh"
-    [ -f "$STAGING_DIR/.deploy-worktree" ] || die "$STAGING_DIR 는 setup-worktrees.sh 가 만든 폴더가 아닙니다 (.deploy-worktree 마커 없음)."
+    [ -e "$STAGING_DIR/.git" ] || die "staging 폴더가 없습니다: $STAGING_DIR — 먼저 scripts/setup.sh worktrees"
+    [ -f "$STAGING_DIR/.deploy-worktree" ] || die "$STAGING_DIR 는 setup.sh worktrees 가 만든 폴더가 아닙니다 (.deploy-worktree 마커 없음)."
     # 마커 내용까지 본다 — STAGING_DIR 가 운영 폴더를 가리키면 down 이 운영을 내리고 up 이 태그를 벗긴다.
     [ "$(cat "$STAGING_DIR/.deploy-worktree")" = staging ] \
         || die "$STAGING_DIR 는 staging 폴더가 아닙니다 (마커: $(cat "$STAGING_DIR/.deploy-worktree")) — STAGING_DIR 확인."
@@ -63,15 +63,17 @@ cmd_up() {
         fi
     fi
 
-    # restart-all.sh 가 알아서: 소스가 바뀌었으면 프론트 재빌드(BACKEND_ORIGIN 으로 /api 대상 고정)
+    # stack.sh restart 가 알아서: 소스가 바뀌었으면 프론트 재빌드(BACKEND_ORIGIN 으로 /api 대상 고정)
     # → stop → start → /health 확인. 유닛은 운영 폴더 것이라 여기선 프로세스를 직접 띄운다.
-    say "[staging] restart-all.sh (:$bport / :$fport)"
+    say "[staging] stack.sh restart (:$bport / :$fport)"
     export BACKEND_ORIGIN="http://localhost:$bport"
     if [ -n "${STAGING_RESTART_CMD:-}" ]; then
         # shellcheck disable=SC2086  # 테스트 훅
         $STAGING_RESTART_CMD
+    elif [ -x "$STAGING_DIR/scripts/stack.sh" ]; then
+        "$STAGING_DIR/scripts/stack.sh" restart
     else
-        "$STAGING_DIR/scripts/restart-all.sh"
+        "$STAGING_DIR/scripts/restart-all.sh"   # stack.sh 이전(2026-09-14 통합 전) ref
     fi
     say
     say "[staging] 떠 있음 — https://staging.maruvis.kr  (로컬: http://127.0.0.1:$fport)"
@@ -83,8 +85,10 @@ cmd_down() {
     if [ -n "${STAGING_STOP_CMD:-}" ]; then
         # shellcheck disable=SC2086  # 테스트 훅
         $STAGING_STOP_CMD
+    elif [ -x "$STAGING_DIR/scripts/stack.sh" ]; then
+        "$STAGING_DIR/scripts/stack.sh" stop
     else
-        "$STAGING_DIR/scripts/stop-all.sh"
+        "$STAGING_DIR/scripts/stop-all.sh"      # stack.sh 이전(2026-09-14 통합 전) ref
     fi
     say "[staging] 내림"
 }

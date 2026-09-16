@@ -1,6 +1,6 @@
 # 외부 상태 감시 (UptimeRobot)
 
-서버 안의 healthcheck 타이머(`scripts/healthcheck-cron.sh`, 2분)와 별개로, **학생이 실제로 지나는 경로**
+서버 안의 healthcheck 타이머(`scripts/healthcheck.sh cron`, 2분)와 별개로, **학생이 실제로 지나는 경로**
 (인터넷 → Cloudflare → Tunnel → 서버)를 밖에서 5분마다 찍는다. 근거: `reports/CamChat-장애대응.pdf` §5.
 
 ## 등록할 모니터 (UptimeRobot 무료, 5분 간격)

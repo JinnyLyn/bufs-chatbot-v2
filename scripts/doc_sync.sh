@@ -91,7 +91,7 @@ require_backend_down_or_restart() {  # $1 = restart 플래그("1"|"")
     fi
 }
 
-# 유닛 이름: 프로세스별 유닛(scripts/systemd, install-units.sh)이 깔려 있으면 백엔드만 내렸다
+# 유닛 이름: 프로세스별 유닛(scripts/systemd, setup.sh units)이 깔려 있으면 백엔드만 내렸다
 # 올린다(Qdrant 락을 쥔 건 백엔드뿐). 없으면 예전 one-shot 유닛(agentic-rag).
 svc_unit() {
     if systemctl --user cat camchat-backend.service >/dev/null 2>&1; then
@@ -105,7 +105,7 @@ svc_unit() {
     else echo agentic-rag; fi
 }
 # healthcheck 타이머(2분)가 내려간 백엔드를 "장애"로 보고 재기동해 reindex 중 Qdrant 락을 뺏지
-# 않도록, 내려 있는 동안 logs/run/maintenance 플래그를 둔다(healthcheck-cron.sh 가 건너뜀).
+# 않도록, 내려 있는 동안 logs/run/maintenance 플래그를 둔다(healthcheck.sh cron 이 건너뜀).
 MAINT_FLAG="$ROOT/logs/run/maintenance"
 svc_stop()  { local u; u="$(svc_unit)"; mkdir -p "$(dirname "$MAINT_FLAG")"; echo "$$ $(date '+%F %T') doc_sync" >"$MAINT_FLAG"; echo ">> systemctl --user stop $u";  systemctl --user stop "$u"; }
 svc_start() { local u; u="$(svc_unit)"; echo ">> systemctl --user start $u"; systemctl --user start "$u"; rm -f "$MAINT_FLAG"; }

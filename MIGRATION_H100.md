@@ -63,7 +63,7 @@ Ollama가 같은 머신의 `127.0.0.1:11434`에 그냥 있다.
 ```
 
 기존 `start-all.ps1`은 이걸 피해 `npm run dev`(개발 서버)로 운영하고 있었다.
-H100에서는 아래 `start-all.sh`가 standalone 빌드가 있으면 그걸 쓰고, 없으면 dev로 떨어진다.
+H100에서는 아래 `stack.sh start`가 standalone 빌드가 있으면 그걸 쓰고, 없으면 dev로 떨어진다.
 
 ---
 
@@ -180,7 +180,7 @@ LANGFUSE_TRACING_ENVIRONMENT=production   # 운영 서버. 개발 머신은 deve
 스크립트는 전부 환경변수로 덮어쓸 수 있게 해 두었다:
 
 ```bash
-BACKEND_PORT=8010 FRONTEND_PORT=3010 ./scripts/start-all.sh
+BACKEND_PORT=8010 FRONTEND_PORT=3010 ./scripts/stack.sh start
 ```
 
 포트를 바꿨다면 따라오는 것들:
@@ -189,7 +189,7 @@ BACKEND_PORT=8010 FRONTEND_PORT=3010 ./scripts/start-all.sh
 - **`BACKEND_PORT` 변경 시 프론트 재빌드 필요** — `next.config.ts`의 `/api` rewrite
   대상은 빌드 시점에 고정된다:
   `BACKEND_ORIGIN=http://localhost:8010 npm run build`
-- **`OLLAMA_PORT` 변경 시**는 start-all.sh가 백엔드에 `OLLAMA_BASE_URL`을 자동
+- **`OLLAMA_PORT` 변경 시**는 `stack.sh start`가 백엔드에 `OLLAMA_BASE_URL`을 자동
   주입한다(명시적으로 설정한 경우에만 — `.env`의 원격 URL 등 의도적 설정은 존중).
 
 ### 3-4. 기동 / 종료 / 점검
@@ -197,15 +197,21 @@ BACKEND_PORT=8010 FRONTEND_PORT=3010 ./scripts/start-all.sh
 ```bash
 chmod +x scripts/*.sh          # 최초 1회
 
-./scripts/start-all.sh         # Ollama + backend + frontend
+./scripts/stack.sh start       # Ollama + backend + frontend
 ./scripts/healthcheck.sh       # /health, /health/llm(GPU offload%), :3000
-./scripts/stop-all.sh          # frontend + backend 종료 (Ollama는 유지)
-./scripts/stop-all.sh --with-ollama
+./scripts/stack.sh stop        # frontend + backend 종료 (Ollama는 유지)
+./scripts/stack.sh stop --with-ollama
+./scripts/stack.sh restart     # 필요하면 프론트 재빌드 → stop → start → /health·/health/llm
 ```
 
-`start-all.sh`는 이미 떠 있는 포트는 건드리지 않고, 시작한 PID만 `logs/run/*.pid`에
-기록한다. `stop-all.sh`는 **그 PID만** 종료한다 — 공유 서버에서 포트로 kill 하면
-남의 프로세스를 잡을 수 있어서 일부러 그렇게 하지 않았다.
+`stack.sh start`는 이미 떠 있는 포트는 건드리지 않고, 시작한 PID만 `logs/run/*.pid`에
+기록한다. `stack.sh stop`은 **그 PID만** (또는 이 체크아웃에 묶였다고 식별된 프로세스만) 종료한다 —
+공유 서버에서 포트로 kill 하면 남의 프로세스를 잡을 수 있어서 일부러 그렇게 하지 않았다.
+스크립트 목록: `scripts/stack.sh`(기동·종료·재기동·유닛 ExecStart) · `healthcheck.sh`(점검·타이머·알림) ·
+`deploy.sh`(릴리스) · `staging.sh` · `setup.sh`(폴더 셋·유닛 설치) · `doc_sync.sh`(KB 문서) — 2026-09-14 통합.
+`run-*.sh` · `healthcheck-cron.sh` · `alert.sh` · `restart-all.sh` 는 옛 이름을 새 진입점으로 넘기는 두 줄짜리
+셈이다 — 설치된 유닛 파일과 지금 운영 중인 릴리스의 `deploy.sh` 가 아직 그 이름을 부르기 때문. 통합된 첫
+릴리스가 배포되면 `scripts/systemd/*` 의 `ExecStart` 를 바꾸고 셈을 지운다 (배포가 유닛을 알아서 갱신한다).
 
 #### `scripts/` 인벤토리 — 서버에서 뭘 쓰고 뭘 쓰면 안 되나
 
@@ -214,7 +220,7 @@ chmod +x scripts/*.sh          # 최초 1회
 
 | 스크립트 | 서버(Ubuntu)에서 |
 |---|---|
-| `start-all.ps1` / `stop-all.ps1` / `healthcheck.ps1` | → `start-all.sh` / `stop-all.sh` / `healthcheck.sh` 사용 |
+| `start-all.ps1` / `stop-all.ps1` / `healthcheck.ps1` | → `stack.sh start` / `stack.sh stop` / `healthcheck.sh` 사용 |
 | `register-autostart.ps1` | → systemd `--user` 유닛 (3-6절) |
 | `apply-maruvis-tunnel.ps1` | 옛 maruvis.co.kr 배포용 일회성 — 폐기. 새 배포는 `cloudflared-config.example.yml` |
 | `rollback-tuning.ps1` / `rollback-cohort-fix.ps1` / `rollback-schedule-fix.ps1` | **실행 금지.** 2026-06 인시던트 시점의 스냅샷 복원용 — `project/.env`를 **이전 관리자의 옛 env**(옛 Langfuse 키·Windows SSL 경로·4070 :11435 프로파일)로 덮어쓰고 KB를 커밋본보다 오래된 스냅샷으로 되돌린다. 서버에서 롤백은 git(`qdrant_db`/`parent_store`는 커밋됨) + 3-2절 `.env` 템플릿으로 한다. `backups/` 삭제(2절) 후에는 "No backup found"로 안전하게 실패한다 |
@@ -243,35 +249,35 @@ cloudflared tunnel --config ~/.cloudflared/config.yml run <uuid>
 ### 3-6. 자동 시작·자동 복구 (옛 `register-autostart.ps1` 대체)
 
 프로세스별 systemd `--user` 유닛을 쓴다(2026-09, 장애 대응 보고서 §4). 유닛 파일은 레포의
-`scripts/systemd/` 에 있고 `scripts/install-units.sh` 가 `~/.config/systemd/user/` 로 복사·활성화한다.
+`scripts/systemd/` 에 있고 `scripts/setup.sh units` 가 `~/.config/systemd/user/` 로 복사·활성화한다.
 
 ```bash
 loginctl enable-linger "$USER"        # 로그아웃 후에도 유지 (1회)
-scripts/install-units.sh              # 유닛 복사 + daemon-reload + enable
-scripts/install-units.sh --switch     # 예전 one-shot agentic-rag.service 에서 갈아탈 때 (ollama 재로드 포함)
+scripts/setup.sh units                # 유닛 복사 + daemon-reload + enable (+ 포트가 비어 있으면 기동)
 ```
 
-이미 돌고 있는 서버에서는 **반드시 `--switch`** 로: 유닛만 깔면 옛 프로세스가 포트를 쥔 채 유닛은 바인드에
-실패한다(설치 스크립트가 경고한다). `stop-all.sh` 는 유닛을 내린 뒤에도 레포 소속 프로세스를 식별해 정리하므로
-섞인 상태에서 `restart-all.sh` 를 돌려도 옛 코드가 남지 않는다.
+셸에서 띄운 스택이 이미 돌고 있으면 유닛은 설치·활성화만 되고 기동은 안 된다(옛 프로세스가 포트를 쥔 채
+유닛은 바인드에 실패하니 — 설치 스크립트가 경고한다). 그때는 `scripts/stack.sh restart --with-ollama` 로
+갈아탄다: `stack.sh stop` 은 유닛을 내린 뒤에도 레포 소속 프로세스를 식별해 정리하므로 섞인 상태에서
+재기동해도 옛 코드가 남지 않는다.
 
 | 유닛 | 역할 | 복구 |
 |---|---|---|
 | `camchat.target` | 스택 전체 핸들 (`systemctl --user start/stop/status camchat.target`) | — |
 | `camchat-ollama.service` | 팀 소유 ollama(:11500, MIG 슬라이스) | `Restart=on-failure` |
-| `camchat-backend.service` | FastAPI :8000 (`scripts/run-backend.sh`) | `Restart=on-failure` 15초 간격, 15분에 10회 제한(부팅 직후 네트워크 지연 흡수) |
-| `camchat-frontend.service` | Next.js standalone :3000 (`scripts/run-frontend.sh`, 시작 때 static 스테이징) | 위와 같음 |
+| `camchat-backend.service` | FastAPI :8000 (`scripts/stack.sh run backend` — 유닛 파일의 `ExecStart` 는 통합 첫 릴리스가 배포될 때까지 `run-backend.sh` 셈을 거친다) | `Restart=on-failure` 15초 간격, 15분에 10회 제한(부팅 직후 네트워크 지연 흡수) |
+| `camchat-frontend.service` | Next.js standalone :3000 (`scripts/stack.sh run frontend`, 시작 때 static 스테이징) | 위와 같음 |
 | `camchat-alert@.service` | 유닛 자체 실패(`OnFailure=`) 시 웹훅 알림 | — |
-| `camchat-healthcheck.timer` | 2분마다 `scripts/healthcheck-cron.sh` | 2회 연속 실패 → `reset-failed` + 백엔드·프론트(LLM 만 실패면 ollama 도) 재기동, 재기동 뒤 300초 유예, 1시간 3회 초과 시 중단 + 알림. `logs/run/maintenance` 플래그·수동 stop(inactive) 은 건드리지 않음 |
+| `camchat-healthcheck.timer` | 2분마다 `scripts/healthcheck.sh cron` | 2회 연속 실패 → `reset-failed` + 백엔드·프론트(LLM 만 실패면 ollama 도) 재기동, 재기동 뒤 300초 유예, 1시간 3회 초과 시 중단 + 알림. `logs/run/maintenance` 플래그·수동 stop(inactive) 은 건드리지 않음 |
 | `camchat-logrotate.timer` | 매일 `logrotate`(`scripts/logrotate.conf`: 50 MB × 5, copytruncate) | 로그 무한 증가 방지 |
 
-- 유닛 파일 속 `%h/camchat` 은 설치 스크립트가 **실제 체크아웃 경로**로 바꿔 넣는다(워크트리·다른 이름의 클론도 자기 스크립트를 가리킨다).
+- 유닛 파일 속 `%h/camchat` 은 설치 스크립트가 **실제 체크아웃 경로**로 바꿔 넣는다(워크트리·다른 이름의 클론도 자기 스크립트를 가리킨다). 이후 `scripts/systemd/` 가 바뀌면 `deploy.sh`·`stack.sh restart` 가 재기동 직전에 설치본을 알아서 갱신한다(`_common.sh` `units_refresh`: 검증 → 교체 → daemon-reload) — 다시 설치할 필요 없다.
 - 로그는 그대로 `logs/<svc>/` 에 append 되고(`journalctl --user -u camchat-backend` 도 됨), healthcheck 는 `logs/healthcheck.log`, 알림은 `logs/alerts.log`.
 - 알림 웹훅(Discord/Slack): `scripts/env.local` 에 `export ALERT_WEBHOOK_URL=https://…` 한 줄. 없으면 로그만 남긴다. 인증정보라 Git 에 넣지 않는다.
-- 기존 스크립트는 그대로 쓴다: 유닛이 깔려 있으면 `start-all.sh`/`stop-all.sh`/`restart-all.sh` 가 systemctl 로 위임하고, `doc_sync.sh --restart` 는 백엔드 유닛만 내렸다 올린다. **배포는 `./scripts/deploy.sh <릴리스 태그>`** (태그 체크아웃 → `restart-all.sh`: 프론트 재빌드 → 유닛 재기동 → /health 확인 → 실패 시 자동 롤백; 절차와 역할은 `RELEASE.md`).
+- 기존 스크립트는 그대로 쓴다: 유닛이 깔려 있으면 `stack.sh start|stop|restart` 가 systemctl 로 위임하고, `doc_sync.sh --restart` 는 백엔드 유닛만 내렸다 올린다. **배포는 `./scripts/deploy.sh <릴리스 태그>`** (태그 체크아웃 → `stack.sh restart`: 프론트 재빌드 → 유닛 재기동 → /health 확인 → 실패 시 자동 롤백; 절차와 역할은 `RELEASE.md`).
 - user 매니저에는 network-online.target 이 없다. 부팅 직후 네트워크가 늦어 Langfuse/HF 접속이 실패하면 `Restart=on-failure` 가 다시 띄운다.
 
-systemd를 쓸 수 없으면 유닛 없이 `./scripts/start-all.sh` 가 예전처럼 프로세스를 직접 띄운다(`tmux new -d -s rag './scripts/start-all.sh'`).
+systemd를 쓸 수 없으면 유닛 없이 `./scripts/stack.sh start` 가 예전처럼 프로세스를 직접 띄운다(`tmux new -d -s rag './scripts/stack.sh start'`).
 
 ### 3-7. 폴더 셋 — 개발 / staging / 운영 (git worktree)
 
@@ -279,7 +285,7 @@ systemd를 쓸 수 없으면 유닛 없이 `./scripts/start-all.sh` 가 예전�
 그래서 레포를 세 폴더로 꺼낸다 — 역할과 규칙은 `RELEASE.md` "폴더 셋".
 
 ```bash
-cd ~/camchat && scripts/setup-worktrees.sh     # ~/camchat-prod, ~/camchat-staging 생성 (멱등)
+cd ~/camchat && scripts/setup.sh worktrees     # ~/camchat-prod, ~/camchat-staging 생성 (멱등)
 ```
 
 만드는 것: worktree 둘(origin/main, detached) · `.venv` 심링크 공유 · `project/.env`·`scripts/env.local` 복사
@@ -291,15 +297,15 @@ cd ~/camchat && scripts/setup-worktrees.sh     # ~/camchat-prod, ~/camchat-stagi
 
 1. **유닛을 운영 폴더로 옮기고 거기서 재기동 — 한 번에.**
    ```bash
-   cd ~/camchat-prod && scripts/install-units.sh --move
+   cd ~/camchat-prod && scripts/setup.sh units --move
    ```
-   유닛 파일의 경로를 `~/camchat-prod` 로 다시 쓰고 daemon-reload 한 뒤 `restart-all.sh`: 프론트 빌드(몇 분, 그동안 옛
+   유닛 파일의 경로를 `~/camchat-prod` 로 다시 쓰고 daemon-reload 한 뒤 `stack.sh restart`: 프론트 빌드(몇 분, 그동안 옛
    스택이 계속 서비스) → `systemctl stop`(옛 폴더 프로세스도 유닛 소속이라 같이 내려감) → `start`(새 폴더에서) → `/health`.
    사용자에게 보이는 건 재기동 30초(Worker 장애 안내 페이지). "옛 폴더 프로세스 + 새 폴더 유닛" 이 섞인 시간이 없어야
-   하므로 재기동 없는 `install-units.sh` 만 따로 돌리지 않는다.
+   하므로 재기동 없는 `setup.sh units` 만 따로 돌리지 않는다.
    `_common.sh` 의 `units_installed()` 는 유닛의 `WorkingDirectory` 가 자기 체크아웃일 때만 참이라, 이 뒤로 staging·개발
-   폴더의 `start/stop/restart-all.sh` 는 systemctl 을 건드리지 않고 자기 프로세스만 직접 관리하고, 개발 폴더에서
-   기본 포트로 `start-all.sh` 를 치면 거부된다.
+   폴더의 `stack.sh start|stop|restart` 는 systemctl 을 건드리지 않고 자기 프로세스만 직접 관리하고, 개발 폴더에서
+   기본 포트로 `stack.sh start` 를 치면 거부된다.
 2. **첫 릴리스** — 성원이 GitHub Releases 에서 `v0.1.0-alpha`(main, 1번과 같은 커밋) 발행.
 3. **첫 배포 기록** — `cd ~/camchat-prod && ./scripts/deploy.sh v0.1.0-alpha`. 그 커밋이 이미 떠서 응답 중이면
    재기동 없이 기록만 남긴다. 이후 운영 폴더는 태그에 머문다.
@@ -317,7 +323,7 @@ cd ~/camchat && scripts/setup-worktrees.sh     # ~/camchat-prod, ~/camchat-stagi
    staging 은 해당 없음.
 5. `cd ~/camchat && ./scripts/staging.sh up` → `https://staging.maruvis.kr`.
 
-되돌리기: `cd ~/camchat && scripts/install-units.sh --move` — 앞의 1번과 대칭. 플래그 없는 `install-units.sh` 는
+되돌리기: `cd ~/camchat && scripts/setup.sh units --move` — 앞의 1번과 대칭. 플래그 없는 `setup.sh units` 는
 유닛 경로만 다시 쓰고 이미 active 인 유닛은 재기동하지 않아, 프로세스는 계속 운영 worktree 를 서비스한 채 남는다.
 worktree 는 `git worktree remove ~/camchat-prod` 로 지워도 히스토리엔 영향 없다.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # deploy.sh — 운영 서버 스위치 하나. 릴리스 태그 배포, 롤백, 점검 모드, 지금 뭐가 떠 있는지.
-# 빌드·유닛 재기동·헬스 확인은 전부 restart-all.sh 에 맡기고, 이 스크립트가 직접 프로세스를
+# 빌드·유닛 재기동·헬스 확인은 전부 `stack.sh restart` 에 맡기고, 이 스크립트가 직접 프로세스를
 # 띄우는 일은 없다.
 #
 #   ./scripts/deploy.sh v0.2.0-alpha          # 그 릴리스 태그를 배포 (바뀌는 커밋 보여주고 y/N)
@@ -24,19 +24,19 @@
 #   4. git checkout --detach <태그>
 #   5. 의존성이 바뀌었으면 설치: package-lock.json → npm ci, requirements.txt → pip (공유 .venv,
 #      torch 는 지금 버전으로 고정). 설치 실패는 빌드 실패처럼 취급 — 서버는 안 건드리고 체크아웃 복원.
-#   6. restart-all.sh — 필요하면 프론트 재빌드, stop, start, /health + /health/llm 확인
+#   6. stack.sh restart — 필요하면 프론트 재빌드, 유닛 파일 동기화, stop, start, /health + /health/llm 확인
 #   7. logs/run/deploys.log 에 한 줄 추가 — 마지막 "ok" 행이 곧 운영 중인 버전
 #   8. GitHub 릴리스 설명의 "배포 기록" 줄을 gh 로 채운다 (Version/Commit/Released/Deployed by/
 #      Previous/Rollback). 태그는 안 건드리니 태그 규칙에 안 걸림. 실패해도 배포 결과엔 영향 없음.
-# restart-all.sh 종료 코드와 그다음:
+# stack.sh restart 종료 코드와 그다음:
 #   0  정상                                   → 운영 중으로 기록
-#   3  프론트 빌드 실패, 서버는 안 건드림       → 체크아웃만 되돌림, 재기동 없음
+#   3  재기동 전 점검 실패(사전 점검·프론트 빌드·유닛 파일), 서버는 안 건드림 → 체크아웃만 되돌림, 재기동 없음
 #   4  백엔드는 응답, /health/llm 실패          → 운영 중(성능 저하)으로 기록, 롤백 없음, 큰 경고
 #   1  백엔드 무응답                            → 직전 운영 태그로 자동 롤백 (--no-auto-rollback 이면 멈춤)
 #
 # 누가 태그를 발행하고 누가 배포하는지, 버전 이름 규칙: RELEASE.md.
 #
-# 테스트 훅 (healthcheck-cron.sh 와 같은 방식): DEPLOY_RESTART_CMD 가 restart-all.sh 를,
+# 테스트 훅 (healthcheck.sh cron 과 같은 방식): DEPLOY_RESTART_CMD 가 stack.sh restart 를,
 # DEPLOY_HEALTH_CMD 가 /health 확인을, DEPLOY_NPM_CMD / DEPLOY_PIP_CMD 가 의존성 설치를,
 # DEPLOY_GH_CMD 가 gh 를 대신. DEPLOY_SKIP_UNIT_CHECK=1 이면 "systemd 가 서비스하는
 # 체크아웃인가" 검사를 건너뜀 (CAMCHAT_UNITS_DIR 로 유닛 경로를 흉내낼 수도 있음 — _common.sh).
@@ -47,7 +47,7 @@ set -Eeuo pipefail
 . "$(dirname -- "${BASH_SOURCE[0]}")/_common.sh"
 
 DEPLOY_LOG="$RUN_DIR/deploys.log"   # TSV, 시도마다 한 행: 시각  동작  태그  sha  결과  계정
-TAG_RE="$RELEASE_TAG_RE"            # _common.sh — restart-all.sh 배너와 같은 패턴
+TAG_RE="$RELEASE_TAG_RE"            # _common.sh — stack.sh restart 배너와 같은 패턴
 # Worker 점검 페이지는 wrangler 로 켜고 끈다. 화면 없는 서버라 API 토큰이 필요하고,
 # scripts/env.local 은 _common.sh 가 읽으니 거기 한 줄이면 아래 모든 npm/wrangler 호출에 전달된다.
 WRANGLER_AUTH_HINT='scripts/env.local 에 export CLOUDFLARE_API_TOKEN=... 한 줄, 또는 cd worker && npx wrangler login'
@@ -55,9 +55,7 @@ WRANGLER_AUTH_HINT='scripts/env.local 에 export CLOUDFLARE_API_TOKEN=... 한 �
 yes=0; dry_run=0; auto_rollback=1; local_only=0
 positional=()
 
-usage() {
-    sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
-}
+usage() { usage_from_header "${BASH_SOURCE[0]}"; }
 
 die() { echo "[error]  $*" >&2; exit 1; }
 say() { echo "$*"; }
@@ -139,7 +137,7 @@ backend_alive() {
     fi
 }
 
-# 지금 도는 백엔드의 커밋 (run-backend.sh 가 시작 때 로그에 남김), 모르면 빈 값.
+# 지금 도는 백엔드의 커밋 (`stack.sh run backend` 가 시작 때 로그에 남김), 모르면 빈 값.
 running_sha() {
     grep -a '\[backend\] starting on' "$LOG_DIR/backend/server.out" 2>/dev/null | tail -1 \
         | sed -n 's/.*(\([0-9a-f]\{7,\}\)).*/\1/p' || true
@@ -199,7 +197,7 @@ verify_tag() {
 }
 
 dry_run_note() {
-    say "[dry-run] 실행했다면: git checkout --detach $1 && ./scripts/restart-all.sh  — 아무것도 바꾸지 않았습니다."
+    say "[dry-run] 실행했다면: git checkout --detach $1 && ./scripts/stack.sh restart  — 아무것도 바꾸지 않았습니다."
 }
 
 # ---------------------------------------------------------------------------------------
@@ -210,10 +208,18 @@ run_restart() {
     if [ -n "${DEPLOY_RESTART_CMD:-}" ]; then
         # shellcheck disable=SC2086  # 테스트 훅: 명령줄이라 일부러 단어 분리
         $DEPLOY_RESTART_CMD
+    elif [ -x "$REPO/scripts/stack.sh" ]; then
+        "$REPO/scripts/stack.sh" restart
     else
-        "$REPO/scripts/restart-all.sh"
+        "$REPO/scripts/restart-all.sh"   # stack.sh 이전 태그(2026-09-14 통합 전)로 롤백
     fi
 }
+
+# 설치된 systemd 유닛을 지금 체크아웃의 scripts/systemd/* 로 맞춘다 (_common.sh units_refresh; 이 폴더를
+# 서비스하는 유닛이 있을 때만, 같으면 no-op). 체크아웃을 바꾼 직후마다 — 앞으로 갈 때도, 되돌릴 때도 —
+# 부른다: 유닛이 다른 트리의 파일을 가리키는 채로 두면 그 사이 crash 재기동이 없는 파일을 exec 한다.
+# stack.sh restart 도 자기 재기동 직전에 같은 일을 한다(멱등). 검증 실패는 경고만 — 설치본은 그대로다.
+sync_units() { units_refresh || true; }
 
 # 의존성 설치 — 태그가 말하는 버전으로 돌게 한다.
 #   pip:  매번 `pip install -r requirements.txt` (이미 맞으면 몇 초 만에 no-op). 선언 diff 가 아니라
@@ -346,9 +352,10 @@ release_record() {  # $1 = 태그  $2 = sha  $3 = 직전 운영 태그 (없으�
     update_release_record "$1" "$2" "$3"
 }
 
-# 배포 시도 전의 체크아웃으로 복귀 (브랜치였으면 브랜치로).
+# 배포 시도 전의 체크아웃으로 복귀 (브랜치였으면 브랜치로) — 유닛 파일도 그 트리 것으로.
 restore_checkout() {  # $1 = 브랜치 이름 또는 "", $2 = sha
     if [ -n "$1" ]; then g checkout --quiet "$1"; else g checkout --quiet --detach "$2"; fi
+    sync_units
 }
 
 # 체크아웃을 되돌린 뒤 의존성도 그 커밋 기준으로 되돌린다 — install_deps 가 이미 새 태그의 의존성을
@@ -380,7 +387,7 @@ switch_to() {
     prev_tag="$(previous_of "$tag")"
 
     # 전환 내내 healthcheck 를 세워 둔다: 체크아웃 + 프론트 빌드 구간이 몇 분이라, 그 사이
-    # 타이머가 재기동하면 반쯤 빌드된 .next 로 프론트를 띄운다. restart-all.sh 는 자기 구간에서
+    # 타이머가 재기동하면 반쯤 빌드된 .next 로 프론트를 띄운다. stack.sh restart 는 자기 구간에서
     # 플래그를 세우고 지우므로, 원래 있던 수동 `maint on` 은 끝나고 되돌린다.
     [ -f "$MAINT_FLAG" ] && maint_saved="$(cat "$MAINT_FLAG")"
     MAINT_SAVED="$maint_saved"
@@ -395,13 +402,14 @@ switch_to() {
         say "[error]  git checkout $tag 실패 — 재기동하지 않았습니다. 워크트리는 git 이 남긴 상태 그대로 (git status)." >&2
         return 1
     fi
+    sync_units
 
     if ! install_deps "$pre_sha" "$sha"; then
         record "$action" "$tag" "$sha" deps-failed
         if [ "$action" = auto-rollback ]; then
             # 롤백 중에 실패: 새(깨진) 태그로 되돌아가느니 롤백 대상 코드에 머문다.
             restore_maint "$maint_saved"; trap - EXIT
-            say "[error]  롤백 대상 $tag 의 의존성 설치 실패 — 체크아웃은 $tag 에 둠. 복구: ./scripts/deploy.sh deps && ./scripts/restart-all.sh" >&2
+            say "[error]  롤백 대상 $tag 의 의존성 설치 실패 — 체크아웃은 $tag 에 둠. 복구: ./scripts/deploy.sh deps && ./scripts/stack.sh restart" >&2
             return 3
         fi
         restore_checkout "$pre_branch" "$pre_sha"
@@ -412,7 +420,7 @@ switch_to() {
         return 3
     fi
 
-    say "[switch] restart-all.sh"
+    say "[switch] stack.sh restart"
     run_restart || rc=$?
     restore_maint "$maint_saved"
     trap - EXIT
@@ -425,11 +433,12 @@ switch_to() {
             if [ "$action" = deploy ]; then release_record "$tag" "$sha" "$prev_tag"; fi
             return 0 ;;
         3)
-            # 프론트 빌드 실패 — restart-all.sh 가 서버를 건드리지 않았다. 의존성은 이미 새 태그 것으로
-            # 바뀌었을 수 있으니 코드와 함께 되돌린다.
-            record "$action" "$tag" "$sha" build-failed
+            # 재기동 전 점검 실패(사전 점검·프론트 빌드·유닛 파일 중 하나 — 원인은 stack.sh 출력에) —
+            # stack.sh 가 서버를 건드리지 않았다. 의존성은 이미 새 태그 것으로 바뀌었을 수 있으니 코드와
+            # 함께 되돌린다.
+            record "$action" "$tag" "$sha" precheck-failed
             restore_checkout "$pre_branch" "$pre_sha"
-            say "[undo]   프론트 빌드 실패, 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌리고 그 의존성으로 재설치" >&2
+            say "[undo]   재기동 전 점검 실패 (사전 점검·프론트 빌드·유닛 파일 중 하나 — 위 stack.sh 출력 참고), 서버는 그대로 — 체크아웃을 ${pre_branch:-${pre_sha:0:7}} 로 되돌리고 그 의존성으로 재설치" >&2
             restore_deps "$pre_sha"
             return 3 ;;
         4)
@@ -492,7 +501,7 @@ cmd_deploy() {  # $1 = 태그
     from="${DEP_SHA:-$(g rev-parse HEAD)}"
     say "[deploy] $tag (${TAG_SHA:0:7})   지금 운영 중: ${DEP_TAG:-기록 없음} (${from:0:7})"
     # 그 커밋이 이미 체크아웃돼 있고 백엔드도 그 커밋으로 떠서 응답 중이면 재기동할 이유가 없다 —
-    # 기록만 남긴다 (첫 릴리스: install-units.sh --move 로 main 을 띄운 직후 같은 커밋에 태그가 붙는 경우).
+    # 기록만 남긴다 (첫 릴리스: setup.sh units --move 로 main 을 띄운 직후 같은 커밋에 태그가 붙는 경우).
     local rsha
     rsha="$(running_sha)"
     if [ "$TAG_SHA" = "$(g rev-parse HEAD)" ] && [ -n "$rsha" ] && [ "${TAG_SHA:0:${#rsha}}" = "$rsha" ] && backend_alive; then
@@ -585,7 +594,7 @@ cmd_status() {
         say "[checkout] $head_ref (${head_sha:0:7})  != 운영중 — 재기동(healthcheck·systemd)되면 $DEP_TAG 가 아니라 이게 뜹니다"
     fi
 
-    # 백엔드는 시작할 때마다 자기 커밋을 로그에 남긴다 (run-backend.sh) — 실제로 도는 코드.
+    # 백엔드는 시작할 때마다 자기 커밋을 로그에 남긴다 (stack.sh run backend) — 실제로 도는 코드.
     local run_sha
     run_sha="$(running_sha)"
     if [ -n "$run_sha" ]; then
@@ -687,7 +696,7 @@ cmd_deps() {
     check_serving_repo
     say "[deps]   현재 체크아웃($(g rev-parse --short HEAD))의 의존성을 강제로 설치합니다"
     install_deps all "$(g rev-parse HEAD)" || die "의존성 설치 실패."
-    say "[deps]   완료 — 적용하려면 재기동: ./scripts/restart-all.sh"
+    say "[deps]   완료 — 적용하려면 재기동: ./scripts/stack.sh restart"
 }
 
 main() {

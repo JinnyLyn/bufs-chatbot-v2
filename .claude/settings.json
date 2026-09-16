@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/scripts/check-main-sync.sh"
+            "command": "bash .claude/scripts/sync-main.sh --check"
           }
         ]
       }
