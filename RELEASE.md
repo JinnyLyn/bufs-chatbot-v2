@@ -152,7 +152,7 @@ cd ~/camchat-prod                   # 운영 폴더 (개발 폴더 ~/camchat 아
 그 아래 `[record]` 블록(Version / Commit / Released / Deployed by / Previous version / Rollback
 target)이 찍히고, **같은 내용이 GitHub 릴리스 설명에 자동으로 기입됩니다**(`gh`, 태그는 안 건드려서
 태그 규칙에 안 걸림). "기입함" 대신 "손으로 붙여 넣으세요" 가 뜨면 그때만 Edit release 로 붙여 넣기.
-`Deployed by` 에 이름을 넣으려면 `scripts/env.local` 에 `export DEPLOY_BY=진서` 한 줄.
+`Approved by` 는 릴리스를 발행한 GitHub 계정, `Deployed by` 는 서버의 `gh` 에 로그인된 GitHub 계정으로 자동 기입됩니다(서버 계정 team_b 는 공용이라 안 씀). 다른 이름을 쓰려면 `scripts/env.local` 에 `export DEPLOY_BY=진서` 한 줄.
 
 `requirements.txt` 나 `frontend/package-lock.json` 이 바뀐 릴리스는 `deploy.sh` 가 **설치까지**
 합니다(`pip install` / `npm ci`, torch 계열은 지금 버전 고정). 설치가 실패하면 서버는 건드리지 않고

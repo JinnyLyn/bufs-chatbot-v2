@@ -261,6 +261,15 @@ install_deps() {  # $1 = 이전 sha 또는 all   $2 = 지금 sha
     return 0
 }
 
+# 배포한 사람: scripts/env.local 의 DEPLOY_BY 가 있으면 그것, 없으면 gh 에 로그인된 GitHub 계정
+# (서버 계정 team_b 는 공용이라 사람을 가리키지 않는다), 그것도 없으면 $USER.
+deployer() {
+    if [ -n "${DEPLOY_BY:-}" ]; then echo "$DEPLOY_BY"; return 0; fi
+    local login
+    login="$(gh_cmd api user --jq .login 2>/dev/null || true)"
+    echo "${login:-${USER:-?}}"
+}
+
 gh_cmd() {
     if [ -n "${DEPLOY_GH_CMD:-}" ]; then
         # shellcheck disable=SC2086  # 테스트 훅
@@ -283,10 +292,13 @@ update_release_record() {  # $1 = 태그  $2 = sha  $3 = 직전 운영 태그 (�
     printf '%s' "$json" >"$tmp.in"
     # 한 번의 python: 있는 줄은 바꾸고, 없는 줄만 "## 배포 기록" 절에 덧붙인다. "Approved by" 는 성원이
     # 체크리스트에 이미 썼으면 그대로, 어디에도 없을 때만 자리표시. 출력: PATCH 본문 → $tmp, id/url → stdout.
-    meta="$(python3 - "$1" "${2:0:7}" "$(date '+%Y-%m-%d')" "${DEPLOY_BY:-${USER:-?}}" "${3:-없음}" "$tmp" "$tmp.in" <<'PY'
+    meta="$(python3 - "$1" "${2:0:7}" "$(date '+%Y-%m-%d')" "$(deployer)" "${3:-없음}" "$tmp" "$tmp.in" <<'PY'
 import json, re, sys
 tag, sha, released, by, prev, out, src = sys.argv[1:8]
 r = json.load(open(src)); body = r.get("body") or ""
+# Approved by = 릴리스를 발행한 GitHub 계정 (Publish 버튼을 누른 사람). 손으로 이미 써 뒀으면 그대로,
+# 자리표시("(릴리스 발행자)")만 있으면 바꾼다.
+publisher = (r.get("author") or {}).get("login") or "(릴리스 발행자)"
 vals = [("Version", tag), ("Commit", sha), ("Released", released), ("Deployed by", by),
         ("Previous version", prev), ("Rollback target", prev)]
 missing = []
@@ -294,9 +306,17 @@ for k, v in vals:
     body, n = re.subn(rf"^{re.escape(k)}:.*$", f"{k}: {v}", body, count=1, flags=re.M)
     if n == 0:
         missing.append(f"{k}: {v}")
+m = re.search(r"^Approved by:(.*)$", body, re.M)
+if m and "(릴리스 발행자)" in m.group(1):
+    body = body[:m.start()] + f"Approved by: {publisher}" + body[m.end():]
+elif not m:
+    rel = re.search(r"^Released:.*$", body, re.M)
+    if rel and not missing:
+        # 기록 줄은 다 있는데 Approved 만 없다 — 그 자리(Released 다음)에 끼워 넣는다
+        body = body[:rel.end()] + f"\nApproved by: {publisher}" + body[rel.end():]
+    else:
+        missing.insert(3 if len(missing) >= 3 else len(missing), f"Approved by: {publisher}")
 if missing:
-    if not re.search(r"^Approved by:", body, re.M):
-        missing.insert(3 if len(missing) >= 3 else len(missing), "Approved by: (릴리스 발행자)")
     body = body.rstrip("\n") + "\n\n## 배포 기록\n" + "\n".join(missing) + "\n"
 json.dump({"body": body}, open(out, "w"), ensure_ascii=False)
 print(f"{r['id']}\t{r.get('html_url', '')}")
@@ -319,8 +339,8 @@ release_record() {  # $1 = 태그  $2 = sha  $3 = 직전 운영 태그 (없으�
     say "         Version: $1"
     say "         Commit: ${2:0:7}"
     say "         Released: $(date '+%Y-%m-%d')"
-    say "         Approved by: (릴리스 발행자)"
-    say "         Deployed by: ${DEPLOY_BY:-${USER:-?}}"
+    say "         Approved by: (릴리스 발행자 — GitHub 릴리스에는 발행 계정으로 기입)"
+    say "         Deployed by: $(deployer)"
     say "         Previous version: ${3:-없음}"
     say "         Rollback target: ${3:-없음}"
     update_release_record "$1" "$2" "$3"

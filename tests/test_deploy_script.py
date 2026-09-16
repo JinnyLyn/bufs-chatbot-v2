@@ -87,6 +87,7 @@ root="$STUB_ROOT"
 echo "gh $*" >>"$root/gh-calls"
 [ -f "$root/gh-fail" ] && exit 1
 if [ "$1" = api ] && [ "$2" = -X ]; then cp "$6" "$root/patch.json"; exit 0; fi
+if [ "$1" = api ] && [ "$2" = user ]; then echo "JinnyLyn"; exit 0; fi
 if [ "$1" = api ]; then cat "$root/release.json"; exit 0; fi
 exit 1
 """
@@ -106,7 +107,7 @@ def run(root, *args, check=True, env=None):
     if not gh.exists():
         _executable(gh, STUB_GH)
     if not (root / "release.json").exists():
-        (root / "release.json").write_text('{"id": 7, "html_url": "https://example/rel", "body": "## 릴리스 확인\\n- [ ] staging\\n\\nVersion: v0.__.__\\nCommit: (배포 후)\\nReleased: (배포 후)\\nApproved by: 성원\\nDeployed by: (배포 후)\\nPrevious version: v0.__.__\\nRollback target: v0.__.__\\n"}')
+        (root / "release.json").write_text('{"id": 7, "html_url": "https://example/rel", "author": {"login": "Sung1Lim"}, "body": "## 릴리스 확인\\n- [ ] staging\\n\\nVersion: v0.__.__\\nCommit: (배포 후)\\nReleased: (배포 후)\\nApproved by: 성원\\nDeployed by: (배포 후)\\nPrevious version: v0.__.__\\nRollback target: v0.__.__\\n"}')
     e.setdefault("DEPLOY_GH_CMD", f"bash {gh}")
     e.setdefault("STUB_ROOT", str(root))
     e.update(env or {})
@@ -414,6 +415,32 @@ class TestReleaseRecordAutofill:
         body = patched_body(prod)
         assert body.startswith("성원이 쓴 메모") and "## 배포 기록" in body and "Version: v0.1.0-beta" in body
         assert "Previous version: 없음" in body
+
+    def test_deployer_defaults_to_gh_login_and_approver_to_release_publisher(self, prod):
+        # DEPLOY_BY 없음 → gh 로그인(JinnyLyn); 릴리스에 Approved 줄이 없으면 발행 계정(author)으로
+        (prod / "release.json").write_text(json.dumps({"id": 9, "html_url": "u", "author": {"login": "Sung1Lim"}, "body": "메모"}))
+        e = {"DEPLOY_BY": ""}
+        p = run(prod, "v0.1.0-beta", "--yes", env=e)
+        body = patched_body(prod)
+        assert "Deployed by: JinnyLyn" in body and "Deployed by: JinnyLyn" in p.stdout
+        assert "Approved by: Sung1Lim" in body and body.count("Approved by:") == 1
+
+    def test_approved_by_placeholder_is_replaced_but_handwritten_kept(self, prod):
+        (prod / "release.json").write_text(json.dumps({"id": 9, "html_url": "u", "author": {"login": "Sung1Lim"}, "body": "Approved by: (릴리스 발행자)\n"}))
+        run(prod, "v0.1.0-beta", "--yes")
+        assert "Approved by: Sung1Lim" in patched_body(prod)
+        (prod / "release.json").write_text(json.dumps({"id": 9, "html_url": "u", "author": {"login": "JinnyLyn"}, "body": "Approved by: 진서 (성원 휴가로 대행)\n"}))
+        run(prod, "v0.2.0-beta", "--yes")
+        body = patched_body(prod)
+        assert "Approved by: 진서 (성원 휴가로 대행)" in body and body.count("Approved by:") == 1
+
+    def test_missing_approved_by_is_inserted_next_to_existing_record_lines(self, prod):
+        body0 = "Version: v0.__\nCommit: (배포 후)\nReleased: (배포 후)\nDeployed by: (배포 후)\nPrevious version: x\nRollback target: x\n"
+        (prod / "release.json").write_text(json.dumps({"id": 9, "html_url": "u", "author": {"login": "Sung1Lim"}, "body": body0}))
+        run(prod, "v0.1.0-beta", "--yes")
+        body = patched_body(prod)
+        assert "## 배포 기록" not in body                          # 새 절을 만들지 않고
+        assert body.index("Released: ") < body.index("Approved by: Sung1Lim") < body.index("Deployed by: ")
 
     def test_append_keeps_existing_approved_by_without_placeholder(self, prod):
         # 새 RELEASE.md 체크리스트: 기록 줄 없이 "Approved by: 성원" 만 있음 → 절을 덧붙이되 Approved 는 한 줄만
