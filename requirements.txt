@@ -1,17 +1,17 @@
 fastapi>=0.141.1
 uvicorn[standard]>=0.53.0
 sse-starlette>=3.4.11
-fastembed==0.8.0
-kiwipiepy==0.23.2         # Korean morphological tokenizer for the BM25 sparse leg (SPARSE_MODEL=kiwi)
+fastembed==0.8.1
+kiwipiepy==0.24.0         # Korean morphological tokenizer for the BM25 sparse leg (SPARSE_MODEL=kiwi)
 ipykernel==7.3.0
 langchain>=1.4.2,<2
 langchain-huggingface==1.2.2
 langchain-ollama==1.1.0
 langchain-qdrant==1.1.0
 langchain-text-splitters==1.1.2
-langfuse==4.15.4
+langfuse==4.15.6
 langgraph==1.2.12
-docling==2.129.0
+docling==2.131.0
 pymupdf==1.28.2        # text-layer fallback for pages Docling drops on std::bad_alloc
 python-dotenv==1.2.3
 sentence-transformers==6.1.0
