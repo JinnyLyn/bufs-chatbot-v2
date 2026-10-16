@@ -2,8 +2,8 @@
 pytest>=9.1.1
 pytest-asyncio>=1.4.0
 pytest-cov>=7.1.0
-pydantic==2.13.5
-langgraph==1.2.14
+pydantic==2.14.1
+langgraph==1.2.15
 langchain-text-splitters==1.1.3
 tiktoken==0.14.0
 
