@@ -80,11 +80,11 @@ jobs:
       # The langfuse MCP server in .mcp.json runs via uvx, which GitHub-hosted
       # runners do not preinstall.
       - name: Install uv (for langfuse MCP)
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@e4a6faad497d33dbc7144135c75e41f82f0bf6c0 # v1
+        uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1
         # .mcp.json expands ${LANGFUSE_*} from the process environment; repository
         # secrets only exist inside a workflow run and only where mapped explicitly.
         # The action loads and trusts the project .mcp.json on its own, but MCP
