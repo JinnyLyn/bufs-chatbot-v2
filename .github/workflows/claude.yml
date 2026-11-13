@@ -84,7 +84,7 @@ jobs:
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@4845bacbb38b3c4b15d948f035349786f678e068 # v1
+        uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1
         # .mcp.json expands ${LANGFUSE_*} from the process environment; repository
         # secrets only exist inside a workflow run and only where mapped explicitly.
         # The action loads and trusts the project .mcp.json on its own, but MCP
