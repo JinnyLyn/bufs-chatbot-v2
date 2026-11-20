@@ -10,11 +10,11 @@ langchain-ollama==1.1.0
 langchain-qdrant==1.1.0
 langchain-text-splitters==1.1.3
 langfuse==4.17.0
-langgraph==1.2.20
-docling==2.150.0
+langgraph==1.2.22
+docling==2.150.1
 pymupdf==1.28.2        # text-layer fallback for pages Docling drops on std::bad_alloc
 python-dotenv==1.2.4
-sentence-transformers==6.2.0
+sentence-transformers==6.3.0
 tiktoken==0.14.0
 # direct dependencies of debug/ tooling (not guaranteed by transitive deps above)
 requests>=2.34.2          # debug/status.py, debug/langfuse_client.py
